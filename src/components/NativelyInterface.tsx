@@ -323,6 +323,12 @@ const NativelyInterface: React.FC<NativelyInterfaceProps> = ({
     // Resolved once on mount via IPC (default true so non-macOS / probe
     // failure falls back to existing behaviour).
     const stealthAutoEngageOkRef = useRef<boolean>(true);
+    // True when CGEventTap is available on this platform. Set once at mount
+    // via IPC. Used to decide whether to block DOM focus in blockInputFocus -
+    // without this synchronous signal, blockInputFocus cannot distinguish "tap
+    // not yet active" (macOS: block anyway) from "tap not available" (Windows:
+    // never block, or the input becomes permanently trapped).
+    const isCgEventTapAvailableRef = useRef<boolean>(false);
     // Latest-handler ref so the captured-key listener (mounted with [] deps)
     // calls the CURRENT handleManualSubmit closure — not the one captured at
     // first render, which reads inputValue="" and silently no-ops on submit.
@@ -2883,6 +2889,7 @@ Provide only the answer, nothing else.`;
         if (window.electronAPI.stealthTapShouldAutoEngage) {
             window.electronAPI.stealthTapShouldAutoEngage()
                 .then((ok) => { stealthAutoEngageOkRef.current = !!ok; })
+                .then(() => window.electronAPI.stealthTapAvailable?.().then((v) => { isCgEventTapAvailableRef.current = !!v; }))
                 .catch(() => { /* fail open — keep default */ });
         }
 
@@ -2938,6 +2945,11 @@ Provide only the answer, nothing else.`;
         // OS Text Input System can route keystrokes through the active IME
         // and compose CJK characters normally.
         if (!stealthAutoEngageOkRef.current) return;
+        // Only block DOM focus when CGEventTap is available on this platform.
+        // On Windows, CGEventTap is never available so this guard exits early
+        // and allows normal input focus. On macOS, the tap is available so we
+        // block focus to prevent the panel from becoming key window.
+        if (!isCgEventTapAvailableRef.current) return;
         e.preventDefault();
         // Don't blur an already-focused element — that itself fires events.
         if (document.activeElement === textInputRef.current) {
