@@ -12,10 +12,12 @@ import { LLMHelper } from './LLMHelper';
 import { SessionTracker } from './SessionTracker';
 import { IntelligenceEngine } from './IntelligenceEngine';
 import { MeetingPersistence } from './MeetingPersistence';
+import { ScreenContext } from './services/screen/ScreenContextService';
 
 // Re-export types for backward compatibility
 export type { TranscriptSegment, SuggestionTrigger, ContextItem } from './SessionTracker';
 export type { IntelligenceMode, IntelligenceModeEvents } from './IntelligenceEngine';
+export type { DynamicAction } from './services/dynamic-actions/DynamicAction';
 
 export const GEMINI_FLASH_MODEL = "gemini-3.1-flash-lite-preview";
 
@@ -56,6 +58,8 @@ export class IntelligenceManager extends EventEmitter {
             'mode_changed', 'error',
             // Sprint 7: dedicated channel for negotiation coaching payloads.
             'negotiation_coaching',
+            // Phase 3: Cluely-style dynamic action card emissions.
+            'dynamic_action_emitted',
         ];
 
         for (const event of events) {
@@ -142,7 +146,7 @@ export class IntelligenceManager extends EventEmitter {
         return this.engine.runAssistMode();
     }
 
-    async runWhatShouldISay(question?: string, confidence?: number, imagePaths?: string[], options?: { skipCooldown?: boolean }): Promise<string | null> {
+    async runWhatShouldISay(question?: string, confidence?: number, imagePaths?: string[], options?: { skipCooldown?: boolean; screenContext?: ScreenContext; promptInstruction?: string }): Promise<string | null> {
         return this.engine.runWhatShouldISay(question, confidence, imagePaths, options);
     }
 
@@ -209,6 +213,48 @@ export class IntelligenceManager extends EventEmitter {
 
     async recoverUnprocessedMeetings(): Promise<void> {
         return this.persistence.recoverUnprocessedMeetings();
+    }
+
+    // ============================================
+    // Mode Context Management
+    // ============================================
+
+    /**
+     * Clear mode-specific transient context without resetting the full session.
+     * Called when user switches modes to prevent old mode's context (Interviewer
+     * Q's, JD context, assistant response history) from bleeding into the new mode.
+     */
+    clearSessionContext(): void {
+        this.session.clearSessionContext();
+    }
+
+    // ============================================
+    // Phase 3 — Dynamic Actions facade
+    // ============================================
+
+    /**
+     * Bind dynamic-action engine to the active meeting/mode.
+     * Caller is the IPC handler that starts a meeting (with sessionId) or
+     * the modes:set-active handler that switches the active mode mid-meeting.
+     */
+    setDynamicActionContext(params: { sessionId: string; modeId: string; modeTemplateType: string }): void {
+        this.engine.setDynamicActionContext(params);
+    }
+
+    clearDynamicActionContext(): void {
+        this.engine.clearDynamicActionContext();
+    }
+
+    acceptDynamicAction(actionId: string): import('./services/dynamic-actions/DynamicAction').DynamicAction | null {
+        return this.engine.acceptDynamicAction(actionId);
+    }
+
+    dismissDynamicAction(actionId: string): void {
+        this.engine.dismissDynamicAction(actionId);
+    }
+
+    getActiveDynamicActions(): import('./services/dynamic-actions/DynamicAction').DynamicAction[] {
+        return this.engine.getActiveDynamicActions();
     }
 
     // ============================================

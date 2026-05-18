@@ -47,7 +47,7 @@ export function compressConversation<T extends { text: string; speaker?: string;
     .map(t => t.text.slice(0, 120));
 
   // Extract facts: statements of fact, numbers, specific claims
-  const factPatterns = /(?:it('s| is) a |the (?:number|total|average|cost|price|size|scale) of|we have|there are|i('ve| have) been|we built|we launched|was (?:built|launched|deployed)/i;
+  const factPatterns = /(?:it('s| is) a |the (?:number|total|average|cost|price|size|scale) of|we have|there are|i('ve| have) been|we built|we launched|was (?:built|launched|deployed))/i;
   const facts = toCompress
     .filter(t => factPatterns.test(t.text))
     .map(t => t.text.slice(0, 120));
@@ -118,6 +118,15 @@ function summarizeNarrative(turnTexts: string[]): string {
   return `${tone.charAt(0).toUpperCase() + tone.slice(1)} discussion covering ${topicCount} topics. Started with: ${first.slice(0, 100)}… Ended with: ${last.slice(0, 100)}…`;
 }
 
+function escapeXmlText(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
 function extractActionItems<T extends { text: string; speaker?: string }>(turns: T[]): string[] {
   const patterns = [
     /\b(\w+(?:\s+\w+){0,3})\s+(?:to|will|should|must)\s+(.+?)(?:\s+(?:by|before|after)\s+(.+?))?[.!?]?$/im,
@@ -140,35 +149,35 @@ function extractActionItems<T extends { text: string; speaker?: string }>(turns:
  */
 export function formatSummaryAsBlock(summary: TurnSummary): string {
   const lines = ['<conversation_history_summary>'];
-  lines.push(`  <turns>${summary.turnsCovered}</turns>`);
-  lines.push(`  <tone>${summary.sentimentTone}</tone>`);
-  lines.push(`  <topics>${summary.topicsDiscussed.join(', ')}</topics>`);
+  lines.push(`  <turns>${escapeXmlText(summary.turnsCovered)}</turns>`);
+  lines.push(`  <tone>${escapeXmlText(summary.sentimentTone)}</tone>`);
+  lines.push(`  <topics>${escapeXmlText(summary.topicsDiscussed.join(', '))}</topics>`);
 
   if (summary.keyDecisions.length > 0) {
     lines.push('  <decisions>');
-    for (const d of summary.keyDecisions) lines.push(`    <decision>${d}</decision>`);
+    for (const d of summary.keyDecisions) lines.push(`    <decision>${escapeXmlText(d)}</decision>`);
     lines.push('  </decisions>');
   }
 
   if (summary.importantFacts.length > 0) {
     lines.push('  <key_facts>');
-    for (const f of summary.importantFacts) lines.push(`    <fact>${f}</fact>`);
+    for (const f of summary.importantFacts) lines.push(`    <fact>${escapeXmlText(f)}</fact>`);
     lines.push('  </key_facts>');
   }
 
   if (summary.actionItems.length > 0) {
     lines.push('  <action_items>');
-    for (const a of summary.actionItems) lines.push(`    <item>${a}</item>`);
+    for (const a of summary.actionItems) lines.push(`    <item>${escapeXmlText(a)}</item>`);
     lines.push('  </action_items>');
   }
 
   if (summary.questionsAsked.length > 0) {
     lines.push('  <open_questions>');
-    for (const q of summary.questionsAsked) lines.push(`    <question>${q}</question>`);
+    for (const q of summary.questionsAsked) lines.push(`    <question>${escapeXmlText(q)}</question>`);
     lines.push('  </open_questions>');
   }
 
-  lines.push(`  <narrative>${summary.summaryText}</narrative>`);
+  lines.push(`  <narrative>${escapeXmlText(summary.summaryText)}</narrative>`);
   lines.push('</conversation_history_summary>');
   return lines.join('\n');
 }

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<api_contract service="natively-api" version="v1">
+  <endpoint method="POST" path="/v1/chat">
+    <auth header="x-natively-key" required="true"/>
+    <request content_type="application/json">
+      <field name="messages" type="array of {role, content}" required="true"/>
+      <field name="stream" type="boolean" default="true"/>
+      <field name="metadata" type="object" required="false"/>
+    </request>
+    <response>
+      The response returns an SSE stream tagged x-natively-stream when stream is true. Each event has a data: prefix and ends with data: [DONE]. When stream is false the response is application/json with a single content field.
+    </response>
+    <errors>
+      <error code="401">Invalid or missing x-natively-key</error>
+      <error code="429">Rate limit exceeded; back off using Retry-After header</error>
+      <error code="500">Upstream provider failure; retryable</error>
+    </errors>
+  </endpoint>
+</api_contract>

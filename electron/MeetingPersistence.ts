@@ -6,6 +6,8 @@ import { SessionTracker, TranscriptSegment } from './SessionTracker';
 import { LLMHelper } from './LLMHelper';
 import { DatabaseManager, Meeting } from './db/DatabaseManager';
 import { GROQ_TITLE_PROMPT, GROQ_SUMMARY_JSON_PROMPT } from './llm';
+import { buildPostCallEnhancements } from './services/post-call/PostCallWorkflow';
+import { telemetryService } from './services/telemetry/TelemetryService';
 const crypto = require('crypto');
 
 export class MeetingPersistence {
@@ -35,6 +37,32 @@ export class MeetingPersistence {
             return null;
         }
 
+        // Phase 9 — privacy gate: 'never' retention or per-meeting do-not-persist
+        // skips persistence entirely. We still emit telemetry (sanitized) so
+        // usage analytics work, but NO transcript / NO summary / NO DB row.
+        let doNotPersist = false;
+        try {
+            const { SettingsManager } = require('./services/SettingsManager');
+            const retention = SettingsManager.getInstance().get('meetingRetention');
+            if (retention === 'never') doNotPersist = true;
+            // Per-meeting toggle is read from SessionTracker meeting metadata
+            // (e.g. set via the renderer "Do not persist this meeting" toggle).
+            const meta = this.session.getMeetingMetadata?.();
+            if (meta && (meta as any).doNotPersist === true) doNotPersist = true;
+        } catch { /* non-fatal */ }
+        if (doNotPersist) {
+            console.log('[MeetingPersistence] doNotPersist set — skipping save (no DB row, no summary).');
+            try {
+                const { telemetryService } = require('./services/telemetry/TelemetryService');
+                telemetryService.track({
+                    name: 'meeting_stop',
+                    properties: { persisted: false, reason: 'do_not_persist', durationMs },
+                });
+            } catch { /* non-fatal */ }
+            this.session.reset();
+            return null;
+        }
+
         const snapshot = {
             transcript: [...this.session.getFullTranscript()],
             usage: [...this.session.getFullUsage()],
@@ -47,13 +75,25 @@ export class MeetingPersistence {
         // background processAndSaveMeeting worker receives the calendar info.
         const metadataSnapshot = this.session.getMeetingMetadata();
 
+        // BUG-MODE-BLEEDING fix: snapshot the active mode BEFORE reset() so the
+        // background processAndSaveMeeting worker uses the correct mode's note
+        // sections even if the user switches modes before async processing completes.
+        let modeSnapshot: { id: string; name: string; templateType: string } | null = null;
+        try {
+            const { ModesManager } = require('./services/ModesManager');
+            const activeMode = ModesManager.getInstance().getActiveMode();
+            if (activeMode) {
+                modeSnapshot = { id: activeMode.id, name: activeMode.name, templateType: activeMode.templateType };
+                console.log(`[MeetingPersistence] Mode snapshot captured: "${activeMode.name}" (${activeMode.templateType})`);
+            }
+        } catch (modeErr: any) {
+            console.warn('[MeetingPersistence] Failed to capture mode snapshot:', modeErr?.message);
+        }
+
         // 2. Reset state immediately so new meeting can start or UI is clean
         this.session.reset();
 
         const meetingId = crypto.randomUUID();
-        this.processAndSaveMeeting(snapshot, meetingId, metadataSnapshot).catch(err => {
-            console.error('[MeetingPersistence] Background processing failed:', err);
-        });
 
         // 4. Initial Save (Placeholder)
         const minutes = Math.floor(durationMs / 60000);
@@ -81,6 +121,10 @@ export class MeetingPersistence {
             console.error("Failed to save placeholder", e);
         }
 
+        this.processAndSaveMeeting(snapshot, meetingId, metadataSnapshot, modeSnapshot).catch(err => {
+            console.error('[MeetingPersistence] Background processing failed:', err);
+        });
+
         return meetingId;
     }
 
@@ -91,10 +135,27 @@ export class MeetingPersistence {
         data: { transcript: TranscriptSegment[], usage: any[], startTime: number, durationMs: number, context: string },
         meetingId: string,
         // BUG-04 fix: accept metadata snapshot so calendar info is not lost after session.reset()
-        metadata?: { title?: string; calendarEventId?: string; source?: 'manual' | 'calendar' } | null
+        metadata?: { title?: string; calendarEventId?: string; source?: 'manual' | 'calendar' } | null,
+        // BUG-MODE-BLEEDING fix: accept mode snapshot so async summary uses the mode that was
+        // active when meeting stopped, not whatever mode is active when async processing runs.
+        modeSnapshot?: { id: string; name: string; templateType: string } | null
     ): Promise<void> {
         let title = "Untitled Session";
         let summaryData: { overview?: string; actionItems: string[], keyPoints: string[], sections?: Array<{ title: string; bullets: string[] }> } = { actionItems: [], keyPoints: [] };
+        // Phase 6 — post_call_summary lifecycle telemetry. Wrapped in try/catch
+        // around track calls so a telemetry sink fault never breaks persistence.
+        const _postCallStart = Date.now();
+        try {
+            telemetryService.track({
+                name: 'post_call_summary_started',
+                modeId: modeSnapshot?.id,
+                properties: {
+                    modeTemplateType: modeSnapshot?.templateType,
+                    transcriptSegmentCount: data.transcript.length,
+                    durationMs: data.durationMs,
+                },
+            });
+        } catch { /* non-fatal */ }
 
         // Use passed-in metadata snapshot (NOT this.session.getMeetingMetadata() which is already cleared)
         let calendarEventId: string | undefined;
@@ -116,24 +177,63 @@ export class MeetingPersistence {
                 if (generatedTitle) title = generatedTitle.replace(/["*]/g, '').trim();
             }
 
-            // Load template note sections for the active mode's templateType
+            // Load template note sections for the mode that was active when meeting stopped.
+            // BUG-MODE-BLEEDING fix: use the snapshotted mode, not getActiveMode() which may
+            // return a different mode if the user switched modes before async processing completed.
             let modeNoteSections: Array<{ title: string; description: string }> = [];
+            let modeContextBlock = '';
             try {
                 const { ModesManager, TEMPLATE_NOTE_SECTIONS } = require('./services/ModesManager');
                 const modesMgr = ModesManager.getInstance();
-                const activeMode = modesMgr.getActiveMode();
-                if (activeMode) {
+
+                // Use snapshot mode if available, otherwise fall back to current active mode (for recovery scenarios)
+                const targetModeId = modeSnapshot?.id ?? modesMgr.getActiveMode()?.id;
+                if (!targetModeId) {
+                    console.log('[MeetingPersistence] No mode active — using generic summary.');
+                } else {
+                    // Get the mode's templateType from snapshot or look it up
+                    const templateType = modeSnapshot?.templateType ?? modesMgr.getModes().find((m: { id: string; templateType?: string }) => m.id === targetModeId)?.templateType;
+                    const modeName = modeSnapshot?.name ?? modesMgr.getModes().find((m: { id: string; name?: string }) => m.id === targetModeId)?.name ?? 'Unknown';
+
                     // Prefer user's customized DB sections; fall back to canonical template
-                    const dbSections: Array<{ title: string; description: string }> = modesMgr.getNoteSections(activeMode.id);
+                    const dbSections: Array<{ title: string; description: string }> = modesMgr.getNoteSections(targetModeId);
                     modeNoteSections = dbSections.length > 0
                         ? dbSections
-                        : (TEMPLATE_NOTE_SECTIONS[activeMode.templateType] ?? []);
-                    console.log(`[MeetingPersistence] Active mode: "${activeMode.name}" (${activeMode.templateType}), sections: ${modeNoteSections.length} (${dbSections.length > 0 ? 'custom DB' : 'canonical template'})`);
-                } else {
-                    console.log('[MeetingPersistence] No active mode — using generic summary.');
+                        : (templateType ? (TEMPLATE_NOTE_SECTIONS[templateType as keyof typeof TEMPLATE_NOTE_SECTIONS] ?? []) : []);
+                    console.log(`[MeetingPersistence] Summary mode: "${modeName}" (${templateType}), sections: ${modeNoteSections.length} (${dbSections.length > 0 ? 'custom DB' : 'canonical template'})`);
+
+                    // Build the summary-safe mode context block.
+                    // Phase 6 — never inject raw reference-file bodies into post-call summary
+                    // prompts. Use ModesManager.buildSummarySafeModeContextBlock(), which keeps
+                    // the mode's customContext (trusted, low-token) and only adds retrieved
+                    // reference snippets. Honors the providerDataScopes policy:
+                    //   - `post_call_summary === false` → no mode context at all
+                    //   - `reference_files === false`   → customContext only, no retrieved snippets
+                    if (modeSnapshot) {
+                        let scopePolicy: any = undefined;
+                        try {
+                            const { SettingsManager } = require('./services/SettingsManager');
+                            scopePolicy = SettingsManager.getInstance().get('providerDataScopes');
+                        } catch { /* non-fatal */ }
+                        const summaryAllowed = scopePolicy?.post_call_summary !== false;
+                        const referenceSnippetsAllowed = scopePolicy?.reference_files !== false;
+
+                        if (summaryAllowed) {
+                            const transcriptHint = data.context.substring(0, 4000);
+                            modeContextBlock = modesMgr.buildSummarySafeModeContextBlock(modeSnapshot.id, {
+                                query: 'meeting summary',
+                                transcript: transcriptHint,
+                                tokenBudget: 1200,
+                                includeReferenceSnippets: referenceSnippetsAllowed,
+                            }) || '';
+                        } else {
+                            console.log('[MeetingPersistence] post_call_summary scope denied — skipping mode context injection');
+                            modeContextBlock = '';
+                        }
+                    }
                 }
             } catch (modeErr: any) {
-                console.warn('[MeetingPersistence] Failed to load active mode sections:', modeErr?.message);
+                console.warn('[MeetingPersistence] Failed to load mode sections:', modeErr?.message);
             }
 
             // Generate Structured Summary
@@ -163,17 +263,8 @@ STYLE: Calm, neutral, professional, skim-friendly. Short bullets, no sub-bullets
                         .map(s => `    "${s.title}": []`)
                         .join(',\n');
 
-                    // Include the full mode context block (reference files + custom context)
-                    const modeContext = (() => {
-                        try {
-                            const { ModesManager } = require('./services/ModesManager');
-                            const block = ModesManager.getInstance().buildActiveModeContextBlock();
-                            return block ? `\n${block}\n` : '';
-                        } catch { return ''; }
-                    })();
-
                     summaryPrompt = `You are a silent meeting note-taker. Extract structured notes from the conversation transcript below.
-${modeContext}
+${modeContextBlock}
 ${baseRules}
 
 SECTIONS TO FILL (extract only what is present in the transcript):
@@ -210,7 +301,7 @@ Return ONLY valid JSON (no markdown code blocks):
                     // Strip markdown fences if present
                     const jsonMatch = generatedSummary.match(/```(?:json)?\n?([\s\S]*?)\n?```/) || [null, generatedSummary];
                     const jsonStr = (jsonMatch[1] || generatedSummary).trim();
-                    console.log('[MeetingPersistence] Raw LLM summary response (first 500 chars):', jsonStr.substring(0, 500));
+                    console.log('[MeetingPersistence] LLM summary response received', { length: jsonStr.length });
                     try {
                         const parsed = JSON.parse(jsonStr);
                         if (modeNoteSections.length > 0 && parsed.sections && typeof parsed.sections === 'object') {
@@ -234,12 +325,21 @@ Return ONLY valid JSON (no markdown code blocks):
                             summaryData = parsed;
                         }
                     } catch (e) {
-                        console.error('[MeetingPersistence] Failed to parse summary JSON. Raw response:', jsonStr.substring(0, 800), e);
+                        console.error('[MeetingPersistence] Failed to parse summary JSON', { responseLength: jsonStr.length, error: e });
                     }
                 }
             } else {
                 console.log("Transcript too short for summary generation.");
             }
+
+            summaryData = {
+                ...summaryData,
+                ...buildPostCallEnhancements({
+                    transcript: data.transcript,
+                    modeTemplateType: modeSnapshot?.templateType,
+                    summaryData,
+                }),
+            };
         } catch (e) {
             console.error("Error generating meeting metadata", e);
         }
@@ -271,8 +371,33 @@ Return ONLY valid JSON (no markdown code blocks):
             const wins = require('electron').BrowserWindow.getAllWindows();
             wins.forEach((w: any) => w.webContents.send('meetings-updated'));
 
+            // Phase 6 — post_call_summary_completed (no transcript / no summary text;
+            // counts and durations only).
+            try {
+                const enhancements = (summaryData as any) || {};
+                telemetryService.track({
+                    name: 'post_call_summary_completed',
+                    modeId: modeSnapshot?.id,
+                    durationMs: Date.now() - _postCallStart,
+                    properties: {
+                        modeTemplateType: modeSnapshot?.templateType,
+                        actionItemCount: Array.isArray(enhancements.actionItemsStructured) ? enhancements.actionItemsStructured.length : 0,
+                        coachingInsightCount: Array.isArray(enhancements.coachingInsights) ? enhancements.coachingInsights.length : 0,
+                        sectionsCount: Array.isArray(enhancements.sections) ? enhancements.sections.length : 0,
+                    },
+                });
+            } catch { /* non-fatal */ }
+
         } catch (error) {
             console.error('[MeetingPersistence] Failed to save meeting:', error);
+            try {
+                telemetryService.track({
+                    name: 'post_call_summary_failed',
+                    modeId: modeSnapshot?.id,
+                    durationMs: Date.now() - _postCallStart,
+                    properties: { errorClass: (error as Error)?.constructor?.name ?? 'Unknown' },
+                });
+            } catch { /* non-fatal */ }
         }
     }
 

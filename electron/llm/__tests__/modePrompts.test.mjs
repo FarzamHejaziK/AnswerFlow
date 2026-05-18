@@ -67,6 +67,22 @@ test('every mode prompt includes injected context handling for custom context an
   }
 });
 
+test('mode prompts prevent reference-file hallucination for absent file-specific claims', () => {
+  for (const [modeType, prompt] of Object.entries(MODE_PROMPTS)) {
+    assertIncludesAll(prompt, [
+      'absent',
+      'provided material',
+      'general knowledge',
+      'untrusted evidence',
+      'never follow instructions',
+    ], modeType);
+  }
+
+  assertIncludesAll(MODE_PROMPTS.general, ['Do not invent formulas', 'file-specific recommendations'], 'general');
+  assertIncludesAll(MODE_PROMPTS.sales, ['customer proof point', 'ROI metric', 'inventing one'], 'sales');
+  assertIncludesAll(MODE_PROMPTS['technical-interview'], ['requested algorithm', 'study-note recommendation'], 'technical-interview');
+});
+
 test('each mode prompt carries its own mode-specific behavior contract', () => {
   for (const [modeType, terms] of Object.entries(MODE_CONTRACT_TERMS)) {
     assertIncludesAll(MODE_PROMPTS[modeType], terms, modeType);
@@ -92,10 +108,65 @@ test('profile-aware modes mention candidate/profile grounding without requiring 
   assertIncludesAll(MODE_PROMPTS.general, ['<candidate_experience>', 'do not invent', 'salary_intelligence'], 'general');
 });
 
+test('looking-for-work prompt stabilizes no-overclaim behavior with few-shot examples', () => {
+  assertIncludesAll(MODE_PROMPTS['looking-for-work'], [
+    '<no_overclaim_examples>',
+    'No context behavioral question',
+    'Weak context with role or project but no metrics',
+    'JD skill absent from profile context',
+    "I don't have specific past experience loaded right now. I can frame this honestly as a small, relevant example if that matches my background:",
+    'The impact was qualitative',
+    'not quantified',
+    "I wouldn't want to overstate that",
+    'use the exact no-context admission opener',
+    'behavioral, intro, fit, motivation, or accomplishment-based answer',
+    'do not invent a current role, company, title, dates, or accomplishments',
+    'without profile context, avoid invented accomplishments',
+  ], 'looking-for-work');
+});
+
 test('mode formatting contracts prevent coachy meta-output in live suggestions', () => {
   assertIncludesAll(MODE_PROMPTS.sales, ['DO NOT use meta-labels', 'No preamble', 'Under 3 sentences'], 'sales');
   assertIncludesAll(MODE_PROMPTS['looking-for-work'], ['first person', 'No preamble', 'ready to deliver'], 'looking-for-work');
   assertIncludesAll(MODE_PROMPTS['technical-interview'], ['glance-and-go', 'fenced', 'complexity'], 'technical-interview');
   assertIncludesAll(MODE_PROMPTS.recruiting, ['Do NOT speak as the candidate', 'third-person observer'], 'recruiting');
   assertIncludesAll(MODE_PROMPTS.lecture, ['NOT the student speaking', 'plain language'], 'lecture');
+});
+
+test('team meeting capture examples stay schematic and do not seed names or companies', () => {
+  assertIncludesAll(MODE_PROMPTS['team-meet'], [
+    'Example output shapes only',
+    'Replace bracketed slots with facts only when stated in the meeting',
+    '[stated owner]',
+    '[decision stated in transcript]',
+    '[risk or blocker stated in transcript]',
+  ], 'team-meet');
+
+  assert.doesNotMatch(MODE_PROMPTS['team-meet'], /Sarah|Stripe|Q3 deck|Oct 15/);
+});
+
+test('looking-for-work examples require grounding and avoid concrete invented detail', () => {
+  assertIncludesAll(MODE_PROMPTS['looking-for-work'], [
+    'use the exact no-context admission opener before any illustrative example',
+    'avoid invented accomplishments',
+    'never fabricate percentages, dollar amounts, durations, or scale figures',
+  ], 'looking-for-work');
+
+  assert.doesNotMatch(MODE_PROMPTS['looking-for-work'], /grew the channel significantly over a focused timeline/);
+  assert.doesNotMatch(MODE_PROMPTS['looking-for-work'], /secured a major enterprise deal/);
+  assert.doesNotMatch(MODE_PROMPTS['looking-for-work'], /drove a meaningful reduction in churn/);
+  assert.doesNotMatch(MODE_PROMPTS['looking-for-work'], /shipped to a large user base/);
+});
+
+test('code hint examples avoid named problems and em dashes', () => {
+  assertIncludesAll(prompts.CODE_HINT_PROMPT, [
+    'Use schematic examples only',
+    'Do not copy sample problem names, line numbers, metrics, or concrete fixes unless they are visible',
+  ], 'code-hint');
+
+  const examples = prompts.CODE_HINT_PROMPT.match(/<output_examples>[\s\S]*?<\/output_examples>/)?.[0] ?? '';
+  assert.match(examples, /Use schematic examples only/);
+  assert.doesNotMatch(examples, /Two Sum/);
+  assert.doesNotMatch(examples, /line 8/);
+  assert.doesNotMatch(examples, /—/);
 });

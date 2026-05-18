@@ -40,6 +40,25 @@ interface Meeting {
         actionItemsTitle?: string;
         keyPointsTitle?: string;
         sections?: Array<{ title: string; bullets: string[] }>;
+        // Phase 7 — PostCallWorkflow enhancements (schema v2). Backend writes
+        // these via buildPostCallEnhancements(); UI renders them when present.
+        schemaVersion?: 2;
+        actionItemsStructured?: Array<{
+            id: string;
+            text: string;
+            owner?: string;
+            deadline?: string;
+            sourceTimestamp?: number;
+        }>;
+        followUpDraft?: string;
+        coachingInsights?: Array<{
+            id: string;
+            type: string;
+            title: string;
+            detail: string;
+            severity: 'info' | 'opportunity' | 'warning';
+            evidence?: string;
+        }>;
     };
     transcript?: Array<{
         speaker: string;
@@ -363,6 +382,77 @@ ${meeting.detailedSummary.keyPoints?.map(item => `- ${item}`).join('\n') || 'Non
                                                 </li>
                                             ))}
                                         </ul>
+                                    </section>
+                                )}
+
+                                {/* Phase 7 — Structured action items (with owner / deadline).
+                                    Rendered ONLY when PostCallWorkflow has produced them
+                                    (schemaVersion === 2). Falls through silently otherwise so
+                                    pre-Phase-7 meetings still look the same. */}
+                                {meeting.detailedSummary?.actionItemsStructured && meeting.detailedSummary.actionItemsStructured.length > 0 && (
+                                    <section className="mb-8">
+                                        <h2 className="text-lg font-semibold text-text-primary mb-4">Next Steps</h2>
+                                        <ul className="space-y-2">
+                                            {meeting.detailedSummary.actionItemsStructured.map(item => (
+                                                <li key={item.id} className="flex items-start gap-3 group">
+                                                    <div className="mt-2 w-1.5 h-1.5 rounded-full bg-emerald-500/70 group-hover:bg-emerald-400 shrink-0" />
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm text-text-secondary leading-relaxed">{item.text}</p>
+                                                        {(item.owner || item.deadline) && (
+                                                            <p className="text-[11px] text-text-tertiary mt-0.5">
+                                                                {item.owner && <span className="font-medium">{item.owner}</span>}
+                                                                {item.owner && item.deadline && <span> · </span>}
+                                                                {item.deadline && <span>by {item.deadline}</span>}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </section>
+                                )}
+
+                                {/* Phase 7 — Coaching insights (mode-specific opportunities). */}
+                                {meeting.detailedSummary?.coachingInsights && meeting.detailedSummary.coachingInsights.length > 0 && (
+                                    <section className="mb-8">
+                                        <h2 className="text-lg font-semibold text-text-primary mb-4">Coaching</h2>
+                                        <ul className="space-y-3">
+                                            {meeting.detailedSummary.coachingInsights.map(insight => {
+                                                const tone = insight.severity === 'warning'
+                                                    ? 'border-amber-400/40 bg-amber-500/5'
+                                                    : insight.severity === 'opportunity'
+                                                        ? 'border-blue-400/40 bg-blue-500/5'
+                                                        : 'border-text-tertiary/30 bg-transparent';
+                                                return (
+                                                    <li key={insight.id} className={`p-3 rounded-[10px] border ${tone}`}>
+                                                        <p className="text-sm font-semibold text-text-primary">{insight.title}</p>
+                                                        <p className="text-[12.5px] text-text-secondary mt-1 leading-relaxed">{insight.detail}</p>
+                                                        {insight.evidence && (
+                                                            <p className="text-[11px] text-text-tertiary mt-1.5 italic">"{insight.evidence}"</p>
+                                                        )}
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    </section>
+                                )}
+
+                                {/* Phase 7 — Follow-up email draft. Selectable + copy-friendly. */}
+                                {meeting.detailedSummary?.followUpDraft && meeting.detailedSummary.followUpDraft.trim() && (
+                                    <section className="mb-8">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h2 className="text-lg font-semibold text-text-primary">Follow-up Draft</h2>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    navigator.clipboard?.writeText(meeting.detailedSummary?.followUpDraft || '').catch(() => { /* swallow */ });
+                                                }}
+                                                className="text-[11px] px-2 py-1 rounded-md bg-white/5 hover:bg-white/10 text-text-secondary border border-white/10 transition-colors"
+                                            >
+                                                Copy
+                                            </button>
+                                        </div>
+                                        <pre className="text-[12.5px] text-text-secondary leading-relaxed whitespace-pre-wrap font-sans select-text cursor-text p-3 rounded-[10px] border border-white/10 bg-white/[0.02]">{meeting.detailedSummary.followUpDraft}</pre>
                                     </section>
                                 )}
 

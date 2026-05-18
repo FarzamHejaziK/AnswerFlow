@@ -27,7 +27,9 @@ import {
     Code,
     Copy,
     Check,
-    PointerOff
+    PointerOff,
+    ShieldCheck,
+    Monitor
 } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -56,6 +58,8 @@ import { getOverlayAppearance, OVERLAY_OPACITY_DEFAULT, getGlassOverlayAppearanc
 import type { MeetingInterfaceTheme } from '../lib/meetingInterfaceTheme';
 import GlassEffectLayer from './ui/GlassEffectLayer';
 import { getCodexCliModelDisplayName } from '../utils/modelUtils';
+import { DynamicActionBar } from './dynamic-actions/DynamicActionBar';
+import type { DynamicActionPayload } from '../types/electron';
 
 interface Message {
     id: string;
@@ -171,6 +175,40 @@ interface MessageRowProps {
     onCopy: (text: string) => void;
     renderMessageText: (msg: Message) => React.ReactNode;
 }
+const formatProviderLabel = (provider?: string | null): string => {
+    if (!provider) return 'not set';
+    return provider
+        .split(/[-_\s]+/)
+        .filter(Boolean)
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
+};
+
+const getSttSummary = (
+    userStatus: 'connected' | 'reconnecting' | 'failed',
+    interviewerStatus: 'connected' | 'reconnecting' | 'failed',
+    userProvider: string,
+    interviewerProvider: string,
+    notConfigured: boolean
+): { label: string; tone: 'ok' | 'warn' | 'error'; detail: string } => {
+    if (notConfigured) {
+        return { label: 'STT not configured', tone: 'error', detail: 'Open Audio settings to select a provider' };
+    }
+    if (userStatus === 'failed' || interviewerStatus === 'failed') {
+        return { label: 'STT needs attention', tone: 'error', detail: `${formatProviderLabel(userProvider)} mic · ${formatProviderLabel(interviewerProvider)} system` };
+    }
+    if (userStatus === 'reconnecting' || interviewerStatus === 'reconnecting') {
+        return { label: 'STT reconnecting', tone: 'warn', detail: `${formatProviderLabel(userProvider)} mic · ${formatProviderLabel(interviewerProvider)} system` };
+    }
+    return { label: 'STT healthy', tone: 'ok', detail: `${formatProviderLabel(userProvider)} mic · ${formatProviderLabel(interviewerProvider)} system` };
+};
+
+const getStatusToneClass = (tone: 'ok' | 'warn' | 'error'): string => {
+    if (tone === 'error') return 'text-rose-600 dark:text-rose-300 border-rose-500/20 bg-rose-500/10';
+    if (tone === 'warn') return 'text-amber-600 dark:text-amber-300 border-amber-500/20 bg-amber-500/10';
+    return 'text-emerald-600 dark:text-emerald-300 border-emerald-500/20 bg-emerald-500/10';
+};
+
 const MessageRow = React.memo(function MessageRow({
     msg, isLightTheme, appearance, onCopy, renderMessageText,
 }: MessageRowProps) {
@@ -374,6 +412,14 @@ const NativelyInterface: React.FC<NativelyInterfaceProps> = ({
 
     // Active mode name (shown as a badge near the Modes button)
     const [activeModeLabel, setActiveModeLabel] = useState<string | null>(null);
+    const [llmProviderLabel, setLlmProviderLabel] = useState<string>('unknown');
+    const [llmPrivacyLabel, setLlmPrivacyLabel] = useState<string>('Checking privacy route');
+    const [screenContextStatus, setScreenContextStatus] = useState<'not_available' | 'available' | 'failed'>('not_available');
+    const [latestUsedImageInput, setLatestUsedImageInput] = useState(false);
+    // Vision-first provenance — populated from the generateWhatToSay response.
+    const [latestVisionProviderUsed, setLatestVisionProviderUsed] = useState<string | undefined>(undefined);
+    const [latestVisionModelUsed, setLatestVisionModelUsed] = useState<string | undefined>(undefined);
+    const [latestVisionFailureReason, setLatestVisionFailureReason] = useState<string | undefined>(undefined);
 
     useEffect(() => {
         // Load initial active mode name
@@ -385,6 +431,26 @@ const NativelyInterface: React.FC<NativelyInterfaceProps> = ({
             setActiveModeLabel(data.name);
         });
         return () => unsub?.();
+    }, []);
+
+    useEffect(() => {
+        let mounted = true;
+        const loadLlmRoute = async () => {
+            const config = await window.electronAPI?.getCurrentLlmConfig?.().catch(() => null);
+            if (!mounted || !config) return;
+            setLlmProviderLabel(formatProviderLabel(config.provider));
+            setLlmPrivacyLabel(config.provider === 'ollama' || config.provider === 'codex-cli'
+                ? 'Local/private route'
+                : config.provider === 'custom'
+                    ? 'Custom endpoint route'
+                    : 'Cloud LLM route');
+        };
+        loadLlmRoute();
+        const unsub = window.electronAPI?.onModelChanged?.(() => { loadLlmRoute(); });
+        return () => {
+            mounted = false;
+            unsub?.();
+        };
     }, []);
 
     // Model Selection State
@@ -1435,7 +1501,8 @@ const NativelyInterface: React.FC<NativelyInterfaceProps> = ({
         // Optional: Trigger a small toast or state change for visual feedback
     }, []);
 
-    const handleWhatToSay = async () => {
+    const handleWhatToSay = async (promptInstruction?: string | React.MouseEvent) => {
+        const dynamicPromptInstruction = typeof promptInstruction === 'string' ? promptInstruction : undefined;
         setIsExpanded(true);
         setIsProcessing(true);
         analytics.trackCommandExecuted('what_to_say');
@@ -1467,7 +1534,16 @@ const NativelyInterface: React.FC<NativelyInterfaceProps> = ({
 
         try {
             // Pass imagePath if attached
-            await window.electronAPI.generateWhatToSay(undefined, currentAttachments.length > 0 ? currentAttachments.map(s => s.path) : undefined);
+            const result = await window.electronAPI.generateWhatToSay(
+                undefined,
+                currentAttachments.length > 0 ? currentAttachments.map(s => s.path) : undefined,
+                dynamicPromptInstruction ? { promptInstruction: dynamicPromptInstruction } : undefined
+            );
+            setScreenContextStatus(result.screenContextStatus || 'not_available');
+            setLatestUsedImageInput(Boolean(result.usedImageInput));
+            setLatestVisionProviderUsed(result.visionProviderUsed);
+            setLatestVisionModelUsed(result.visionModelUsed);
+            setLatestVisionFailureReason(result.visionFailureReason);
         } catch (err) {
             setMessages(prev => [...prev, {
                 id: Date.now().toString(),
@@ -2949,6 +3025,8 @@ Provide only the answer, nothing else.`;
     const interviewerSttIndicatorStatus = sttInterviewerStatus;
     // Strip consecutive error count from display — show only in expanded diagnostics
     const interviewerSttIndicatorError = sttInterviewerError?.replace(/\s*\(\d+ consecutive errors\):?/gi, '');
+    const sttSummary = getSttSummary(sttUserStatus, sttInterviewerStatus, sttUserProvider, sttInterviewerProvider, sttNotConfigured);
+    const statusPillBaseClass = `flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-medium shadow-sm backdrop-blur-xl ${isLightTheme ? 'bg-white/55 border-black/10' : 'bg-black/20 border-white/10'}`;
 
     const copyDiagnostics = async () => {
         const version = import.meta.env.VITE_APP_VERSION || 'unknown';
@@ -3020,6 +3098,61 @@ Provide only the answer, nothing else.`;
                         >
                             {isGlassTheme && <GlassEffectLayer parentRef={shellRef} cornerRadius={24} />}
 
+                            <div className="relative no-drag flex flex-wrap items-center justify-center gap-1.5 px-4 pt-3 pb-1">
+                                <div className={`${statusPillBaseClass} overlay-text-primary`} title={activeModeLabel ? `Active mode: ${activeModeLabel}` : 'No active mode selected'}>
+                                    <LayoutGrid className="h-3 w-3 opacity-70" />
+                                    <span>{activeModeLabel ? `Mode: ${activeModeLabel}` : 'General mode'}</span>
+                                </div>
+                                <div className={`${statusPillBaseClass} ${getStatusToneClass(sttSummary.tone)}`} title={sttSummary.detail}>
+                                    <Mic className="h-3 w-3 opacity-70" />
+                                    <span>{sttSummary.label}</span>
+                                </div>
+                                {(() => {
+                                    // Vision-first status chip. Order of preference for what to show:
+                                    //   1. attached screenshots queued for this turn
+                                    //   2. failure from the last vision call (reason-aware)
+                                    //   3. success from the last vision call (provider/model surfaced)
+                                    //   4. legacy ocr-available fallback (only fires if a legacy mode is re-enabled)
+                                    //   5. nothing-yet placeholder
+                                    const visionFailed = screenContextStatus === 'failed' || !!latestVisionFailureReason;
+                                    const visionSucceeded = (latestUsedImageInput || screenContextStatus === 'available') && !visionFailed;
+                                    const failureLabelMap: Record<string, string> = {
+                                        no_vision_provider: 'No vision provider',
+                                        all_vision_failed: 'Vision failed',
+                                        privacy_blocked: 'Private mode blocked vision',
+                                        scope_blocked: 'Screenshots disabled',
+                                        provider_timeout: 'Vision timed out',
+                                    };
+                                    const failureLabel = latestVisionFailureReason ? (failureLabelMap[latestVisionFailureReason] || 'Vision failed') : 'Vision failed';
+                                    const failureTitleMap: Record<string, string> = {
+                                        no_vision_provider: 'No vision-capable provider is configured. Add a Natively, OpenAI, Claude, Gemini, or Groq key — or configure a local Ollama vision model.',
+                                        all_vision_failed: 'All configured vision providers failed for this turn. Check provider quotas and try again.',
+                                        privacy_blocked: 'Private vision mode blocked cloud vision providers; no local vision provider is configured.',
+                                        scope_blocked: 'Screenshots are disabled for the current provider. Enable the screenshots scope in Settings.',
+                                        provider_timeout: 'Vision provider exceeded its per-call timeout; the chain moved on to the next provider.',
+                                    };
+                                    const failureTitle = latestVisionFailureReason ? (failureTitleMap[latestVisionFailureReason] || 'The vision provider failed for this turn.') : 'Screen vision did not return a result for this turn.';
+                                    const providerLabel = latestVisionProviderUsed
+                                        ? `Vision: ${latestVisionProviderUsed}`
+                                        : 'Vision input used';
+                                    const providerTitle = latestVisionProviderUsed && latestVisionModelUsed
+                                        ? `Latest answer used ${latestVisionProviderUsed} (${latestVisionModelUsed}) vision on the screenshot`
+                                        : latestVisionProviderUsed
+                                            ? `Latest answer used ${latestVisionProviderUsed} vision on the screenshot`
+                                            : 'The latest answer received direct image input from the attached screen';
+                                    return (
+                                        <div className={`${statusPillBaseClass} ${visionFailed ? getStatusToneClass('warn') : visionSucceeded ? getStatusToneClass('ok') : 'overlay-text-primary'}`} title={attachedContext.length > 0 ? 'Attached screenshots will be sent to the vision provider when you send this turn' : visionFailed ? failureTitle : visionSucceeded ? providerTitle : 'No screen context attached'}>
+                                            <Monitor className="h-3 w-3 opacity-70" />
+                                            <span>{attachedContext.length > 0 ? `${attachedContext.length} screen attached` : visionFailed ? failureLabel : visionSucceeded ? providerLabel : 'No screen context'}</span>
+                                        </div>
+                                    );
+                                })()}
+                                <div className={`${statusPillBaseClass} overlay-text-primary`} title={`${llmPrivacyLabel}: ${llmProviderLabel}`}>
+                                    <ShieldCheck className="h-3 w-3 opacity-70" />
+                                    <span>{llmPrivacyLabel}</span>
+                                </div>
+                            </div>
+
                             {/* System Audio Permission Warning Banner */}
                             {systemAudioWarning && (
                                 <div className="flex items-center justify-between mx-4 mt-3 mb-1 px-3.5 py-2.5 bg-yellow-500/10 border border-yellow-500/20 rounded-[12px] shadow-sm relative no-drag group/warning">
@@ -3087,6 +3220,16 @@ Provide only the answer, nothing else.`;
                                     </div>
                                 </div>
                             )}
+
+                            {/* Phase 3 — Dynamic action card row (Cluely-style live triggers).
+                                Appears between status pills and rolling transcript so users see
+                                actionable suggestions in their primary scan path. Bar self-hides
+                                when no actions are present. */}
+                            <DynamicActionBar
+                                onAcceptAction={(action: DynamicActionPayload) => {
+                                    void handleWhatToSay(action.promptInstruction);
+                                }}
+                            />
 
                             {/* Rolling Transcript Bar — includes STT status indicator inline */}
                             {(showTranscript && rollingTranscript) || interviewerSttIndicatorStatus !== 'connected' || sttUserStatus !== 'connected' ? (

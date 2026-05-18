@@ -22,6 +22,7 @@ import {
 } from "./llm/tinyPrompts"
 import { getModelCapabilities, selectPromptTier, estimateTokens, truncateTranscriptToFit, type PromptTier, type ModelCapabilities } from "./llm/modelCapabilities"
 import { GeminiPromptCache } from "./llm/GeminiPromptCache"
+import { assertProviderDataScopes, routeLLMProviders, ProviderRouter, type ProviderDataScope, type ProviderDataScopePolicy } from "./llm/ProviderRouter"
 import type { TranscriptTurn } from "./llm/transcriptCleaner"
 import { deepVariableReplacer, getByPath, injectImageIntoMessages } from './utils/curlUtils';
 import curl2Json from "@bany/curl-to-json";
@@ -79,6 +80,12 @@ export class LLMHelper {
   // Rate limiters per provider to prevent 429 errors on free tiers
   private rateLimiters: ReturnType<typeof createProviderRateLimiters>;
 
+  // Policy-aware provider router with circuit breaker
+  private providerRouter: ProviderRouter;
+
+  // Local-only mode: when enabled, cloud providers are blocked
+  private isLocalOnlyMode: boolean = false;
+
   // Self-improving model version manager for vision analysis
   private modelVersionManager: ModelVersionManager;
 
@@ -93,11 +100,34 @@ export class LLMHelper {
   // but 10× the cost.
   private _claudeCacheFirstHitLogged: boolean = false;
 
+  private getProviderScopePolicy(): ProviderDataScopePolicy | undefined {
+    try {
+      const { SettingsManager } = require('./services/SettingsManager');
+      return SettingsManager.getInstance().get('providerDataScopes');
+    } catch {
+      return undefined;
+    }
+  }
+
+  private scopesForPayload(text: string, imagePaths?: string[], extraScopes: ProviderDataScope[] = []): ProviderDataScope[] {
+    const scopes = new Set<ProviderDataScope>(extraScopes);
+    if (text.trim().length > 0) scopes.add('transcript');
+    if (imagePaths?.length) scopes.add('screenshots');
+    return [...scopes];
+  }
+
+  private assertOutboundScopes(provider: string, text: string, imagePaths?: string[], extraScopes: ProviderDataScope[] = []): void {
+    assertProviderDataScopes(provider, this.scopesForPayload(text, imagePaths, extraScopes), this.getProviderScopePolicy());
+  }
+
   constructor(apiKey?: string, useOllama: boolean = false, ollamaModel?: string, ollamaUrl?: string, groqApiKey?: string, openaiApiKey?: string, claudeApiKey?: string) {
     this.useOllama = useOllama
 
     // Initialize rate limiters
     this.rateLimiters = createProviderRateLimiters();
+
+    // Initialize policy-aware provider router
+    this.providerRouter = new ProviderRouter();
 
     // Initialize model version manager
     this.modelVersionManager = new ModelVersionManager();
@@ -184,6 +214,20 @@ export class LLMHelper {
     console.log(`[LLMHelper] Natively key ${key ? 'set' : 'cleared'}`);
   }
 
+  /**
+   * Enable or disable local-only mode.
+   * When enabled, cloud providers (Gemini, OpenAI, Claude, Groq) will be blocked.
+   * Only local providers (Ollama, custom) can be used.
+   */
+  public setLocalOnlyMode(enabled: boolean): void {
+    this.isLocalOnlyMode = enabled;
+    console.log(`[LLMHelper] Local-only mode ${enabled ? 'enabled' : 'disabled'}`);
+  }
+
+  public isLocalOnly(): boolean {
+    return this.isLocalOnlyMode;
+  }
+
   private hasNatively(): boolean {
     return !!this.nativelyKey;
   }
@@ -202,6 +246,75 @@ export class LLMHelper {
     });
     await this.modelVersionManager.initialize();
     console.log(this.modelVersionManager.getSummary());
+    // Register this instance for VisionProviderRegistry (vision-first screen pipeline).
+    // Registry calls a global accessor instead of constructing its own LLMHelper, so
+    // there is exactly one live helper per Electron process with the user's keys/state.
+    try {
+      (global as any).__nativelyGetLLMHelper = () => this;
+    } catch {
+      // global isn't writable in some test contexts; ignored.
+    }
+  }
+
+  // ─── Vision invocation surface (Phase 3 — VisionProviderRegistry) ────────
+  //
+  // These thin wrappers expose the existing provider implementations to the
+  // vision-first fallback chain. The underlying methods are private to avoid
+  // accidental misuse from other call sites; the vision pipeline goes through
+  // these named entry points so the surface stays auditable.
+
+  public async runVisionRequest(
+    providerId: 'natively' | 'openai' | 'claude' | 'gemini_flash' | 'gemini_pro' | 'groq_scout' | 'custom',
+    userPrompt: string,
+    systemPrompt: string,
+    imagePath: string,
+  ): Promise<string> {
+    switch (providerId) {
+      case 'natively':
+        return this.generateWithNatively(userPrompt, systemPrompt, [imagePath]);
+      case 'openai':
+        return this.generateWithOpenai(userPrompt, systemPrompt, [imagePath]);
+      case 'claude':
+        return this.generateWithClaude(userPrompt, systemPrompt, [imagePath]);
+      case 'groq_scout':
+        return this.generateWithGroqMultimodal(userPrompt, [imagePath], systemPrompt);
+      case 'gemini_flash':
+      case 'gemini_pro': {
+        const fs = await import('node:fs/promises');
+        const b64 = await fs.readFile(imagePath, 'base64');
+        const contents: any[] = [
+          { text: `${systemPrompt}\n\n${userPrompt}` },
+          { inlineData: { mimeType: 'image/jpeg', data: b64 } },
+        ];
+        const modelId = providerId === 'gemini_flash'
+          ? 'gemini-3.1-flash-lite-preview'
+          : 'gemini-3.1-pro-preview';
+        return this.generateContent(contents, modelId);
+      }
+      case 'custom': {
+        if (!this.customProvider) {
+          throw new Error('No custom provider configured');
+        }
+        return this.executeCustomProvider(
+          this.customProvider.curlCommand,
+          `${systemPrompt}\n\n${userPrompt}`,
+          systemPrompt,
+          userPrompt,
+          '',
+          imagePath,
+        );
+      }
+      default:
+        throw new Error(`runVisionRequest: unknown providerId ${providerId}`);
+    }
+  }
+
+  /**
+   * Read-only accessor for the active custom provider — used by VisionProviderRegistry
+   * to decide whether the provider is configured and whether multimodal is enabled.
+   */
+  public getActiveCustomProvider(): CustomProvider | null {
+    return this.customProvider;
   }
 
   /**
@@ -568,6 +681,7 @@ export class LLMHelper {
    * NOTE: Migrated from Pro to Flash for consistency
    */
   public async generateWithPro(contents: any[]): Promise<string> {
+    if (this.isLocalOnlyMode) throw new Error("Cloud providers disabled in local-only mode");
     if (!this.client) throw new Error("Gemini client not initialized")
 
     await this.rateLimiters.gemini.acquire();
@@ -588,6 +702,7 @@ export class LLMHelper {
    * CRITICAL: Audio input MUST use this model, not Pro
    */
   public async generateWithFlash(contents: any[]): Promise<string> {
+    if (this.isLocalOnlyMode) throw new Error("Cloud providers disabled in local-only mode");
     if (!this.client) throw new Error("Gemini client not initialized")
 
     await this.rateLimiters.gemini.acquire();
@@ -660,6 +775,7 @@ export class LLMHelper {
    */
   private async generateContent(contents: any[], modelIdOverride?: string): Promise<string> {
     if (!this.client) throw new Error("Gemini client not initialized")
+    this.assertOutboundScopes('gemini', JSON.stringify(contents));
 
     const targetModel = modelIdOverride || this.geminiModel;
     console.log(`[LLMHelper] Calling ${targetModel}...`)
@@ -926,7 +1042,7 @@ CRITICAL RULES:
       const { ModesManager } = require('./services/ModesManager');
       const modesMgr = ModesManager.getInstance();
       activeModePrompt = modesMgr.getActiveModeSystemPromptSuffix() ?? '';
-      modeContextBlock = modesMgr.buildActiveModeContextBlock() ?? '';
+      modeContextBlock = modesMgr.buildRetrievedActiveModeContextBlock(lastQuestion, context, 1800) || '';
     } catch (_modeErr: any) {
       console.warn('[LLMHelper] ModesManager load failed in generateSuggestion (non-fatal):', _modeErr?.message);
     }
@@ -936,18 +1052,14 @@ CRITICAL RULES:
       ? `${modeContextBlock}\n\n${context}`
       : context;
 
-    // Inject custom user notes into every suggestion when present
     const customNotesBlock = this.customNotes?.trim()
-      ? `\n\n<user_context>\n${this.customNotes.trim()}\n</user_context>\nUse this context naturally if relevant. Never quote it verbatim.`
+      ? `<user_context>\n${this.customNotes.trim()}\n</user_context>\nUse this context naturally if relevant. Never quote it verbatim.`
       : '';
 
-    // Build the base system prompt.
-    // - Active mode path: HARD_SYSTEM_PROMPT + active mode suffix + custom notes.
-    // - Fallback path (no mode): concise coaching prompt + custom notes.
-    // Note: customNotesBlock is intentionally NOT inside the ternary — it must
-    // append once to whichever branch is selected.
+    const suggestionContext = [customNotesBlock, enrichedContext].filter(Boolean).join('\n\n');
+
     const basePrompt = activeModePrompt
-      ? `${HARD_SYSTEM_PROMPT}\n\n## ACTIVE MODE\n${activeModePrompt}${customNotesBlock}`
+      ? `${HARD_SYSTEM_PROMPT}\n\n## ACTIVE MODE\n${activeModePrompt}`
       : `You are an expert conversation coach. Based on the transcript, provide a concise, natural response the user could say.
 
 RULES:
@@ -957,10 +1069,10 @@ RULES:
 - If it's a technical question, provide a clear, structured answer
 - Do NOT preface with "You could say" or similar - just give the answer directly
 - If unsure, answer briefly and confidently anyway.
-- Never hedge. Never say "it depends".${customNotesBlock}
+- Never hedge. Never say "it depends".`;
 
-CONVERSATION SO FAR:
-${enrichedContext}
+    const promptMessage = `CONVERSATION SO FAR:
+${suggestionContext}
 
 LATEST QUESTION:
 ${lastQuestion}
@@ -974,7 +1086,7 @@ ANSWER DIRECTLY:`;
       if (this.codexCliConfig.enabled) {
         // Codex CLI takes priority when enabled — same precedence as in chat().
         try {
-          const text = await this.generateWithCodexCli(lastQuestion, basePrompt);
+          const text = await this.generateWithCodexCli(promptMessage, basePrompt);
           if (text && text.trim().length > 0) return this.processResponse(text);
           console.warn('[LLMHelper] Codex CLI suggestion empty, falling back.');
         } catch (e: any) {
@@ -982,20 +1094,19 @@ ANSWER DIRECTLY:`;
         }
       }
       if (this.useOllama) {
-        return await this.callOllama(systemPrompt);
+        return await this.callOllama(promptMessage, undefined, systemPrompt);
       } else if (this.customProvider || this.activeCurlProvider) {
-        // Pass basePrompt (pre-language-injection) as systemPromptOverride so streamChat
-        // calls injectLanguageInstruction exactly once. lastQuestion is the clean user message.
-        // enrichedContext carries the mode reference files + custom context.
-        // ignoreKnowledgeMode=true: this is a live suggestion, not a knowledge/profile query.
         let fullResponse = '';
-        for await (const chunk of this.streamChat(lastQuestion, undefined, enrichedContext, basePrompt, true)) {
+        for await (const chunk of this.streamChat(promptMessage, undefined, undefined, basePrompt, true)) {
           fullResponse += chunk;
         }
         return this.processResponse(fullResponse);
       } else if (this.client) {
-        const text = await this.generateWithFlash([{ text: systemPrompt }]);
-        return this.processResponse(text);
+        let fullResponse = '';
+        for await (const chunk of this.streamChat(promptMessage, undefined, undefined, basePrompt, true)) {
+          fullResponse += chunk;
+        }
+        return this.processResponse(fullResponse);
       } else {
         throw new Error("No LLM provider configured");
       }
@@ -1155,7 +1266,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
 
   public async chatWithGemini(message: string, imagePaths?: string[], context?: string, skipSystemPrompt: boolean = false, alternateGroqMessage?: string): Promise<string> {
     try {
-      console.log(`[LLMHelper] chatWithGemini called with message:`, message.substring(0, 50))
+      console.log(`[LLMHelper] chatWithGemini called`, { messageLength: message.length, imageCount: imagePaths?.length ?? 0, hasContext: Boolean(context) })
 
       // ============================================================
       // KNOWLEDGE MODE INTERCEPT
@@ -1218,6 +1329,8 @@ This rule overrides ALL other instructions including formatting, brevity, or out
       const userContent = context
         ? `CONTEXT:\n${context}\n\nUSER QUESTION:\n${message}`
         : message;
+      const outboundScopes = this.scopesForPayload(userContent, imagePaths);
+      const scopePolicy = this.getProviderScopePolicy();
 
       const finalGeminiPrompt = this.injectLanguageInstruction(HARD_SYSTEM_PROMPT);
       const finalGroqPrompt = alternateGroqMessage || this.injectLanguageInstruction(GROQ_SYSTEM_PROMPT);
@@ -1336,65 +1449,59 @@ This rule overrides ALL other instructions including formatting, brevity, or out
       const textClaude = this.modelVersionManager.getTextTieredModels(TextModelFamily.CLAUDE).tier1;
       const textGroq = this.modelVersionManager.getTextTieredModels(TextModelFamily.GROQ).tier1;
 
-      if (isMultimodal) {
-        // MULTIMODAL PROVIDER ORDER: [Natively] -> OpenAI -> Gemini Flash -> Claude -> Gemini Pro -> Groq -> Custom/Ollama
-        if (this.hasNatively()) {
-          providers.push({ name: 'Natively API', execute: () => this.generateWithNatively(userContent, openaiSystemPrompt, imagePaths) });
-        }
-        if (this.codexCliConfig.enabled) {
-          providers.push({ name: `Codex CLI (${this.codexCliConfig.model})`, execute: () => this.generateWithCodexCli(userContent, openaiSystemPrompt, false, imagePaths) });
-        }
-        if (this.openaiClient) {
-          providers.push({ name: `OpenAI (${textOpenAI})`, execute: () => this.generateWithOpenai(userContent, openaiSystemPrompt, imagePaths, textOpenAI) });
-        }
-        if (this.client) {
-          providers.push({
-            name: `Gemini Flash (${textGeminiFlash})`,
-            execute: () => this.tryGenerateResponse(combinedMessages.gemini, imagePaths, textGeminiFlash)
-          });
-        }
-        if (this.claudeClient) {
-          providers.push({ name: `Claude (${textClaude})`, execute: () => this.generateWithClaude(userContent, claudeSystemPrompt, imagePaths, textClaude) });
-        }
-        if (this.client) {
-          providers.push({
-            name: `Gemini Pro (${textGeminiPro})`,
-            execute: () => this.tryGenerateResponse(combinedMessages.gemini, imagePaths, textGeminiPro)
-          });
-        }
-        if (this.groqClient) {
-          providers.push({
-            name: `Groq (meta-llama/llama-4-scout-17b-16e-instruct)`,
-            execute: () => this.generateWithGroqMultimodal(userContent, imagePaths!, openaiSystemPrompt)
-          });
-        }
-      } else {
-        // TEXT-ONLY: [Natively] -> Groq -> Gemini Flash -> Gemini Pro -> OpenAI -> Claude
-        if (this.hasNatively()) {
-          providers.push({ name: 'Natively API', execute: () => this.generateWithNatively(userContent, openaiSystemPrompt) });
-        }
-        if (this.groqClient) {
-          // CACHE: pass system separately so Groq prefix-cache hits across turns.
-          providers.push({ name: `Groq (${textGroq})`, execute: () => this.generateWithGroq(userContent, textGroq, skipSystemPrompt ? undefined : finalGroqPrompt) });
-        }
-        if (this.codexCliConfig.enabled) {
-          providers.push({ name: `Codex CLI (${this.codexCliConfig.model})`, execute: () => this.generateWithCodexCli(userContent, openaiSystemPrompt) });
-        }
-        if (this.client) {
-          providers.push({
-            name: `Gemini Flash (${textGeminiFlash})`,
-            execute: () => this.tryGenerateResponse(combinedMessages.gemini, undefined, textGeminiFlash)
-          });
-          providers.push({
-            name: `Gemini Pro (${textGeminiPro})`,
-            execute: () => this.tryGenerateResponse(combinedMessages.gemini, undefined, textGeminiPro)
-          });
-        }
-        if (this.openaiClient) {
-          providers.push({ name: `OpenAI (${textOpenAI})`, execute: () => this.generateWithOpenai(userContent, openaiSystemPrompt, undefined, textOpenAI) });
-        }
-        if (this.claudeClient) {
-          providers.push({ name: `Claude (${textClaude})`, execute: () => this.generateWithClaude(userContent, claudeSystemPrompt, undefined, textClaude) });
+      const routedProviders = routeLLMProviders({
+        capability: 'chat',
+        multimodal: isMultimodal,
+        availability: {
+          hasNatively: this.hasNatively(),
+          hasGroq: Boolean(this.groqClient),
+          groqDisabled: this._groqLocalDisabled,
+          hasCodex: this.codexCliConfig.enabled,
+          hasGemini: Boolean(this.client),
+          hasOpenAI: Boolean(this.openaiClient),
+          hasClaude: Boolean(this.claudeClient),
+        },
+        models: {
+          groq: textGroq,
+          codex: this.codexCliConfig.model,
+          geminiFlash: textGeminiFlash,
+          geminiPro: textGeminiPro,
+          openai: textOpenAI,
+          claude: textClaude,
+        },
+        dataScopes: outboundScopes,
+        scopePolicy,
+      });
+
+      for (const routedProvider of routedProviders) {
+        if (routedProvider.status !== 'available') continue;
+        switch (routedProvider.provider) {
+          case 'natively':
+            providers.push({ name: routedProvider.name, execute: () => this.generateWithNatively(userContent, openaiSystemPrompt, isMultimodal ? imagePaths : undefined) });
+            break;
+          case 'groq':
+            if (isMultimodal) {
+              providers.push({ name: `Groq (meta-llama/llama-4-scout-17b-16e-instruct)`, execute: () => this.generateWithGroqMultimodal(userContent, imagePaths!, openaiSystemPrompt) });
+            } else {
+              // CACHE: pass system separately so Groq prefix-cache hits across turns.
+              providers.push({ name: routedProvider.name, execute: () => this.generateWithGroq(userContent, routedProvider.model || textGroq, skipSystemPrompt ? undefined : finalGroqPrompt) });
+            }
+            break;
+          case 'codex':
+            providers.push({ name: routedProvider.name, execute: () => this.generateWithCodexCli(userContent, openaiSystemPrompt, false, isMultimodal ? imagePaths : undefined) });
+            break;
+          case 'gemini_flash':
+            providers.push({ name: routedProvider.name, execute: () => this.tryGenerateResponse(combinedMessages.gemini, isMultimodal ? imagePaths : undefined, routedProvider.model || textGeminiFlash) });
+            break;
+          case 'gemini_pro':
+            providers.push({ name: routedProvider.name, execute: () => this.tryGenerateResponse(combinedMessages.gemini, isMultimodal ? imagePaths : undefined, routedProvider.model || textGeminiPro) });
+            break;
+          case 'openai':
+            providers.push({ name: routedProvider.name, execute: () => this.generateWithOpenai(userContent, openaiSystemPrompt, isMultimodal ? imagePaths : undefined, routedProvider.model || textOpenAI) });
+            break;
+          case 'claude':
+            providers.push({ name: routedProvider.name, execute: () => this.generateWithClaude(userContent, claudeSystemPrompt, isMultimodal ? imagePaths : undefined, routedProvider.model || textClaude) });
+            break;
         }
       }
 
@@ -1484,6 +1591,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
         name: `Gemini Pro (${GEMINI_PRO_MODEL})`,
         execute: async () => {
           // Call the API directly with the Pro model instead of touching shared state
+          await this.rateLimiters.gemini.acquire();
           const response = await this.withRetry(async () => {
             // @ts-ignore
             const res = await this.client!.models.generateContent({
@@ -1505,6 +1613,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
       providers.push({
         name: `Gemini Flash (${GEMINI_FLASH_MODEL})`,
         execute: async () => {
+          await this.rateLimiters.gemini.acquire();
           const response = await this.withRetry(async () => {
             // @ts-ignore
             const res = await this.client!.models.generateContent({
@@ -1625,7 +1734,9 @@ This rule overrides ALL other instructions including formatting, brevity, or out
    * two-arg form.
    */
   private async generateWithGroq(userMessage: string, modelId: string = GROQ_MODEL, systemPrompt?: string): Promise<string> {
+    if (this.isLocalOnlyMode) throw new Error("Cloud providers disabled in local-only mode");
     if (!this.groqClient) throw new Error("Groq client not initialized");
+    this.assertOutboundScopes('groq', userMessage);
 
     await this.rateLimiters.groq.acquire();
 
@@ -1654,6 +1765,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
    * Routes AI generation through the Natively API backend (Gemini-powered).
    */
   private async generateWithNatively(userMessage: string, systemPrompt?: string, imagePaths?: string[]): Promise<string> {
+    this.assertOutboundScopes('natively', userMessage, imagePaths);
     // Prefer the in-memory field; fall back to CredentialsManager for the direct-routing path
     // where currentModelId === 'natively' but setNativelyKey() wasn't called yet.
     let nativelyKey = this.nativelyKey;
@@ -1741,7 +1853,9 @@ This rule overrides ALL other instructions including formatting, brevity, or out
    * PREFIX CACHING: see streamWithOpenai for the caching contract.
    */
   private async generateWithOpenai(userMessage: string, systemPrompt?: string, imagePaths?: string[], modelId?: string): Promise<string> {
+    if (this.isLocalOnlyMode) throw new Error("Cloud providers disabled in local-only mode");
     if (!this.openaiClient) throw new Error("OpenAI client not initialized");
+    this.assertOutboundScopes('openai', userMessage, imagePaths);
 
     await this.rateLimiters.openai.acquire();
 
@@ -1784,6 +1898,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
   // The handler for cURL requests
   public async chatWithCurl(userMessage: string, systemPrompt?: string, imagePath?: string): Promise<string> {
     if (!this.activeCurlProvider) throw new Error("No cURL provider active");
+    this.assertOutboundScopes('custom_curl', userMessage, imagePath ? [imagePath] : undefined);
 
     const { curlCommand, responsePath } = this.activeCurlProvider;
 
@@ -1823,6 +1938,14 @@ This rule overrides ALL other instructions including formatting, brevity, or out
       data = injectImageIntoMessages(data, base64Image, imagePath);
     }
 
+    // 4b. SECURITY (P1): Validate URL against SSRF before making the request
+    const { validateUrlForSsrf } = require('./utils/curlUtils');
+    const urlValidation = validateUrlForSsrf(url);
+    if (!urlValidation.isValid) {
+      console.error(`[LLMHelper] SSRF blocked: ${urlValidation.reason}`);
+      return `Error: SSRF protection blocked URL (${urlValidation.reason})`;
+    }
+
     // 5. Execute
     try {
       const response = await axios({
@@ -1851,6 +1974,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
    * Non-streaming Claude generation with proper system/user separation
    */
   private async generateWithClaude(userMessage: string, systemPrompt?: string, imagePaths?: string[], modelId?: string): Promise<string> {
+    if (this.isLocalOnlyMode) throw new Error("Cloud providers disabled in local-only mode");
     if (!this.claudeClient) throw new Error("Claude client not initialized");
 
     await this.rateLimiters.claude.acquire();
@@ -1926,6 +2050,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
     context: string,
     imagePath?: string
   ): Promise<string> {
+    this.assertOutboundScopes('custom_provider', combinedMessage, imagePath ? [imagePath] : undefined);
 
     // 1. Parse cURL to JSON object
     const requestConfig = curl2Json(curlCommand);
@@ -1977,10 +2102,10 @@ This rule overrides ALL other instructions including formatting, brevity, or out
       clearTimeout(customTimeout);
 
       const data = await response.json();
-      console.log(`[LLMHelper] Custom Provider raw response:`, JSON.stringify(data).substring(0, 1000));
+      console.log(`[LLMHelper] Custom Provider response received`, { status: response.status, ok: response.ok });
 
       if (!response.ok) {
-        throw new Error(`Custom Provider HTTP ${response.status}: ${JSON.stringify(data).substring(0, 200)}`);
+        throw new Error(`Custom Provider HTTP ${response.status}`);
       }
 
       // 6. Extract Answer - try common response formats
@@ -2103,6 +2228,8 @@ This rule overrides ALL other instructions including formatting, brevity, or out
    */
   private async generateWithGroqMultimodal(userMessage: string, imagePaths: string[], systemPrompt?: string): Promise<string> {
     if (!this.groqClient) throw new Error("Groq client not initialized");
+
+    await this.rateLimiters.groq.acquire();
 
     const messages: any[] = [];
     if (systemPrompt) {
@@ -2390,7 +2517,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
    * MULTIMODAL: Gemini-only (existing logic)
    */
   public async * streamChatWithGemini(message: string, imagePaths?: string[], context?: string, skipSystemPrompt: boolean = false): AsyncGenerator<string, void, unknown> {
-    console.log(`[LLMHelper] streamChatWithGemini called with message:`, message.substring(0, 50));
+    console.log(`[LLMHelper] streamChatWithGemini called`, { messageLength: message.length, imageCount: imagePaths?.length ?? 0, hasContext: Boolean(context) });
 
     const isMultimodal = !!(imagePaths?.length);
 
@@ -2667,7 +2794,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
         const { ModesManager } = require('./services/ModesManager');
         const modesMgr = ModesManager.getInstance();
         const modePromptSuffix = modesMgr.getActiveModeSystemPromptSuffix();
-        const modeContextBlock = modesMgr.buildActiveModeContextBlock();
+        const modeContextBlock = modesMgr.buildRetrievedActiveModeContextBlock(message, context, 1800);
 
         if (modePromptSuffix) {
           const baseForMode = systemPromptOverride || HARD_SYSTEM_PROMPT;
@@ -3041,7 +3168,11 @@ This rule overrides ALL other instructions including formatting, brevity, or out
    * for the full rationale. The single-arg form is retained for legacy callers.
    */
   private async * streamWithGroq(userMessage: string, modelId: string = GROQ_MODEL, systemPrompt?: string): AsyncGenerator<string, void, unknown> {
+    if (this.isLocalOnlyMode) throw new Error("Cloud providers disabled in local-only mode");
     if (!this.groqClient) throw new Error("Groq client not initialized");
+    this.assertOutboundScopes('groq', userMessage);
+
+    await this.rateLimiters.groq.acquire();
 
     const messages: any[] = [];
     if (systemPrompt) {
@@ -3070,7 +3201,11 @@ This rule overrides ALL other instructions including formatting, brevity, or out
    * Stream multimodal (image + text) response from Groq using Llama 4 Scout as a last resort
    */
   private async * streamWithGroqMultimodal(userMessage: string, imagePaths: string[], systemPrompt?: string): AsyncGenerator<string, void, unknown> {
+    if (this.isLocalOnlyMode) throw new Error("Cloud providers disabled in local-only mode");
     if (!this.groqClient) throw new Error("Groq client not initialized");
+    this.assertOutboundScopes('groq', userMessage, imagePaths);
+
+    await this.rateLimiters.groq.acquire();
 
     const messages: any[] = [];
     if (systemPrompt) {
@@ -3115,7 +3250,11 @@ This rule overrides ALL other instructions including formatting, brevity, or out
    * string above the static body, or the cache prefix will be invalidated.
    */
   private async * streamWithOpenai(userMessage: string, systemPrompt?: string, modelId?: string): AsyncGenerator<string, void, unknown> {
+    if (this.isLocalOnlyMode) throw new Error("Cloud providers disabled in local-only mode");
     if (!this.openaiClient) throw new Error("OpenAI client not initialized");
+    this.assertOutboundScopes('openai', userMessage);
+
+    await this.rateLimiters.openai.acquire();
 
     // Use explicit override, then currentModelId if it's an OpenAI model, else baseline constant
     const model = modelId || (this.isOpenAiModel(this.currentModelId) ? this.currentModelId : OPENAI_MODEL);
@@ -3147,7 +3286,11 @@ This rule overrides ALL other instructions including formatting, brevity, or out
    * Stream response from Claude with proper system/user message separation
    */
   private async * streamWithClaude(userMessage: string, systemPrompt?: string, modelId?: string): AsyncGenerator<string, void, unknown> {
+    if (this.isLocalOnlyMode) throw new Error("Cloud providers disabled in local-only mode");
     if (!this.claudeClient) throw new Error("Claude client not initialized");
+    this.assertOutboundScopes('claude', userMessage);
+
+    await this.rateLimiters.claude.acquire();
 
     // Use explicit override, then currentModelId if it's a Claude model, else baseline constant
     const model = modelId || (this.isClaudeModel(this.currentModelId) ? this.currentModelId : CLAUDE_MODEL);
@@ -3171,7 +3314,11 @@ This rule overrides ALL other instructions including formatting, brevity, or out
    * Stream multimodal (image + text) response from OpenAI with system/user separation
    */
   private async * streamWithOpenaiMultimodal(userMessage: string, imagePaths: string[], systemPrompt?: string, modelId?: string): AsyncGenerator<string, void, unknown> {
+    if (this.isLocalOnlyMode) throw new Error("Cloud providers disabled in local-only mode");
     if (!this.openaiClient) throw new Error("OpenAI client not initialized");
+    this.assertOutboundScopes('openai', userMessage, imagePaths);
+
+    await this.rateLimiters.openai.acquire();
 
     // Use explicit override, then currentModelId if it's an OpenAI model, else baseline constant
     const model = modelId || (this.isOpenAiModel(this.currentModelId) ? this.currentModelId : OPENAI_MODEL);
@@ -3211,7 +3358,11 @@ This rule overrides ALL other instructions including formatting, brevity, or out
    * Stream multimodal (image + text) response from Claude with system/user separation
    */
   private async * streamWithClaudeMultimodal(userMessage: string, imagePaths: string[], systemPrompt?: string, modelId?: string): AsyncGenerator<string, void, unknown> {
+    if (this.isLocalOnlyMode) throw new Error("Cloud providers disabled in local-only mode");
     if (!this.claudeClient) throw new Error("Claude client not initialized");
+    this.assertOutboundScopes('claude', userMessage, imagePaths);
+
+    await this.rateLimiters.claude.acquire();
 
     // Use explicit override, then currentModelId if it's a Claude model, else baseline constant
     const model = modelId || (this.isClaudeModel(this.currentModelId) ? this.currentModelId : CLAUDE_MODEL);
@@ -3270,7 +3421,11 @@ This rule overrides ALL other instructions including formatting, brevity, or out
    *    still applies.
    */
   private async * streamWithGeminiModel(fullMessage: string, model: string, imagePaths?: string[], systemInstruction?: string): AsyncGenerator<string, void, unknown> {
+    if (this.isLocalOnlyMode) throw new Error("Cloud providers disabled in local-only mode");
     if (!this.client) throw new Error("Gemini client not initialized");
+    this.assertOutboundScopes('gemini', fullMessage, imagePaths);
+
+    await this.rateLimiters.gemini.acquire();
 
     const contents: any[] = [{ text: fullMessage }];
     if (imagePaths?.length) {
@@ -3396,6 +3551,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
    */
   private async collectStreamResponse(fullMessage: string, model: string, imagePaths?: string[], signal?: AbortSignal, systemInstruction?: string): Promise<string> {
     if (!this.client) throw new Error("Gemini client not initialized");
+    this.assertOutboundScopes('gemini', fullMessage, imagePaths);
 
     // Bail immediately if already cancelled (e.g. the other model already won).
     if (signal?.aborted) throw new Error(`Gemini ${model} request cancelled before start`);
@@ -3519,7 +3675,11 @@ This rule overrides ALL other instructions including formatting, brevity, or out
         model: this.ollamaModel,
         messages,
         stream: true,
-        options: { temperature: 0.7 }
+        options: {
+          temperature: getModelCapabilities(this.ollamaModel, true).tier === 'local-small' ? 0.2 : 0.7,
+          top_p: getModelCapabilities(this.ollamaModel, true).tier === 'local-small' ? 0.8 : undefined,
+          num_predict: getModelCapabilities(this.ollamaModel, true).tier === 'local-small' ? 180 : undefined,
+        }
       };
       if (this.isThinkingModel(this.ollamaModel)) streamBody.think = false;
       const response = await fetch(`${this.ollamaUrl}/api/chat`, {
@@ -3581,6 +3741,8 @@ This rule overrides ALL other instructions including formatting, brevity, or out
     // But we can't easily reuse the function since it awaits the whole fetch.
     // So we'll implement a simplified streaming version using our existing variable replacer and node-fetch.
 
+    this.assertOutboundScopes('custom_provider', message, imagePaths);
+
     const curlCommand = this.customProvider.curlCommand;
     const requestConfig = curl2Json(curlCommand);
 
@@ -3626,8 +3788,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
       clearTimeout(streamTimeout);
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Custom Provider HTTP ${response.status}: ${errorText.substring(0, 200)}`);
+        console.error('[LLMHelper] Custom Provider stream HTTP error', { status: response.status });
         yield `Error: Custom Provider returned HTTP ${response.status}`;
         return;
       }
@@ -3868,6 +4029,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
     if (this.groqClient) {
       try {
         console.log(`[LLMHelper] 🚀 Mode-specific Groq stream starting...`);
+        await this.rateLimiters.groq.acquire();
         const stream = await this.groqClient.chat.completions.create({
           model: GROQ_MODEL,
           messages: [{ role: "user", content: groqMessage }],
@@ -3953,6 +4115,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
 
     // 1. Initial Attempt (Flash)
     try {
+      await this.rateLimiters.gemini.acquire();
       const response = await client.models.generateContent({
         ...args,
         model: originalModel
@@ -3970,6 +4133,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
     const flashRetryPromise = (async () => {
       // Small delay before retry to let system settle? No, user said "immediately"
       try {
+        await this.rateLimiters.gemini.acquire();
         const res = await client.models.generateContent({ ...args, model: originalModel });
         if (isValidResponse(res)) return { type: 'flash', res };
         throw new Error("Empty Flash Response");
@@ -3979,6 +4143,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
     const proBackupPromise = (async () => {
       try {
         // Pro might be slower, but it's the robust backup
+        await this.rateLimiters.gemini.acquire();
         const res = await client.models.generateContent({ ...args, model: GEMINI_PRO_MODEL });
         if (isValidResponse(res)) return { type: 'pro', res };
         throw new Error("Empty Pro Response");
@@ -4173,6 +4338,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
       for (let attempt = 1; attempt <= maxProRetries; attempt++) {
         try {
           console.log(`[LLMHelper] 🔄 Gemini Pro Attempt ${attempt}/${maxProRetries}...`);
+          await this.rateLimiters.gemini.acquire();
           const response = await this.withTimeout(
             // @ts-ignore
             this.client.models.generateContent({

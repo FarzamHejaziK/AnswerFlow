@@ -67,9 +67,9 @@ interface ElectronAPI {
   getNativelyUsage: () => Promise<{ ok: boolean; plan?: string; quota?: { transcription: { used: number; limit: number; remaining: number }; ai: { used: number; limit: number; remaining: number }; search: { used: number; limit: number; remaining: number }; resets_at: string }; member_since?: string; error?: string; status?: number }>
   getStoredCredentials: () => Promise<{ hasGeminiKey: boolean; hasGroqKey: boolean; hasOpenaiKey: boolean; hasClaudeKey: boolean; hasNativelyKey: boolean; googleServiceAccountPath: string | null; sttProvider: string; hasSttGroqKey: boolean; hasSttOpenaiKey: boolean; hasDeepgramKey: boolean; hasElevenLabsKey: boolean; hasAzureKey: boolean; azureRegion: string; hasIbmWatsonKey: boolean; ibmWatsonRegion: string; hasSonioxKey: boolean }>
   // Free Trial
-  startTrial:     () => Promise<{ ok: boolean; trial_token?: string; started_at?: string; expires_at?: string; expired?: boolean; already_used?: boolean; converted_to?: string | null; usage?: { ai: number; stt_seconds: number; search: number }; limits?: { duration_ms: number; ai_requests: number; stt_minutes: number; search_requests: number }; error?: string; status?: number }>
+  startTrial:     () => Promise<{ ok: boolean; hasToken?: boolean; started_at?: string; expires_at?: string; expired?: boolean; already_used?: boolean; converted_to?: string | null; usage?: { ai: number; stt_seconds: number; search: number }; limits?: { duration_ms: number; ai_requests: number; stt_minutes: number; search_requests: number }; error?: string; status?: number }>
   getTrialStatus: () => Promise<{ ok: boolean; expired?: boolean; remaining_ms?: number; started_at?: string; expires_at?: string; converted_to?: string | null; usage?: { ai: number; stt_seconds: number; search: number }; limits?: object; error?: string }>
-  getLocalTrial:  () => Promise<{ hasToken: boolean; trialClaimed?: boolean; trialToken?: string; expiresAt?: string; startedAt?: string; expired?: boolean }>
+  getLocalTrial:  () => Promise<{ hasToken: boolean; trialClaimed?: boolean; expiresAt?: string; startedAt?: string; expired?: boolean }>
   convertTrial:   (choice: string) => Promise<{ ok: boolean }>
   endTrialByok:   () => Promise<{ success: boolean; error?: string }>
   onTrialEnded:   (cb: (data: { choice: string }) => void) => () => void
@@ -130,7 +130,7 @@ interface ElectronAPI {
 
   // Intelligence Mode IPC
   generateAssist: () => Promise<{ insight: string | null }>
-  generateWhatToSay: (question?: string, imagePaths?: string[]) => Promise<{ answer: string | null; question?: string; error?: string }>
+  generateWhatToSay: (question?: string, imagePaths?: string[], options?: { promptInstruction?: string }) => Promise<{ answer: string | null; question?: string; error?: string; screenContextStatus?: 'not_available' | 'available' | 'failed'; ocrTextLength?: number; imageCount?: number; usedImageInput?: boolean }>
   generateFollowUp: (intent: string, userRequest?: string) => Promise<{ refined: string | null; intent: string }>
   generateRecap: () => Promise<{ summary: string | null }>
   submitManualQuestion: (question: string) => Promise<{ answer: string | null; question: string }>
@@ -332,6 +332,24 @@ interface ElectronAPI {
   // Verbose / Debug Logging
   getVerboseLogging: () => Promise<boolean>;
   setVerboseLogging: (enabled: boolean) => Promise<{ success: boolean }>;
+  getMeetingRetention: () => Promise<'forever' | '7d' | '30d' | 'never'>;
+  setMeetingRetention: (retention: 'forever' | '7d' | '30d' | 'never') => Promise<{ success: boolean; error?: string }>;
+  onMeetingRetentionChanged: (callback: (retention: 'forever' | '7d' | '30d' | 'never') => void) => () => void;
+  getProviderDataScopes: () => Promise<{ transcript?: boolean; screenshots?: boolean; reference_files?: boolean; profile_history?: boolean; embeddings?: boolean; post_call_summary?: boolean }>;
+  setProviderDataScopes: (scopes: { transcript?: boolean; screenshots?: boolean; reference_files?: boolean; profile_history?: boolean; embeddings?: boolean; post_call_summary?: boolean }) => Promise<{ success: boolean; error?: string }>;
+  onProviderDataScopesChanged: (callback: (scopes: { transcript?: boolean; screenshots?: boolean; reference_files?: boolean; profile_history?: boolean; embeddings?: boolean; post_call_summary?: boolean }) => void) => () => void;
+  getScreenUnderstandingMode: () => Promise<'vision_first' | 'vision_only' | 'private_vision'>;
+  setScreenUnderstandingMode: (mode: 'vision_first' | 'vision_only' | 'private_vision') => Promise<{ success: boolean; error?: string }>;
+  onScreenUnderstandingModeChanged: (callback: (mode: 'vision_first' | 'vision_only' | 'private_vision') => void) => () => void;
+  getTechnicalInterviewVisionFirst: () => Promise<boolean>;
+  setTechnicalInterviewVisionFirst: (enabled: boolean) => Promise<{ success: boolean; error?: string }>;
+  onTechnicalInterviewVisionFirstChanged: (callback: (enabled: boolean) => void) => () => void;
+  /** @deprecated alias for technicalInterviewVisionFirst — retained so older renderer builds keep working. */
+  getTechnicalInterviewDirectVision: () => Promise<boolean>;
+  /** @deprecated alias for technicalInterviewVisionFirst — retained so older renderer builds keep working. */
+  setTechnicalInterviewDirectVision: (enabled: boolean) => Promise<{ success: boolean; error?: string }>;
+  /** @deprecated alias for technicalInterviewVisionFirstChanged — retained so older renderer builds keep working. */
+  onTechnicalInterviewDirectVisionChanged: (callback: (enabled: boolean) => void) => () => void;
   getLogFilePath: () => Promise<string | null>;
   openLogFile: () => Promise<{ success: boolean; error?: string }>;
 
@@ -772,7 +790,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Intelligence Mode IPC
   generateAssist: () => ipcRenderer.invoke("generate-assist"),
-  generateWhatToSay: (question?: string, imagePaths?: string[]) => ipcRenderer.invoke("generate-what-to-say", question, imagePaths),
+  generateWhatToSay: (question?: string, imagePaths?: string[], options?: { promptInstruction?: string }) => ipcRenderer.invoke("generate-what-to-say", question, imagePaths, options),
   generateClarify: () => ipcRenderer.invoke("generate-clarify"),
   generateCodeHint: (imagePaths?: string[], problemStatement?: string) => ipcRenderer.invoke("generate-code-hint", imagePaths, problemStatement),
   generateBrainstorm: (imagePaths?: string[], problemStatement?: string) => ipcRenderer.invoke("generate-brainstorm", imagePaths, problemStatement),
@@ -829,6 +847,17 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.removeListener("intelligence-assist-update", subscription)
     }
   },
+  // Phase 3 — Dynamic Action Cards
+  onIntelligenceDynamicAction: (callback: (data: { action: any }) => void) => {
+    const subscription = (_: any, data: any) => callback(data)
+    ipcRenderer.on("intelligence-dynamic-action", subscription)
+    return () => {
+      ipcRenderer.removeListener("intelligence-dynamic-action", subscription)
+    }
+  },
+  acceptDynamicAction: (actionId: string) => ipcRenderer.invoke("dynamic-action:accept", actionId),
+  dismissDynamicAction: (actionId: string) => ipcRenderer.invoke("dynamic-action:dismiss", actionId),
+  listDynamicActions: () => ipcRenderer.invoke("dynamic-action:list"),
   onIntelligenceSuggestedAnswerToken: (callback: (data: { token: string; question: string; confidence: number }) => void) => {
     const subscription = (_: any, data: any) => callback(data)
     ipcRenderer.on("intelligence-suggested-answer-token", subscription)
@@ -1295,6 +1324,45 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Verbose / Debug Logging
   getVerboseLogging: () => ipcRenderer.invoke('get-verbose-logging'),
   setVerboseLogging: (enabled: boolean) => ipcRenderer.invoke('set-verbose-logging', enabled),
+  getMeetingRetention: () => ipcRenderer.invoke('get-meeting-retention'),
+  setMeetingRetention: (retention: 'forever' | '7d' | '30d' | 'never') => ipcRenderer.invoke('set-meeting-retention', retention),
+  onMeetingRetentionChanged: (callback: (retention: 'forever' | '7d' | '30d' | 'never') => void) => {
+    const subscription = (_: any, retention: 'forever' | '7d' | '30d' | 'never') => callback(retention);
+    ipcRenderer.on('meeting-retention-changed', subscription);
+    return () => { ipcRenderer.removeListener('meeting-retention-changed', subscription); };
+  },
+  getProviderDataScopes: () => ipcRenderer.invoke('get-provider-data-scopes'),
+  setProviderDataScopes: (scopes: any) => ipcRenderer.invoke('set-provider-data-scopes', scopes),
+  onProviderDataScopesChanged: (callback: (scopes: any) => void) => {
+    const subscription = (_: any, scopes: any) => callback(scopes);
+    ipcRenderer.on('provider-data-scopes-changed', subscription);
+    return () => { ipcRenderer.removeListener('provider-data-scopes-changed', subscription); };
+  },
+  getScreenUnderstandingMode: () => ipcRenderer.invoke('get-screen-understanding-mode'),
+  setScreenUnderstandingMode: (mode: 'vision_first' | 'vision_only' | 'private_vision') =>
+    ipcRenderer.invoke('set-screen-understanding-mode', mode),
+  onScreenUnderstandingModeChanged: (callback: (mode: 'vision_first' | 'vision_only' | 'private_vision') => void) => {
+    const subscription = (_: any, mode: 'vision_first' | 'vision_only' | 'private_vision') => callback(mode);
+    ipcRenderer.on('screen-understanding-mode-changed', subscription);
+    return () => { ipcRenderer.removeListener('screen-understanding-mode-changed', subscription); };
+  },
+  getTechnicalInterviewVisionFirst: () => ipcRenderer.invoke('get-technical-interview-vision-first'),
+  setTechnicalInterviewVisionFirst: (enabled: boolean) =>
+    ipcRenderer.invoke('set-technical-interview-vision-first', enabled),
+  onTechnicalInterviewVisionFirstChanged: (callback: (enabled: boolean) => void) => {
+    const subscription = (_: any, enabled: boolean) => callback(enabled);
+    ipcRenderer.on('technical-interview-vision-first-changed', subscription);
+    return () => { ipcRenderer.removeListener('technical-interview-vision-first-changed', subscription); };
+  },
+  // Deprecated aliases — kept so renderer builds compiled against the old API keep working.
+  getTechnicalInterviewDirectVision: () => ipcRenderer.invoke('get-technical-interview-direct-vision'),
+  setTechnicalInterviewDirectVision: (enabled: boolean) =>
+    ipcRenderer.invoke('set-technical-interview-direct-vision', enabled),
+  onTechnicalInterviewDirectVisionChanged: (callback: (enabled: boolean) => void) => {
+    const subscription = (_: any, enabled: boolean) => callback(enabled);
+    ipcRenderer.on('technical-interview-vision-first-changed', subscription);
+    return () => { ipcRenderer.removeListener('technical-interview-vision-first-changed', subscription); };
+  },
   getLogFilePath: () => ipcRenderer.invoke('get-log-file-path'),
   openLogFile: () => ipcRenderer.invoke('open-log-file'),
   

@@ -11,6 +11,7 @@ import { EmbeddingPipeline } from './EmbeddingPipeline';
 import { RAGRetriever } from './RAGRetriever';
 import { LiveRAGIndexer } from './LiveRAGIndexer';
 import { buildRAGPrompt, NO_CONTEXT_FALLBACK, NO_GLOBAL_CONTEXT_FALLBACK } from './prompts';
+import type { ProviderDataScopePolicy } from '../llm/ProviderRouter';
 
 export interface RAGManagerConfig {
     db: Database.Database;
@@ -19,6 +20,7 @@ export interface RAGManagerConfig {
     openaiKey?: string;
     geminiKey?: string;
     ollamaUrl?: string;
+    providerDataScopes?: ProviderDataScopePolicy;
 }
 
 /**
@@ -49,7 +51,8 @@ export class RAGManager {
         this.embeddingPipeline.initialize({
             openaiKey: config.openaiKey,
             geminiKey: config.geminiKey,
-            ollamaUrl: config.ollamaUrl
+            ollamaUrl: config.ollamaUrl,
+            providerDataScopes: config.providerDataScopes
         }).then(() => {
             // Backfill provider metadata for meetings that were embedded before the
             // embedding_provider column was written (or where the write failed silently).
@@ -68,7 +71,7 @@ export class RAGManager {
         return this.embeddingPipeline;
     }
 
-    initializeEmbeddings(keys: { openaiKey?: string, geminiKey?: string, ollamaUrl?: string }): void {
+    initializeEmbeddings(keys: { openaiKey?: string, geminiKey?: string, ollamaUrl?: string, providerDataScopes?: ProviderDataScopePolicy }): void {
         const initPromise = this.embeddingPipeline.initialize(keys);
         // After init, backfill embedding_provider on meetings that have embedded chunks
         // but a NULL metadata column (common for meetings embedded before this metadata

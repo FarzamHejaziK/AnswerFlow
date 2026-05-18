@@ -85,6 +85,8 @@ export class LocalWhisperSTT extends EventEmitter {
     private isActive = false;
     private taskCounter = 0;
     private workerReady = false;
+    private isDrainingFinals = false;
+    private drainingFinalsInFlight = 0;
     // Pending audio waiting for the worker to become ready. Always finals —
     // streaming partials are never queued (they're best-effort and only fire
     // while a segment is open AND the worker is ready).
@@ -200,6 +202,8 @@ export class LocalWhisperSTT extends EventEmitter {
 
     start(): void {
         if (this.isActive) return;
+        this.isDrainingFinals = false;
+        this.drainingFinalsInFlight = 0;
         this.isActive = true;
         this.vad = new VadProcessor();
         this.spawnWorker();
@@ -219,10 +223,10 @@ export class LocalWhisperSTT extends EventEmitter {
         if (this.vad) {
             const segs = this.vad.flush();
             this.vad = null;
+            this.isDrainingFinals = true;
             segs.forEach(s => this.dispatchFinal(s.samples));
         }
 
-        this.pendingAudio = [];
         this.resetAgreementState();
 
         // Print one final latency summary for the just-ended session, then
@@ -237,28 +241,11 @@ export class LocalWhisperSTT extends EventEmitter {
         this.trackedSegmentId = 0;
         this.latencyLogCounter = 0;
 
-        // Give in-flight transcriptions up to 5s to complete, then terminate.
-        // Listeners are removed so any partial/result that lands in the grace
-        // window is dropped at the EventEmitter layer (in addition to the
-        // isActive guard inside the handler).
         const w = this.worker;
-        this.worker = null;
-        this.workerReady = false;
-        // Reset the sent-prompt tracker: a future spawnWorker call will get a
-        // fresh worker with empty cache, so we must re-push on next ready.
-        this.contextPromptSentToWorker = '';
         if (w) {
-            w.removeAllListeners('message');
-            w.removeAllListeners('error');
-            // Cancel any prior pending termination from a previous stop().
-            if (this.workerTerminateTimer) clearTimeout(this.workerTerminateTimer);
-            const t = setTimeout(() => {
-                this.workerTerminateTimer = null;
-                w.terminate();
-            }, 5000);
-            // unref so the timer doesn't pin the Node event loop on app quit.
-            (t as any).unref?.();
-            this.workerTerminateTimer = t;
+            const shouldKeepWorkerForFinals = this.isDrainingFinals && (this.pendingAudio.length > 0 || this.drainingFinalsInFlight > 0);
+            if (shouldKeepWorkerForFinals) return;
+            this.beginWorkerTermination(w);
         }
     }
 
@@ -543,6 +530,9 @@ export class LocalWhisperSTT extends EventEmitter {
             return;
         }
 
+        if (this.isDrainingFinals) {
+            this.drainingFinalsInFlight++;
+        }
         this.sendTranscribe(audio, false);
     }
 
@@ -585,9 +575,10 @@ export class LocalWhisperSTT extends EventEmitter {
                 return;
             }
 
-            // After stop() the worker has a 5s grace window before terminate;
-            // don't emit transcripts on a torn-down instance.
-            if (!this.isActive) return;
+            // After stop(), allow only the explicitly flushed final segments to
+            // return during the 5s drain window; partials and unrelated worker
+            // messages remain ignored on a torn-down instance.
+            if (!this.isActive && !(this.isDrainingFinals && msg.type === 'result')) return;
 
             if (msg.type === 'partial') {
                 // Drop partials whose segment has already been finalized — the
@@ -614,8 +605,20 @@ export class LocalWhisperSTT extends EventEmitter {
                 // the segment). Next write() that opens a fresh VAD segment will
                 // re-stamp via the segment-id check.
                 this.segmentOpenedAt = 0;
+                if (this.isDrainingFinals) {
+                    this.drainingFinalsInFlight = Math.max(0, this.drainingFinalsInFlight - 1);
+                    if (this.drainingFinalsInFlight === 0 && this.worker) {
+                        this.beginWorkerTermination(this.worker);
+                    }
+                }
             } else if (msg.type === 'error') {
                 console.error('[LocalWhisperSTT] Worker error:', msg.message);
+                if (this.isDrainingFinals && msg.taskId?.startsWith('t')) {
+                    this.drainingFinalsInFlight = Math.max(0, this.drainingFinalsInFlight - 1);
+                    if (this.drainingFinalsInFlight === 0 && this.worker) {
+                        this.beginWorkerTermination(this.worker);
+                    }
+                }
                 // If the failed task was the in-flight streaming one, unblock
                 // the loop so the next tick can fire.
                 if (msg.taskId && msg.taskId === this.streamingTaskId) {
@@ -643,5 +646,28 @@ export class LocalWhisperSTT extends EventEmitter {
         this.maybePushPromptToWorker();
         const queued = this.pendingAudio.splice(0);
         queued.forEach(audio => this.sendTranscribe(audio, false));
+        if (this.isDrainingFinals && queued.length === 0 && this.drainingFinalsInFlight === 0 && this.worker) {
+            this.beginWorkerTermination(this.worker);
+        }
+    }
+
+    private beginWorkerTermination(w: Worker): void {
+        this.worker = null;
+        this.workerReady = false;
+        this.isDrainingFinals = false;
+        this.drainingFinalsInFlight = 0;
+        // Reset the sent-prompt tracker: a future spawnWorker call will get a
+        // fresh worker with empty cache, so we must re-push on next ready.
+        this.contextPromptSentToWorker = '';
+        w.removeAllListeners('message');
+        w.removeAllListeners('error');
+        if (this.workerTerminateTimer) clearTimeout(this.workerTerminateTimer);
+        const t = setTimeout(() => {
+            this.workerTerminateTimer = null;
+            w.terminate();
+        }, 5000);
+        // unref so the timer doesn't pin the Node event loop on app quit.
+        (t as any).unref?.();
+        this.workerTerminateTimer = t;
     }
 }

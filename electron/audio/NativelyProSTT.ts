@@ -323,9 +323,13 @@ export class NativelyProSTT extends EventEmitter {
         ws.on('message', (data: WebSocket.Data) => guard(() => {
             try {
                 const msg = JSON.parse(data.toString());
-                // Log every server message (excluding frequent interim transcripts)
                 if (!msg.text || msg.is_final) {
-                    console.log(`[NativelyProSTT:${this.channel}] Server msg:`, JSON.stringify(msg).slice(0, 120));
+                    console.log(`[NativelyProSTT:${this.channel}] Server msg`, {
+                        type: msg.type,
+                        final: Boolean(msg.is_final),
+                        hasText: Boolean(msg.text),
+                        textLength: typeof msg.text === 'string' ? msg.text.length : 0,
+                    });
                 }
 
                 if (msg.error) {

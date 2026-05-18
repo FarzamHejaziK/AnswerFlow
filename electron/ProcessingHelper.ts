@@ -98,6 +98,7 @@ export class ProcessingHelper {
           openaiKey: openaiKey || undefined,
           geminiKey: geminiKey || undefined,
           // ollamaUrl is not fetched in CredentialsManager yet by default, but we pass these keys
+          providerDataScopes: (() => { try { const { SettingsManager } = require('./services/SettingsManager'); return SettingsManager.getInstance().get('providerDataScopes'); } catch { return undefined; } })()
       });
 
       // CRITICAL: Retry pending embeddings now that we have a key

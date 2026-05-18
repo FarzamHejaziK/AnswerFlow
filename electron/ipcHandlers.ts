@@ -411,7 +411,7 @@ export function initializeIpcHandlers(appState: AppState): void {
     try {
       const result = await appState.processingHelper.getLLMHelper().chatWithGemini(message, imagePaths, context, options?.skipSystemPrompt);
 
-      console.log(`[IPC] gemini - chat response: `, result ? result.substring(0, 50) : "(empty)");
+      console.log(`[IPC] gemini - chat response received`, { length: result?.length ?? 0 });
 
       // Don't process empty responses
       if (!result || result.trim().length === 0) {
@@ -435,7 +435,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       // 2. Add assistant response and set as last message
       console.log(`[IPC] Updating IntelligenceManager with assistant message...`);
       intelligenceManager.addAssistantMessage(result);
-      console.log(`[IPC] Updated IntelligenceManager.Last message: `, intelligenceManager.getLastAssistantMessage()?.substring(0, 50));
+      console.log(`[IPC] Updated IntelligenceManager.Last message`, { length: intelligenceManager.getLastAssistantMessage()?.length ?? 0 });
 
       // Log Usage
       intelligenceManager.logUsage('chat', message, result);
@@ -732,6 +732,100 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle("set-verbose-logging", async (_, enabled: boolean) => {
     appState.setVerboseLogging(enabled);
+    return { success: true };
+  });
+
+  safeHandle("get-meeting-retention", async () => {
+    return SettingsManager.getInstance().get('meetingRetention') ?? 'forever';
+  });
+
+  safeHandle("set-meeting-retention", async (_, retention: 'forever' | '7d' | '30d' | 'never') => {
+    if (!['forever', '7d', '30d', 'never'].includes(retention)) {
+      return { success: false, error: 'invalid_retention' };
+    }
+    SettingsManager.getInstance().set('meetingRetention', retention);
+    BrowserWindow.getAllWindows().forEach(win => {
+      if (!win.isDestroyed()) {
+        win.webContents.send('meeting-retention-changed', retention);
+      }
+    });
+    return { success: true };
+  });
+
+  safeHandle("get-provider-data-scopes", async () => {
+    return SettingsManager.getInstance().get('providerDataScopes') ?? {};
+  });
+
+  safeHandle("set-provider-data-scopes", async (_, scopes: Record<string, boolean>) => {
+    if (!scopes || typeof scopes !== 'object') {
+      return { success: false, error: 'invalid_scopes' };
+    }
+    const allowedKeys = new Set(['transcript', 'screenshots', 'reference_files', 'profile_history', 'embeddings', 'post_call_summary']);
+    const sanitized: Record<string, boolean> = {};
+    for (const [key, value] of Object.entries(scopes)) {
+      if (allowedKeys.has(key) && typeof value === 'boolean') {
+        sanitized[key] = value;
+      }
+    }
+    SettingsManager.getInstance().set('providerDataScopes', sanitized as any);
+    BrowserWindow.getAllWindows().forEach(win => {
+      if (!win.isDestroyed()) {
+        win.webContents.send('provider-data-scopes-changed', sanitized);
+      }
+    });
+    return { success: true };
+  });
+
+  safeHandle("get-screen-understanding-mode", async () => {
+    return SettingsManager.getInstance().getScreenUnderstandingMode();
+  });
+
+  safeHandle("set-screen-understanding-mode", async (_, mode: 'vision_first' | 'vision_only' | 'private_vision') => {
+    if (!['vision_first', 'vision_only', 'private_vision'].includes(mode)) {
+      return { success: false, error: 'invalid_mode' };
+    }
+    SettingsManager.getInstance().setScreenUnderstandingMode(mode);
+    BrowserWindow.getAllWindows().forEach(win => {
+      if (!win.isDestroyed()) {
+        win.webContents.send('screen-understanding-mode-changed', mode);
+      }
+    });
+    return { success: true };
+  });
+
+  safeHandle("get-technical-interview-vision-first", async () => {
+    return SettingsManager.getInstance().getTechnicalInterviewVisionFirst();
+  });
+
+  safeHandle("set-technical-interview-vision-first", async (_, enabled: boolean) => {
+    if (typeof enabled !== 'boolean') {
+      return { success: false, error: 'invalid_value' };
+    }
+    SettingsManager.getInstance().set('technicalInterviewVisionFirst', enabled);
+    BrowserWindow.getAllWindows().forEach(win => {
+      if (!win.isDestroyed()) {
+        win.webContents.send('technical-interview-vision-first-changed', enabled);
+      }
+    });
+    return { success: true };
+  });
+
+  // Legacy alias for renderer builds that still call the old IPC name.
+  // Maps the deprecated technicalInterviewDirectVision channel onto the new
+  // technicalInterviewVisionFirst getter/setter so old renderer builds keep working.
+  safeHandle("get-technical-interview-direct-vision", async () => {
+    return SettingsManager.getInstance().getTechnicalInterviewVisionFirst();
+  });
+  safeHandle("set-technical-interview-direct-vision", async (_, enabled: boolean) => {
+    if (typeof enabled !== 'boolean') {
+      return { success: false, error: 'invalid_value' };
+    }
+    SettingsManager.getInstance().set('technicalInterviewVisionFirst', enabled);
+    BrowserWindow.getAllWindows().forEach(win => {
+      if (!win.isDestroyed()) {
+        win.webContents.send('technical-interview-vision-first-changed', enabled);
+      }
+    });
     return { success: true };
   });
 
@@ -1133,7 +1227,8 @@ export function initializeIpcHandlers(appState: AppState): void {
         if (llmHelper) llmHelper.setNativelyKey(TRIAL_SENTINEL_KEY);
       }
 
-      return { ok: true, ...data };
+      const { trial_token, ...safeData } = data;
+      return { ok: true, ...safeData, hasToken: Boolean(data.trial_token) };
     } catch (error: any) {
       console.error('[IPC] trial:start failed:', error);
       return { ok: false, error: error.message || 'network_error' };
@@ -1173,7 +1268,6 @@ export function initializeIpcHandlers(appState: AppState): void {
       return {
         hasToken: true,
         trialClaimed: true,
-        trialToken: token,
         expiresAt: cm.getTrialExpiresAt(),
         startedAt: cm.getTrialStartedAt(),
         expired: cm.getTrialExpiresAt()
@@ -1494,15 +1588,15 @@ export function initializeIpcHandlers(appState: AppState): void {
         ibmWatsonRegion: creds.ibmWatsonRegion || 'us-south',
         hasSonioxKey: hasKey(creds.sonioxApiKey),
         // STT key values — returned so the settings UI can pre-populate input fields.
-        // AI model keys (Gemini/Groq/OpenAI/Claude) remain boolean-only; STT keys are
-        // surfaced here because users need to see which key is active when switching providers.
-        sttGroqKey: creds.groqSttApiKey || '',
-        sttOpenaiKey: creds.openAiSttApiKey || '',
-        sttDeepgramKey: creds.deepgramApiKey || '',
-        sttElevenLabsKey: creds.elevenLabsApiKey || '',
-        sttAzureKey: creds.azureApiKey || '',
-        sttIbmKey: creds.ibmWatsonApiKey || '',
-        sttSonioxKey: creds.sonioxApiKey || '',
+        // SECURITY FIX (P0): Return masked keys only, never raw API keys.
+        // The hasSttGroqKey boolean tells UI if key exists — no raw key needed.
+        sttGroqKey: creds.groqSttApiKey ? `sk-...${creds.groqSttApiKey.slice(-4)}` : '',
+        sttOpenaiKey: creds.openAiSttApiKey ? `sk-...${creds.openAiSttApiKey.slice(-4)}` : '',
+        sttDeepgramKey: creds.deepgramApiKey ? `sk-...${creds.deepgramApiKey.slice(-4)}` : '',
+        sttElevenLabsKey: creds.elevenLabsApiKey ? `sk-...${creds.elevenLabsApiKey.slice(-4)}` : '',
+        sttAzureKey: creds.azureApiKey ? `sk-...${creds.azureApiKey.slice(-4)}` : '',
+        sttIbmKey: creds.ibmWatsonApiKey ? `sk-...${creds.ibmWatsonApiKey.slice(-4)}` : '',
+        sttSonioxKey: creds.sonioxApiKey ? `sk-...${creds.sonioxApiKey.slice(-4)}` : '',
         openAiSttBaseUrl: creds.openAiSttBaseUrl || '',
         hasTavilyKey: hasKey(creds.tavilyApiKey),
         // Dynamic Model Discovery - preferred models
@@ -1512,6 +1606,7 @@ export function initializeIpcHandlers(appState: AppState): void {
         claudePreferredModel: creds.claudePreferredModel || undefined,
       };
     } catch (error: any) {
+      // SECURITY FIX (P0): Error fallback returns masked keys, not raw strings
       return { hasGeminiKey: false, hasGroqKey: false, hasOpenaiKey: false, hasClaudeKey: false, hasNativelyKey: false, googleServiceAccountPath: null, sttProvider: 'none', groqSttModel: 'whisper-large-v3-turbo', hasSttGroqKey: false, hasSttOpenaiKey: false, hasDeepgramKey: false, hasElevenLabsKey: false, hasAzureKey: false, azureRegion: 'eastus', hasIbmWatsonKey: false, ibmWatsonRegion: 'us-south', hasSonioxKey: false, hasTavilyKey: false, sttGroqKey: '', sttOpenaiKey: '', sttDeepgramKey: '', sttElevenLabsKey: '', sttAzureKey: '', sttIbmKey: '', sttSonioxKey: '' };
     }
   });
@@ -2448,20 +2543,22 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle("open-external", async (event, url: string) => {
     try {
-      // For macOS System Settings, URL() parsing might act differently or we can just check string prefix
-      if (url.startsWith('x-apple.systempreferences:')) {
-        await shell.openExternal(url);
+      if (typeof url !== 'string') {
+        console.warn('[IPC] Blocked invalid open-external request', { reason: 'non-string' });
         return;
       }
 
       const parsed = new URL(url);
-      if (['http:', 'https:', 'mailto:'].includes(parsed.protocol)) {
+      const allowedWebUrl = parsed.protocol === 'https:' && parsed.hostname === 'mail.google.com' && parsed.pathname === '/mail/';
+      const allowedSystemSettingsUrl = parsed.protocol === 'x-apple.systempreferences:';
+
+      if (allowedWebUrl || allowedSystemSettingsUrl) {
         await shell.openExternal(url);
       } else {
-        console.warn(`[IPC] Blocked potentially unsafe open-external: ${url}`);
+        console.warn('[IPC] Blocked open-external request', { protocol: parsed.protocol, hostname: parsed.hostname });
       }
     } catch {
-      console.warn(`[IPC] Invalid URL in open-external: ${url}`);
+      console.warn('[IPC] Invalid URL in open-external');
     }
   });
 
@@ -2481,14 +2578,113 @@ export function initializeIpcHandlers(appState: AppState): void {
   });
 
   // MODE 2: What Should I Say (Primary auto-answer)
-  safeHandle("generate-what-to-say", async (_, question?: string, imagePaths?: string[]) => {
+  //
+  // VISION-FIRST: image paths are validated and forwarded to IntelligenceManager
+  // which routes them through the vision provider fallback chain.
+  // LEGACY OCR PATH DISABLED: the previous build called ScreenContextService.captureScreenFromPath
+  // here to run Tesseract OCR before answering. That path is now removed from the runtime —
+  // Natively answers from the image directly via a vision-capable provider. Do not re-introduce
+  // OCR here unless a future explicit OCR-only mode is reintroduced.
+  safeHandle("generate-what-to-say", async (_, question?: string, imagePaths?: string[], options?: { promptInstruction?: string }) => {
     try {
+      let screenContext: any;
+      let screenContextStatus: 'not_available' | 'available' | 'failed' = 'not_available';
+      let visionProviderUsed: string | undefined;
+      let visionModelUsed: string | undefined;
+      let visionAttempts: number | undefined;
+      let visionFailureReason: string | undefined;
+
+      const validatedImagePaths: string[] | undefined = imagePaths?.length ? [] : undefined;
+
+      // SECURITY (P0): Validate image paths if provided from renderer
+      if (imagePaths && imagePaths.length > 0) {
+        if (!Array.isArray(imagePaths) || imagePaths.length > 5 || imagePaths.some(imagePath => typeof imagePath !== 'string' || imagePath.trim().length === 0)) {
+          console.warn('[IPC] generate-what-to-say: malformed image path payload rejected');
+          return {
+            answer: null,
+            question: question || 'unknown',
+            screenContextStatus,
+            error: 'Invalid image path payload'
+          };
+        }
+
+        const { app } = require('electron');
+        const { validateImagePath } = require('./utils/curlUtils');
+        const userDataDir = app.getPath('userData');
+
+        for (const imagePath of imagePaths) {
+          const validation = validateImagePath(imagePath, userDataDir);
+          if (!validation.isValid) {
+            console.warn(`[IPC] generate-what-to-say: invalid image path rejected: ${validation.reason}`);
+            return {
+              answer: null,
+              question: question || 'unknown',
+              screenContextStatus,
+              error: `Invalid image path: ${validation.reason}`
+            };
+          }
+          validatedImagePaths!.push(imagePath);
+        }
+
+        // Vision-first: run the ScreenUnderstandingService so the image is hashed, optimized,
+        // and routed through the vision provider fallback chain. The structured result becomes
+        // the screenContext that PromptAssembler consumes.
+        try {
+          const { getScreenUnderstandingService } = require('./services/screen/ScreenUnderstandingService');
+          const { CredentialsManager } = require('./services/CredentialsManager');
+          const sus = getScreenUnderstandingService();
+          const settings = SettingsManager.getInstance();
+          const credentials = CredentialsManager.getInstance();
+          const providerScopes = settings.get('providerDataScopes') || {};
+
+          const sur = await sus.understand({
+            modeId: 'what-to-say',
+            transcript: question,
+            userAction: 'what_to_say',
+            qualityMode: 'balanced',
+            imagePaths: validatedImagePaths,
+            screenUnderstandingMode: settings.getScreenUnderstandingMode(),
+            technicalInterviewVisionFirst: settings.getTechnicalInterviewVisionFirst(),
+            providerPolicy: {
+              localOnly: settings.getScreenUnderstandingMode() === 'private_vision',
+              allowScreenshots: providerScopes.screenshots !== false,
+              visionAvailable: credentials.anyVisionProviderConfigured?.() ?? true,
+              localVisionAvailable: credentials.anyLocalVisionProviderConfigured?.() ?? false,
+            },
+          });
+
+          screenContext = sur.status === 'available' ? sur : undefined;
+          screenContextStatus = sur.status === 'available' ? 'available' : (sur.status === 'failed' ? 'failed' : 'not_available');
+          visionProviderUsed = sur.providerUsed;
+          visionModelUsed = sur.modelUsed;
+          visionAttempts = Array.isArray(sur.attempts) ? sur.attempts.length : undefined;
+          visionFailureReason = sur.failureReason;
+        } catch (sErr: any) {
+          screenContextStatus = 'failed';
+          console.warn('[IPC] generate-what-to-say: ScreenUnderstandingService failed', {
+            errorClass: sErr?.name || 'Error',
+          });
+        }
+      }
+
       const intelligenceManager = appState.getIntelligenceManager();
       // Question and imagePaths are now optional - IntelligenceManager infers from transcript
-      const answer = await intelligenceManager.runWhatShouldISay(question, 0.8, imagePaths, {
+      const answer = await intelligenceManager.runWhatShouldISay(question, 0.8, validatedImagePaths, {
         skipCooldown: process.env.NODE_ENV === 'test',
+        screenContext,
+        promptInstruction: typeof options?.promptInstruction === 'string' ? options.promptInstruction : undefined,
       });
-      return { answer, question: question || 'inferred from context' };
+      return {
+        answer,
+        question: question || 'inferred from context',
+        screenContextStatus,
+        visionProviderUsed,
+        visionModelUsed,
+        visionAttempts,
+        visionFailureReason,
+        imageCount: validatedImagePaths?.length || 0,
+        usedImageInput: Boolean(validatedImagePaths?.length),
+      };
     } catch (error: any) {
       console.error('[IPC] generate-what-to-say error:', error);
       return {
@@ -2515,20 +2711,69 @@ export function initializeIpcHandlers(appState: AppState): void {
     }
   });
 
+  // Shared helper: validate, then run images through the vision-first ImageOptimizer
+  // so downstream provider calls send compressed JPEG payloads instead of raw retina PNGs.
+  // Falls back to the original paths if optimization fails — image input is more important
+  // than payload size, so a Sharp failure must not block the request.
+  async function optimizeImagesForVision(
+    paths: string[],
+    handlerLabel: string,
+    profile: 'fast' | 'balanced' | 'technical' | 'best' = 'technical',
+  ): Promise<string[]> {
+    if (paths.length === 0) return paths;
+    try {
+      const { getImageOptimizer } = require('./services/screen/ImageOptimizer');
+      const optimizer = getImageOptimizer();
+      const optimized: string[] = [];
+      for (const p of paths) {
+        try {
+          const out = await optimizer.optimize(p, { profile, provider: 'openai', cacheKey: p });
+          optimized.push(out.path);
+        } catch (err: any) {
+          console.warn(`[IPC] ${handlerLabel}: image optimization failed for ${p}, using original`, { errorClass: err?.name });
+          optimized.push(p);
+        }
+      }
+      return optimized;
+    } catch {
+      return paths;
+    }
+  }
+
   safeHandle("generate-code-hint", async (_, imagePaths?: string[], problemStatement?: string) => {
     try {
       // If no explicit images were passed from the frontend, fall back to the
       // screenshot queue so the AI can always "see" the user's screen.
+      const screenshotQueue = appState.getScreenshotQueue();
       const resolvedImagePaths: string[] =
         imagePaths && imagePaths.length > 0
           ? imagePaths
-          : appState.getScreenshotQueue();
+          : screenshotQueue;
+
+      // SECURITY (P0): Validate image paths if provided from renderer
+      if (imagePaths && imagePaths.length > 0) {
+        const { app } = require('electron');
+        const { validateImagePath } = require('./utils/curlUtils');
+        const userDataDir = app.getPath('userData');
+
+        for (const imagePath of imagePaths) {
+          const validation = validateImagePath(imagePath, userDataDir);
+          if (!validation.isValid) {
+            console.warn(`[IPC] generate-code-hint: invalid image path rejected: ${validation.reason}`);
+            return { error: `Invalid image path: ${validation.reason}`, hint: null };
+          }
+        }
+      }
 
       console.log(`[IPC] generate-code-hint: using ${resolvedImagePaths.length} image(s) (${imagePaths?.length ? 'explicit' : 'queue fallback'})`);
 
+      // VISION-FIRST: optimize the screenshot(s) with Sharp before they reach the LLM,
+      // using the 'technical' profile so code text stays sharp at 1536px.
+      const optimizedPaths = await optimizeImagesForVision(resolvedImagePaths, 'generate-code-hint', 'technical');
+
       const intelligenceManager = appState.getIntelligenceManager();
       const hint = await intelligenceManager.runCodeHint(
-        resolvedImagePaths.length > 0 ? resolvedImagePaths : undefined,
+        optimizedPaths.length > 0 ? optimizedPaths : undefined,
         problemStatement
       );
       return { hint };
@@ -2541,16 +2786,35 @@ export function initializeIpcHandlers(appState: AppState): void {
     try {
       // If no explicit images were passed from the frontend, fall back to the
       // screenshot queue so the AI can always "see" the user's screen.
+      const screenshotQueue = appState.getScreenshotQueue();
       const resolvedImagePaths: string[] =
         imagePaths && imagePaths.length > 0
           ? imagePaths
-          : appState.getScreenshotQueue();
+          : screenshotQueue;
+
+      // SECURITY (P0): Validate image paths if provided from renderer
+      if (imagePaths && imagePaths.length > 0) {
+        const { app } = require('electron');
+        const { validateImagePath } = require('./utils/curlUtils');
+        const userDataDir = app.getPath('userData');
+
+        for (const imagePath of imagePaths) {
+          const validation = validateImagePath(imagePath, userDataDir);
+          if (!validation.isValid) {
+            console.warn(`[IPC] generate-brainstorm: invalid image path rejected: ${validation.reason}`);
+            return { error: `Invalid image path: ${validation.reason}`, script: null };
+          }
+        }
+      }
 
       console.log(`[IPC] generate-brainstorm: using ${resolvedImagePaths.length} image(s) (${imagePaths?.length ? 'explicit' : 'queue fallback'})`);
 
+      // VISION-FIRST: balanced profile (1280px) — brainstorm doesn't need code-sharp text.
+      const optimizedPaths = await optimizeImagesForVision(resolvedImagePaths, 'generate-brainstorm', 'balanced');
+
       const intelligenceManager = appState.getIntelligenceManager();
       const script = await intelligenceManager.runBrainstorm(
-        resolvedImagePaths.length > 0 ? resolvedImagePaths : undefined,
+        optimizedPaths.length > 0 ? optimizedPaths : undefined,
         problemStatement
       );
       return { script };
@@ -2646,6 +2910,63 @@ export function initializeIpcHandlers(appState: AppState): void {
       return { success: true };
     } catch (error: any) {
       return { success: false, error: error.message };
+    }
+  });
+
+  // Phase 3 — Dynamic Actions IPC. Accept/dismiss/list. The action emission
+  // direction is push-only (intelligence-dynamic-action channel from main →
+  // renderer); these handlers are the renderer → main control plane.
+  safeHandle("dynamic-action:accept", async (_, actionId: string) => {
+    try {
+      if (typeof actionId !== 'string' || !actionId) {
+        return { success: false, error: 'invalid_action_id' };
+      }
+      const intelligenceManager = appState.getIntelligenceManager();
+      const action = intelligenceManager.acceptDynamicAction(actionId);
+      if (!action) return { success: false, error: 'not_found' };
+      // Phase 6 — telemetry on accept (no transcript, no evidence body).
+      try {
+        const { telemetryService } = require('./services/telemetry/TelemetryService');
+        telemetryService.track({
+          name: 'dynamic_action_accepted',
+          sessionId: action.sessionId,
+          modeId: action.modeId,
+          properties: { actionId: action.id, actionType: action.type, modeTemplateType: action.modeTemplateType },
+        });
+      } catch { /* non-fatal */ }
+      // Caller (renderer) is expected to follow up with a normal Ask-AI call
+      // using action.promptInstruction. We return the action so the renderer
+      // can populate the answer prompt without a second round-trip.
+      return { success: true, action };
+    } catch (error: any) {
+      return { success: false, error: error?.message ?? 'internal_error' };
+    }
+  });
+
+  safeHandle("dynamic-action:dismiss", async (_, actionId: string) => {
+    try {
+      if (typeof actionId !== 'string' || !actionId) {
+        return { success: false, error: 'invalid_action_id' };
+      }
+      const intelligenceManager = appState.getIntelligenceManager();
+      intelligenceManager.dismissDynamicAction(actionId);
+      // Phase 6 — telemetry on dismiss.
+      try {
+        const { telemetryService } = require('./services/telemetry/TelemetryService');
+        telemetryService.track({ name: 'dynamic_action_dismissed', properties: { actionId } });
+      } catch { /* non-fatal */ }
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error?.message ?? 'internal_error' };
+    }
+  });
+
+  safeHandle("dynamic-action:list", async () => {
+    try {
+      const intelligenceManager = appState.getIntelligenceManager();
+      return { success: true, actions: intelligenceManager.getActiveDynamicActions() };
+    } catch (error: any) {
+      return { success: false, error: error?.message ?? 'internal_error', actions: [] };
     }
   });
 
@@ -3460,12 +3781,44 @@ export function initializeIpcHandlers(appState: AppState): void {
         }
       }
       const { ModesManager } = require('./services/ModesManager');
+      // BUG-MODE-BLEEDING fix: clear mode-specific session context BEFORE switching modes
+      // so Interview mode resume/JD context doesn't bleed into the new mode's responses.
+      try {
+        const appStateIntMgr = appState.getIntelligenceManager();
+        if (appStateIntMgr) appStateIntMgr.clearSessionContext();
+      } catch { /* non-fatal — session may not exist during startup */ }
+
       ModesManager.getInstance().setActiveMode(id);
       // Broadcast mode change to all windows so indicators update immediately
-      const activeName = id ? (ModesManager.getInstance().getActiveMode()?.name ?? null) : null;
+      const activeMode = id ? ModesManager.getInstance().getActiveMode() : null;
+      const activeName = activeMode?.name ?? null;
       BrowserWindow.getAllWindows().forEach(win => {
         if (!win.isDestroyed()) win.webContents.send('mode-changed', { id, name: activeName });
       });
+      // Phase 3 — re-bind dynamic action engine so the new mode's trigger pack
+      // takes effect immediately. New (sessionId, modeId) pair flushes the per-
+      // session store inside DynamicActionEngine, killing any old-mode candidates.
+      try {
+        const appStateIntMgr = appState.getIntelligenceManager();
+        if (appStateIntMgr && activeMode) {
+          appStateIntMgr.setDynamicActionContext({
+            sessionId: `session_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            modeId: activeMode.id,
+            modeTemplateType: activeMode.templateType,
+          });
+        } else if (appStateIntMgr && !id) {
+          appStateIntMgr.clearDynamicActionContext();
+        }
+      } catch { /* non-fatal */ }
+      // Phase 6 — mode_switched telemetry (no PII).
+      try {
+        const { telemetryService } = require('./services/telemetry/TelemetryService');
+        telemetryService.track({
+          name: 'mode_switched',
+          modeId: activeMode?.id,
+          properties: { modeTemplateType: activeMode?.templateType, cleared: !id },
+        });
+      } catch { /* non-fatal */ }
       return { success: true };
     } catch (e: any) {
       console.error('[IPC] modes:set-active error:', e);
@@ -3486,10 +3839,24 @@ export function initializeIpcHandlers(appState: AppState): void {
   safeHandle("modes:upload-reference-file", async (_, modeId: string) => {
     try {
       if (!isProOrTrialActive()) return { success: false, error: 'pro_required' };
-      const result = await dialog.showOpenDialog({
+      // Server-side allow-list. The dialog filter is a hint to users — never
+      // trust it for validation, since the user can rename a file or the
+      // filter can be bypassed by selecting "All Files" in the dialog UI.
+      // Plain-text formats parse trivially; PDF and DOCX go through their
+      // dedicated parsers below.
+      const ALLOWED_EXTENSIONS = new Set([
+        '.txt', '.md', '.markdown', '.json', '.csv', '.tsv', '.xml', '.html', '.htm', '.log',
+        '.pdf', '.docx', '.doc',
+      ]);
+      // 10 MiB per file. Anything larger is almost always a database dump,
+      // a media file, or a misclicked archive; the modes layer would just
+      // truncate it to ~40 KB anyway via MAX_TOTAL_CHARS.
+      const MAX_FILE_BYTES = 10 * 1024 * 1024;
+
+      const result: any = await dialog.showOpenDialog({
         properties: ['openFile'],
         filters: [
-          { name: 'Text & Documents', extensions: ['txt', 'md', 'pdf', 'docx', 'doc'] },
+          { name: 'Text & Documents', extensions: ['txt', 'md', 'json', 'csv', 'xml', 'html', 'pdf', 'docx', 'doc'] },
           { name: 'All Files', extensions: ['*'] },
         ],
       });
@@ -3500,19 +3867,110 @@ export function initializeIpcHandlers(appState: AppState): void {
       const fileName = path.basename(filePath);
       const ext = path.extname(filePath).toLowerCase();
 
+      if (!ALLOWED_EXTENSIONS.has(ext)) {
+        // Friendly, actionable message — UI surfaces this to the user.
+        return {
+          success: false,
+          error: `Unsupported file type "${ext || 'none'}". Supported formats: TXT, MD, JSON, CSV, XML, HTML, LOG, PDF, DOCX, DOC. For resumes and job descriptions, use Profile Intelligence under Settings instead.`,
+        };
+      }
+
+      // Pre-flight stat. Use lstat so we don't auto-follow symlinks — a
+      // symlink to /dev/zero or a network mount that lies about size would
+      // otherwise hang the renderer-IPC reply forever via readFileSync.
+      let stats: ReturnType<typeof fs.lstatSync>;
+      try {
+        stats = fs.lstatSync(filePath);
+      } catch {
+        return { success: false, error: 'Could not read the selected file. It may have moved or been deleted.' };
+      }
+      if (!stats.isFile()) {
+        return {
+          success: false,
+          error: 'Selected path is not a regular file (it may be a symlink, device, or directory). Pick a real document file.',
+        };
+      }
+      if (stats.size > MAX_FILE_BYTES) {
+        const mb = (stats.size / (1024 * 1024)).toFixed(1);
+        return {
+          success: false,
+          error: `File is ${mb} MB; the maximum is 10 MB. Trim the file or split it into smaller reference documents.`,
+        };
+      }
+
+      // Wrap the parser branches in a per-call timeout. pdf-parse and mammoth
+      // have both hung historically on malformed input or zip-bomb DOCX —
+      // 15 s is generous for a 10 MiB document.
+      const PARSE_TIMEOUT_MS = 15_000;
+      function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+        return Promise.race([
+          p,
+          new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)),
+        ]);
+      }
+
       let content = '';
-      if (ext === '.pdf') {
-        const { PDFParse } = require('pdf-parse');
-        const buffer = fs.readFileSync(filePath);
-        const parser = new PDFParse({ data: buffer });
-        const data = await parser.getText();
-        content = data.text;
-      } else if (ext === '.docx' || ext === '.doc') {
-        const mammoth = require('mammoth');
-        const result2 = await mammoth.extractRawText({ path: filePath });
-        content = result2.value;
-      } else {
-        content = fs.readFileSync(filePath, 'utf8');
+      try {
+        if (ext === '.pdf') {
+          const { PDFParse } = require('pdf-parse');
+          const buffer = fs.readFileSync(filePath);
+          const parser = new PDFParse({ data: buffer });
+          const data: any = await withTimeout<any>(parser.getText(), PARSE_TIMEOUT_MS, 'PDF parse');
+          content = data.text;
+        } else if (ext === '.docx' || ext === '.doc') {
+          const mammoth = require('mammoth');
+          const result2: any = await withTimeout<any>(mammoth.extractRawText({ path: filePath }), PARSE_TIMEOUT_MS, 'DOCX parse');
+          content = result2.value;
+        } else {
+          // Plain-text family. Read raw bytes first so we can detect text
+          // encoding from a leading byte-order-mark before deciding whether
+          // a null byte is binary noise or a legitimate UTF-16 zero-pad.
+          const probe = fs.readFileSync(filePath, { encoding: null });
+          if (probe.length === 0) {
+            return { success: false, error: `"${fileName}" is empty.` };
+          }
+          // BOM-aware decode. UTF-16 files have many embedded null bytes; we
+          // must NOT treat those as a binary-rename signal.
+          if (probe.length >= 2 && probe[0] === 0xFF && probe[1] === 0xFE) {
+            content = probe.subarray(2).toString('utf16le');
+          } else if (probe.length >= 2 && probe[0] === 0xFE && probe[1] === 0xFF) {
+            // UTF-16 BE → swap pairs then decode as utf16le.
+            const swapped = Buffer.allocUnsafe(probe.length - 2);
+            for (let i = 2; i + 1 < probe.length; i += 2) {
+              swapped[i - 2] = probe[i + 1];
+              swapped[i - 1] = probe[i];
+            }
+            content = swapped.toString('utf16le');
+          } else if (probe.length >= 3 && probe[0] === 0xEF && probe[1] === 0xBB && probe[2] === 0xBF) {
+            content = probe.subarray(3).toString('utf8');
+          } else {
+            // No BOM. Sniff the first 2 KiB for a null byte — that's the
+            // strongest signal of a renamed binary.
+            const sniffWindow = probe.subarray(0, Math.min(2048, probe.length));
+            if (sniffWindow.includes(0)) {
+              return {
+                success: false,
+                error: `"${fileName}" looks like a binary file even though its extension is ${ext}. Re-save the file as plain text or pick a supported document format.`,
+              };
+            }
+            content = probe.toString('utf8');
+          }
+        }
+      } catch (parseErr: any) {
+        // Parser-specific failures (timeout, malformed PDF, zip-bomb DOCX).
+        // Log detail to main-process; return a generic message.
+        console.error('[IPC] modes:upload-reference-file parser error:', parseErr?.message ?? parseErr);
+        return {
+          success: false,
+          error: `Could not parse "${fileName}". The file may be corrupt, password-protected, or in an unsupported variant of ${ext}.`,
+        };
+      }
+
+      if (!content || content.trim().length === 0) {
+        return {
+          success: false,
+          error: `"${fileName}" parsed to empty text. The file may be password-protected, image-only, or corrupt.`,
+        };
       }
 
       const { ModesManager } = require('./services/ModesManager');
@@ -3520,7 +3978,10 @@ export function initializeIpcHandlers(appState: AppState): void {
       return { success: true, file };
     } catch (e: any) {
       console.error('[IPC] modes:upload-reference-file error:', e);
-      return { success: false, error: e.message };
+      // Do not leak raw error.message to the renderer (may contain absolute
+      // paths or library internals). Return a generic message; the detail is
+      // already in the main-process log above.
+      return { success: false, error: 'Could not read the selected file. Please try a different file or contact support.' };
     }
   });
 

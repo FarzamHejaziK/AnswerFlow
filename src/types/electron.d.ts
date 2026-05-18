@@ -1,3 +1,37 @@
+// Phase 3 — DynamicActionPayload mirrors electron/services/dynamic-actions/DynamicAction.ts.
+// Kept as a structural interface (not a class import) to preserve the strict main↔renderer
+// type boundary — the renderer never imports from electron/* directly.
+export interface DynamicActionEvidenceRef {
+  source: 'transcript' | 'screen' | 'reference' | 'meeting_history'
+  text: string
+  timestamp?: number
+  speaker?: string
+  fileId?: string
+  chunkId?: string
+}
+
+export interface DynamicActionPayload {
+  id: string
+  sessionId: string
+  modeId: string
+  modeTemplateType: string
+  type: string
+  label: string
+  description?: string
+  confidence: number
+  priority: number
+  evidenceRefs: DynamicActionEvidenceRef[]
+  status: 'candidate' | 'shown' | 'accepted' | 'dismissed' | 'completed' | 'expired'
+  createdAt: number
+  expiresAt?: number
+  promptInstruction: string
+  answerStyle?: {
+    maxWords: number
+    format: 'bullets' | 'short_script' | 'code' | 'checklist' | 'summary'
+    tone: string
+  }
+}
+
 export interface ElectronAPI {
   updateContentDimensions: (dimensions: {
     width: number
@@ -92,9 +126,9 @@ export interface ElectronAPI {
   requestMicPermission: () => Promise<boolean>
 
   // Free Trial
-  startTrial:     () => Promise<{ ok: boolean; trial_token?: string; started_at?: string; expires_at?: string; expired?: boolean; already_used?: boolean; converted_to?: string | null; usage?: { ai: number; stt_seconds: number; search: number }; limits?: { duration_ms: number; ai_requests: number; stt_minutes: number; search_requests: number }; error?: string; status?: number }>
+  startTrial:     () => Promise<{ ok: boolean; hasToken?: boolean; started_at?: string; expires_at?: string; expired?: boolean; already_used?: boolean; converted_to?: string | null; usage?: { ai: number; stt_seconds: number; search: number }; limits?: { duration_ms: number; ai_requests: number; stt_minutes: number; search_requests: number }; error?: string; status?: number }>
   getTrialStatus: () => Promise<{ ok: boolean; expired?: boolean; remaining_ms?: number; started_at?: string; expires_at?: string; converted_to?: string | null; usage?: { ai: number; stt_seconds: number; search: number }; limits?: object; error?: string }>
-  getLocalTrial:  () => Promise<{ hasToken: boolean; trialClaimed?: boolean; trialToken?: string; expiresAt?: string; startedAt?: string; expired?: boolean }>
+  getLocalTrial:  () => Promise<{ hasToken: boolean; trialClaimed?: boolean; expiresAt?: string; startedAt?: string; expired?: boolean }>
   convertTrial:   (choice: string) => Promise<{ ok: boolean }>
   endTrialByok:        () => Promise<{ success: boolean; error?: string }>
   wipeTrialProfileData: () => Promise<{ success: boolean; error?: string }>
@@ -148,7 +182,19 @@ export interface ElectronAPI {
 
   // Intelligence Mode IPC
   generateAssist: () => Promise<{ insight: string | null }>
-  generateWhatToSay: (question?: string, imagePaths?: string[]) => Promise<{ answer: string | null; question?: string; error?: string }>
+  generateWhatToSay: (question?: string, imagePaths?: string[], options?: { promptInstruction?: string }) => Promise<{
+    answer: string | null;
+    question?: string;
+    error?: string;
+    /** Vision pipeline outcome — replaces legacy screenContextStatus/ocrTextLength fields */
+    screenContextStatus?: 'not_available' | 'available' | 'failed';
+    visionProviderUsed?: string;
+    visionModelUsed?: string;
+    visionAttempts?: number;
+    visionFailureReason?: 'no_vision_provider' | 'all_vision_failed' | 'privacy_blocked' | 'scope_blocked' | 'provider_timeout';
+    imageCount?: number;
+    usedImageInput?: boolean;
+  }>
   generateClarify: () => Promise<{ clarification: string | null }>
   generateCodeHint: (imagePaths?: string[], problemStatement?: string) => Promise<{ hint: string | null }>
   generateBrainstorm: (imagePaths?: string[], problemStatement?: string) => Promise<{ script: string | null }>
@@ -191,6 +237,12 @@ export interface ElectronAPI {
   updateMeetingSummary: (id: string, updates: { overview?: string, actionItems?: string[], keyPoints?: string[], actionItemsTitle?: string, keyPointsTitle?: string }) => Promise<boolean>
   deleteMeeting: (id: string) => Promise<boolean>
   setWindowMode: (mode: 'launcher' | 'overlay', inactive?: boolean) => Promise<void>
+
+  // Phase 3 — Cluely-style dynamic action cards.
+  onIntelligenceDynamicAction: (callback: (data: { action: DynamicActionPayload }) => void) => () => void
+  acceptDynamicAction: (actionId: string) => Promise<{ success: boolean; action?: DynamicActionPayload; error?: string }>
+  dismissDynamicAction: (actionId: string) => Promise<{ success: boolean; error?: string }>
+  listDynamicActions: () => Promise<{ success: boolean; actions: DynamicActionPayload[]; error?: string }>
 
   // Intelligence Mode Events
   onIntelligenceAssistUpdate: (callback: (data: { insight: string }) => void) => () => void
@@ -380,6 +432,24 @@ export interface ElectronAPI {
   // Verbose / Debug Logging
   getVerboseLogging: () => Promise<boolean>;
   setVerboseLogging: (enabled: boolean) => Promise<{ success: boolean }>;
+  getMeetingRetention: () => Promise<'forever' | '7d' | '30d' | 'never'>;
+  setMeetingRetention: (retention: 'forever' | '7d' | '30d' | 'never') => Promise<{ success: boolean; error?: string }>;
+  onMeetingRetentionChanged: (callback: (retention: 'forever' | '7d' | '30d' | 'never') => void) => () => void;
+  getProviderDataScopes: () => Promise<{ transcript?: boolean; screenshots?: boolean; reference_files?: boolean; profile_history?: boolean; embeddings?: boolean; post_call_summary?: boolean }>;
+  setProviderDataScopes: (scopes: { transcript?: boolean; screenshots?: boolean; reference_files?: boolean; profile_history?: boolean; embeddings?: boolean; post_call_summary?: boolean }) => Promise<{ success: boolean; error?: string }>;
+  onProviderDataScopesChanged: (callback: (scopes: { transcript?: boolean; screenshots?: boolean; reference_files?: boolean; profile_history?: boolean; embeddings?: boolean; post_call_summary?: boolean }) => void) => () => void;
+  getScreenUnderstandingMode: () => Promise<'vision_first' | 'vision_only' | 'private_vision'>;
+  setScreenUnderstandingMode: (mode: 'vision_first' | 'vision_only' | 'private_vision') => Promise<{ success: boolean; error?: string }>;
+  onScreenUnderstandingModeChanged: (callback: (mode: 'vision_first' | 'vision_only' | 'private_vision') => void) => () => void;
+  getTechnicalInterviewVisionFirst: () => Promise<boolean>;
+  setTechnicalInterviewVisionFirst: (enabled: boolean) => Promise<{ success: boolean; error?: string }>;
+  onTechnicalInterviewVisionFirstChanged: (callback: (enabled: boolean) => void) => () => void;
+  /** @deprecated alias retained for older renderer builds — maps to technicalInterviewVisionFirst */
+  getTechnicalInterviewDirectVision: () => Promise<boolean>;
+  /** @deprecated alias retained for older renderer builds — maps to technicalInterviewVisionFirst */
+  setTechnicalInterviewDirectVision: (enabled: boolean) => Promise<{ success: boolean; error?: string }>;
+  /** @deprecated alias retained for older renderer builds — maps to technicalInterviewVisionFirstChanged */
+  onTechnicalInterviewDirectVisionChanged: (callback: (enabled: boolean) => void) => () => void;
   getLogFilePath: () => Promise<string | null>;
   openLogFile: () => Promise<{ success: boolean; error?: string }>;
 

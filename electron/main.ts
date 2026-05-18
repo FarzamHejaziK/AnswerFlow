@@ -12,11 +12,11 @@ process.stdout?.on?.('error', () => { });
 process.stderr?.on?.('error', () => { });
 
 process.on('uncaughtException', (err) => {
-  logToFile('[CRITICAL] Uncaught Exception: ' + (err.stack || err.message || err));
+  logToFile('[CRITICAL] Uncaught Exception: ' + redactArgsForLog([err]));
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  logToFile('[CRITICAL] Unhandled Rejection at: ' + promise + ' reason: ' + (reason instanceof Error ? reason.stack : reason));
+  logToFile('[CRITICAL] Unhandled Rejection: ' + redactArgsForLog([reason]));
 });
 
 // CQ-04 fix: do NOT call app.getPath() at module load time.
@@ -37,6 +37,20 @@ const getLogFile = (): string | null => {
 const originalLog = console.log;
 const originalWarn = console.warn;
 const originalError = console.error;
+
+// Lazy redactor import — pulled at first call so this file can boot even if
+// the redactor module fails to load (we fall back to a no-op transform).
+let _redactForLog: ((args: unknown[]) => string) | null = null;
+function redactArgsForLog(args: unknown[]): string {
+  if (!_redactForLog) {
+    try {
+      _redactForLog = require('./utils/redactForLog').redactForLog;
+    } catch {
+      _redactForLog = (xs: unknown[]) => xs.map(a => (a instanceof Error ? a.stack || a.message : (typeof a === 'object' ? JSON.stringify(a) : String(a)))).join(' ');
+    }
+  }
+  return _redactForLog!(args);
+}
 
 /** Maximum log file size before rotation (10 MB). */
 const LOG_MAX_BYTES = 10 * 1024 * 1024;
@@ -122,24 +136,21 @@ function getMacScreenCaptureStatus(): 'granted' | 'denied' | 'not-determined' | 
 }
 
 console.log = (...args: any[]) => {
-  const msg = args.map(a => (a instanceof Error) ? a.stack || a.message : (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
-  logToFile('[LOG] ' + msg);
+  logToFile('[LOG] ' + redactArgsForLog(args));
   try {
     originalLog.apply(console, args);
   } catch { }
 };
 
 console.warn = (...args: any[]) => {
-  const msg = args.map(a => (a instanceof Error) ? a.stack || a.message : (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
-  logToFile('[WARN] ' + msg);
+  logToFile('[WARN] ' + redactArgsForLog(args));
   try {
     originalWarn.apply(console, args);
   } catch { }
 };
 
 console.error = (...args: any[]) => {
-  const msg = args.map(a => (a instanceof Error) ? a.stack || a.message : (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
-  logToFile('[ERROR] ' + msg);
+  logToFile('[ERROR] ' + redactArgsForLog(args));
   try {
     originalError.apply(console, args);
   } catch { }
@@ -646,7 +657,8 @@ export class AppState {
              this.ragManager.initializeEmbeddings({
                 openaiKey: cm.getOpenaiApiKey() || process.env.OPENAI_API_KEY || undefined,
                 geminiKey: cm.getGeminiApiKey() || process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || undefined,
-                ollamaUrl: process.env.OLLAMA_URL || "http://localhost:11434"
+                ollamaUrl: process.env.OLLAMA_URL || "http://localhost:11434",
+                providerDataScopes: (() => { try { const { SettingsManager } = require('./services/SettingsManager'); return SettingsManager.getInstance().get('providerDataScopes'); } catch { return undefined; } })()
              });
           }
         }
@@ -667,13 +679,15 @@ export class AppState {
         const openaiKey = cm.getOpenaiApiKey() || process.env.OPENAI_API_KEY;
         const geminiKey = cm.getGeminiApiKey() || process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
         
-        this.ragManager = new RAGManager({ 
-            db: sqliteDb, 
+        const providerDataScopes = (() => { try { const { SettingsManager } = require('./services/SettingsManager'); return SettingsManager.getInstance().get('providerDataScopes'); } catch { return undefined; } })();
+        this.ragManager = new RAGManager({
+            db: sqliteDb,
             dbPath: db.getDbPath(),
             extPath: db.getExtPath(),
             openaiKey,
             geminiKey,
-            ollamaUrl: process.env.OLLAMA_URL || 'http://localhost:11434'
+            ollamaUrl: process.env.OLLAMA_URL || 'http://localhost:11434',
+            providerDataScopes
         });
         this.ragManager.setLLMHelper(this.processingHelper.getLLMHelper());
         console.log('[AppState] RAGManager initialized');
@@ -2577,6 +2591,41 @@ export class AppState {
       this.intelligenceManager.setMeetingMetadata(metadata);
     }
 
+    // Phase 3 — bind dynamic action engine to this meeting + active mode.
+    // Action store is per-(sessionId, modeId), so a fresh sessionId here gives
+    // us per-meeting isolation. Re-binding on mode switch is handled in the
+    // modes:set-active IPC handler.
+    let _meetingTelemetrySessionId: string | undefined;
+    try {
+      const { ModesManager } = require('./services/ModesManager');
+      const activeMode = ModesManager.getInstance().getActiveMode();
+      if (activeMode) {
+        const sessionId = `session_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        _meetingTelemetrySessionId = sessionId;
+        this.intelligenceManager.setDynamicActionContext({
+          sessionId,
+          modeId: activeMode.id,
+          modeTemplateType: activeMode.templateType,
+        });
+      }
+    } catch (err) {
+      // Auxiliary feature — never block meeting start.
+      console.warn('[Main] failed to bind dynamic action context at meeting start:', (err as Error)?.message);
+    }
+
+    // Phase 6 — meeting_start telemetry (no transcript / no PII).
+    try {
+      const { telemetryService } = require('./services/telemetry/TelemetryService');
+      const { ModesManager } = require('./services/ModesManager');
+      const am = ModesManager.getInstance().getActiveMode();
+      telemetryService.track({
+        name: 'meeting_start',
+        sessionId: _meetingTelemetrySessionId,
+        modeId: am?.id,
+        properties: { modeTemplateType: am?.templateType, hasMetadata: Boolean(metadata) },
+      });
+    } catch { /* non-fatal */ }
+
     // Emit session reset to clear UI state immediately
     this.getWindowHelper().getOverlayWindow()?.webContents.send('session-reset');
     this.getWindowHelper().getLauncherWindow()?.webContents.send('session-reset');
@@ -2641,6 +2690,19 @@ export class AppState {
 
   public async endMeeting(): Promise<void> {
     console.log('[Main] Ending Meeting...');
+
+    // Phase 6 — meeting_stop telemetry. Emit BEFORE any teardown so a crash
+    // in stop logic still records the stop event.
+    try {
+      const { telemetryService } = require('./services/telemetry/TelemetryService');
+      const { ModesManager } = require('./services/ModesManager');
+      const am = ModesManager.getInstance().getActiveMode();
+      telemetryService.track({
+        name: 'meeting_stop',
+        modeId: am?.id,
+        properties: { modeTemplateType: am?.templateType },
+      });
+    } catch { /* non-fatal */ }
 
     // Reset Mouse Passthrough so the next meeting overlay starts fresh and focusable
     if (this.overlayMousePassthrough) {
@@ -2726,12 +2788,7 @@ export class AppState {
         this.googleSTT?.stop();
         this.googleSTT_User?.stop();
 
-        // 3. STT is closed — no more transcripts can arrive. Stop accepting
-        //    them. (UX-facing `isMeetingActive` was flipped synchronously up
-        //    top; nothing to broadcast here.)
-        this._isDraining = false;
-
-        // 4. Snapshot transcript + persist placeholder + queue title/summary LLM.
+        // 3. Snapshot transcript + persist placeholder + queue title/summary LLM.
         //    intelligenceManager.stopMeeting itself runs LLM in background.
         const meetingId = await this.intelligenceManager.stopMeeting();
 
@@ -2756,6 +2813,8 @@ export class AppState {
         }
       } catch (err) {
         console.error('[Main] Background meeting teardown failed:', err);
+      } finally {
+        this._isDraining = false;
       }
     })();
     // endMeeting returns NOW — the IPC handler resolves and the renderer's
@@ -2855,6 +2914,32 @@ export class AppState {
       const helper = this.getWindowHelper();
       helper.getLauncherWindow()?.webContents.send('intelligence-assist-update', { insight });
       helper.getOverlayWindow()?.webContents.send('intelligence-assist-update', { insight });
+    })
+
+    // Phase 3 — Cluely-style dynamic action card. Forward to all open windows
+    // (launcher + overlay) so whichever surface the user has up shows the card.
+    this.intelligenceManager.on('dynamic_action_emitted', (action: any) => {
+      const helper = this.getWindowHelper();
+      helper.getLauncherWindow()?.webContents.send('intelligence-dynamic-action', { action });
+      helper.getOverlayWindow()?.webContents.send('intelligence-dynamic-action', { action });
+      // Phase 6 — telemetry: log detection (sanitized: NO transcript text, NO
+      // evidence body — only ids, type, mode, confidence). The TelemetryService
+      // sanitizer also strips transcript-shaped fields defensively.
+      try {
+        const { telemetryService } = require('./services/telemetry/TelemetryService');
+        telemetryService.track({
+          name: 'dynamic_action_detected',
+          sessionId: action?.sessionId,
+          modeId: action?.modeId,
+          properties: {
+            actionId: action?.id,
+            actionType: action?.type,
+            modeTemplateType: action?.modeTemplateType,
+            confidence: action?.confidence,
+            priority: action?.priority,
+          },
+        });
+      } catch { /* non-fatal */ }
     })
 
     this.intelligenceManager.on('suggested_answer', (answer: string, question: string, confidence: number) => {
@@ -3829,6 +3914,24 @@ async function initializeApp() {
   }
 
   // 3. Initialize Managers
+  // Phase 6 — bind TelemetryService to the Electron userData path. The
+  // singleton was constructed with cwd-relative paths at module-load time
+  // (before app.whenReady), so we reconfigure here. Honors the user's
+  // telemetry-enabled setting (default: on, local-only JSONL).
+  try {
+    const { telemetryService } = require('./services/telemetry/TelemetryService');
+    const userDataPath = app.getPath('userData');
+    const telemetryEnabledSetting = SettingsManager.getInstance().get('telemetryEnabled');
+    telemetryService.configure({
+      userDataPath,
+      enabled: telemetryEnabledSetting !== false, // default true
+      localEnabled: true,
+    });
+    telemetryService.track({ name: 'app_start', properties: { platform: process.platform } });
+  } catch (err) {
+    console.warn('[Init] TelemetryService configure threw (non-fatal):', err);
+  }
+
   // Initialize CredentialsManager and load keys explicitly
   // This fixes the issue where keys (especially in production) aren't loaded in time for RAG/LLM
   const { CredentialsManager } = require('./services/CredentialsManager');
@@ -4109,6 +4212,17 @@ async function initializeApp() {
       console.log('[Main] Credentials scrubbed from memory on quit');
     } catch (e) {
       console.error('[Main] Failed to scrub credentials on quit:', e);
+    }
+
+    // Clean up screenshot queues to prevent residual PNG files on disk
+    try {
+      const { ScreenshotHelper } = require('./ScreenshotHelper');
+      // Clear screenshot queues - this deletes all queued screenshot files
+      const screenshotHelper = new ScreenshotHelper();
+      screenshotHelper.clearQueues();
+      console.log('[Main] Screenshot queues cleared on quit');
+    } catch (e) {
+      console.error('[Main] Failed to clear screenshot queues on quit:', e);
     }
   })
 

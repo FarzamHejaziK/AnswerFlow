@@ -33,8 +33,14 @@ export class RateLimiter {
         this.refillRatePerSecond = refillRatePerSecond;
         this.lastRefillTime = Date.now();
 
-        // Refill tokens periodically
+        // Refill tokens periodically. unref() so the timer does not keep the
+        // event loop alive — important for unit tests that create a limiter
+        // without explicitly destroy()ing it (otherwise `node --test` hangs
+        // forever waiting for the interval to drain).
         this.refillTimer = setInterval(() => this.refill(), 1000);
+        if (this.refillTimer && typeof this.refillTimer.unref === 'function') {
+            this.refillTimer.unref();
+        }
     }
 
     /**

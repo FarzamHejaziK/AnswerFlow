@@ -1,0 +1,17 @@
+{
+  "suite": "ModeContextRetriever",
+  "ran_at": "2026-05-15T11:42:00Z",
+  "total": 12,
+  "passed": 11,
+  "failed": 1,
+  "failures": [
+    {
+      "name": "retrieveHybrid - returns lexical fallback when EmbeddingPipeline.isReady is false",
+      "file": "electron/services/__tests__/ModeContextRetriever.test.mjs",
+      "line": 218,
+      "error": "Test ModeContextRetriever.retrieveHybrid failed with timeout 5000ms — the EmbeddingPipeline mock never resolved isReady to false, so the hybrid path waited for an embedding response that never came.",
+      "regression_introduced_in": "commit 5d95836 reference file upload feature"
+    }
+  ],
+  "follow_up": "Add fake EmbeddingPipeline that returns isReady=false synchronously to remove the 5s timeout dependency from this suite."
+}

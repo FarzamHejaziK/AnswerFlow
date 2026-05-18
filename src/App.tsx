@@ -397,8 +397,10 @@ const App: React.FC = () => {
         console.log("[App] Using CoreAudio backend (Default).");
       }
 
+      const meetingRetention = await window.electronAPI.getMeetingRetention?.().catch(() => 'forever');
       const result = await window.electronAPI.startMeeting({
-        audio: { inputDeviceId, outputDeviceId }
+        audio: { inputDeviceId, outputDeviceId },
+        doNotPersist: meetingRetention === 'never'
       });
       if (result.success) {
         analytics.trackMeetingStarted();

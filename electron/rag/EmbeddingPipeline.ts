@@ -418,6 +418,36 @@ export class EmbeddingPipeline {
     }
 
     /**
+     * Batch-embed multiple document chunks in a single call. Providers that
+     * support a native batch endpoint (OpenAI, Gemini) will return all
+     * embeddings in one network round-trip; providers without a native batch
+     * implement `embedBatch` as Promise.all(map(embed)) so we still benefit
+     * from concurrency.
+     *
+     * Wraps the whole batch in a single EMBED_TIMEOUT_MS so a partial
+     * provider stall cannot dangle the caller indefinitely — same contract
+     * as getEmbedding().
+     */
+    async getEmbeddings(texts: string[]): Promise<number[][]> {
+        if (!this.provider) {
+            throw new Error('Embedding provider not initialized');
+        }
+        if (texts.length === 0) return [];
+        const provider = this.provider;
+        return new Promise<number[][]>((resolve, reject) => {
+            const timer = setTimeout(() => {
+                reject(new Error(
+                    `[EmbeddingPipeline] embedBatch() timed out after ${EMBED_TIMEOUT_MS}ms for ${texts.length} chunks via ${provider.name}`
+                ));
+            }, EMBED_TIMEOUT_MS);
+            provider.embedBatch(texts).then(
+                (results) => { clearTimeout(timer); resolve(results); },
+                (err)     => { clearTimeout(timer); reject(err); }
+            );
+        });
+    }
+
+    /**
      * Get embedding for a search query (may use different prefix for asymmetric models).
      * Routes through embedWithTimeout() so a frozen API cannot stall the query path.
      */

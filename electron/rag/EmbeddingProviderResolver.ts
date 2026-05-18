@@ -3,11 +3,13 @@ import { OpenAIEmbeddingProvider } from './providers/OpenAIEmbeddingProvider';
 import { GeminiEmbeddingProvider } from './providers/GeminiEmbeddingProvider';
 import { OllamaEmbeddingProvider } from './providers/OllamaEmbeddingProvider';
 import { LocalEmbeddingProvider } from './providers/LocalEmbeddingProvider';
+import { assertProviderDataScopes, type ProviderDataScopePolicy } from '../llm/ProviderRouter';
 
 export interface AppAPIConfig {
   openaiKey?: string;
   geminiKey?: string;
   ollamaUrl?: string; // e.g. 'http://localhost:11434'
+  providerDataScopes?: ProviderDataScopePolicy;
 }
 
 export class EmbeddingProviderResolver {
@@ -20,10 +22,20 @@ export class EmbeddingProviderResolver {
     const candidates: IEmbeddingProvider[] = [];
 
     if (config.openaiKey) {
-      candidates.push(new OpenAIEmbeddingProvider(config.openaiKey));
+      try {
+        assertProviderDataScopes('openai_embeddings', ['embeddings'], config.providerDataScopes);
+        candidates.push(new OpenAIEmbeddingProvider(config.openaiKey));
+      } catch {
+        console.log('[EmbeddingProviderResolver] OpenAI embeddings disabled by provider data scope policy');
+      }
     }
     if (config.geminiKey) {
-      candidates.push(new GeminiEmbeddingProvider(config.geminiKey));
+      try {
+        assertProviderDataScopes('gemini_embeddings', ['embeddings'], config.providerDataScopes);
+        candidates.push(new GeminiEmbeddingProvider(config.geminiKey));
+      } catch {
+        console.log('[EmbeddingProviderResolver] Gemini embeddings disabled by provider data scope policy');
+      }
     }
     
     candidates.push(new OllamaEmbeddingProvider(config.ollamaUrl || 'http://localhost:11434'));

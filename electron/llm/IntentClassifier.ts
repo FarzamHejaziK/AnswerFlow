@@ -33,8 +33,8 @@ const INTENT_ANSWER_SHAPES: Record<ConversationIntent, string> = {
     clarification: 'Give a direct, focused 1-2 sentence clarification. No setup, no context-setting.',
     follow_up: 'Continue the narrative naturally. 1-2 sentences. No recap of what was already said.',
     deep_dive: 'Provide a structured but concise explanation. Use concrete specifics, not abstract concepts.',
-    behavioral: 'Lead with a specific example or story. Use the STAR pattern implicitly. Focus on actions and outcomes.',
-    example_request: 'Provide ONE concrete, detailed example. Make it realistic and specific.',
+    behavioral: 'Use a specific story only when grounded candidate/profile context exists. Without grounding, use the required no-context admission opener and keep any example illustrative, unnamed, modest, and qualitative.',
+    example_request: 'Provide one concrete example from grounded context when available. Without grounding, label it as illustrative and avoid invented names, companies, dates, metrics, or first-person claims.',
     summary_probe: 'Confirm the summary briefly and add one clarifying point if needed.',
     coding: 'Provide a FULL, complete, working and production-ready code implementation (including necessary boilerplate like Java imports/classes). Start with a brief approach description, then the fully runnable code block, then a concise explanation of why this approach works.',
     general: 'Respond naturally based on context. Keep it conversational and direct.'
@@ -153,7 +153,7 @@ class ZeroShotClassifier {
             }
 
             const intent = ZERO_SHOT_LABELS[topLabel] || 'general';
-            console.log(`[IntentClassifier] SLM classified as "${intent}" (${(topScore * 100).toFixed(1)}%): "${text.substring(0, 60)}..."`);
+            console.log(`[IntentClassifier] SLM classified`, { intent, confidence: topScore, textLength: text.length });
 
             return {
                 intent,

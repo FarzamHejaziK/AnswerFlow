@@ -121,7 +121,7 @@ export class SessionTracker {
             this.detectedCodingQuestion = trimmed;
             this.codingQuestionSource = source;
             this.codingQuestionSetAt = now;
-            console.log(`[SessionTracker] Coding question stored (source: ${source}): "${trimmed.substring(0, 80)}..."`);
+            console.log(`[SessionTracker] Coding question stored`, { source, length: trimmed.length });
             return;
         }
 
@@ -130,7 +130,7 @@ export class SessionTracker {
             this.detectedCodingQuestion = trimmed;
             this.codingQuestionSource = source;
             this.codingQuestionSetAt = now;
-            console.log(`[SessionTracker] Coding question updated via screenshot: "${trimmed.substring(0, 80)}..."`);
+            console.log(`[SessionTracker] Coding question updated via screenshot`, { length: trimmed.length });
             return;
         }
 
@@ -143,7 +143,7 @@ export class SessionTracker {
             this.detectedCodingQuestion = trimmed;
             this.codingQuestionSource = source;
             this.codingQuestionSetAt = now;
-            console.log(`[SessionTracker] Coding question updated via transcript (prev was ${this.codingQuestionSource}, stale=${isStale}): "${trimmed.substring(0, 80)}..."`);
+            console.log(`[SessionTracker] Coding question updated via transcript`, { source: this.codingQuestionSource, stale: isStale, length: trimmed.length });
         } else {
             console.log(`[SessionTracker] Transcript question ignored — screenshot question is recent (< ${SessionTracker.SCREENSHOT_STALE_MS / 1000}s)`);
         }
@@ -158,6 +158,24 @@ export class SessionTracker {
         this.codingQuestionSource = null;
         this.codingQuestionSetAt = null;
         this.recentInterviewerBuffer = [];
+    }
+
+    /**
+     * Clear all mode-specific transient context.
+     * Called when the user switches modes mid-meeting to prevent the old mode's
+     * context (Interviewer Q's, JD context, assistant responses, etc.) from
+     * bleeding into the new mode's responses.
+     */
+    clearSessionContext(): void {
+        this.contextItems = [];
+        this.detectedCodingQuestion = null;
+        this.codingQuestionSource = null;
+        this.codingQuestionSetAt = null;
+        this.recentInterviewerBuffer = [];
+        this.lastAssistantMessage = null;
+        this.assistantResponseHistory = [];
+        this.lastInterimInterviewer = null;
+        console.log('[SessionTracker] Mode-specific session context cleared');
     }
 
     /**
@@ -235,7 +253,7 @@ export class SessionTracker {
      * Add assistant-generated message to context
      */
     addAssistantMessage(text: string): void {
-        console.log(`[SessionTracker] addAssistantMessage called with:`, text.substring(0, 50));
+        console.log(`[SessionTracker] addAssistantMessage called`, { length: text.length });
 
         // Natively-style filtering
         if (!text) return;
@@ -297,12 +315,12 @@ export class SessionTracker {
         // Track interim segments for interviewer to prevent data loss on stop
         if (segment.speaker === 'user') {
             if (isVerboseLogging() && (Math.random() < 0.05 || segment.final)) {
-                console.log(`[SessionTracker] RX User Segment: Final=${segment.final} Text="${segment.text.substring(0, 50)}..."`);
+                console.log(`[SessionTracker] RX User Segment`, { final: segment.final, length: segment.text.length });
             }
         }
         if (segment.speaker === 'interviewer') {
             if (isVerboseLogging() && (Math.random() < 0.05 || segment.final)) {
-                console.log(`[SessionTracker] RX Interviewer Segment: Final=${segment.final} Text="${segment.text.substring(0, 50)}..."`);
+                console.log(`[SessionTracker] RX Interviewer Segment`, { final: segment.final, length: segment.text.length });
             }
 
             if (!segment.final) {
@@ -456,7 +474,7 @@ export class SessionTracker {
      */
     flushInterimTranscript(): void {
         if (this.lastInterimInterviewer) {
-            console.log('[SessionTracker] Force-saving pending interim transcript:', this.lastInterimInterviewer.text);
+            console.log('[SessionTracker] Force-saving pending interim transcript', { length: this.lastInterimInterviewer.text.length });
             const finalSegment = { ...this.lastInterimInterviewer, final: true };
             this.addTranscript(finalSegment);
             this.lastInterimInterviewer = null;
@@ -532,19 +550,19 @@ export class SessionTracker {
                         console.log(`[SessionTracker] Epoch summary created (${this.transcriptEpochSummaries.length} total)`);
                     } else {
                         // Empty LLM response — store a basic marker so context is not lost
-                        const marker = `[Earlier discussion: ${oldEntries.length} segments — ${oldEntries.slice(0, 3).map(s => s.text.substring(0, 40)).join('; ')}...]`;
+                        const marker = `[Earlier discussion: ${oldEntries.length} segments summarized without transcript snippets.]`;
                         this.transcriptEpochSummaries.push(marker);
                     }
                 } catch (e) {
                     // If summarization fails, store a simple marker
-                    const fallback = `[Earlier discussion: ${oldEntries.length} segments, topics: ${oldEntries.slice(0, 3).map(s => s.text.substring(0, 40)).join('; ')}...]`;
+                    const fallback = `[Earlier discussion: ${oldEntries.length} segments summarized without transcript snippets.]`;
                     this.transcriptEpochSummaries.push(fallback);
                     console.warn('[SessionTracker] Epoch summarization failed, using fallback marker');
                 }
             } else {
                 // BUG-03 fix: recapLLM not yet available — always push a plain marker so early
                 // context is not silently discarded with no record in transcriptEpochSummaries.
-                const marker = `[Earlier discussion (no LLM): ${oldEntries.length} segments — ${oldEntries.slice(0, 3).map(s => s.text.substring(0, 40)).join('; ')}...]`;
+                const marker = `[Earlier discussion (no LLM): ${oldEntries.length} segments summarized without transcript snippets.]`;
                 this.transcriptEpochSummaries.push(marker);
                 console.warn('[SessionTracker] recapLLM not available — storing plain epoch marker');
             }
