@@ -48,16 +48,19 @@ export function initializeIpcHandlers(appState: AppState): void {
     }
   };
 
-  // Clears the active mode when the pro license is lost so non-general mode prompts
-  // and reference files stop being injected into LLM calls.
+  // Clears premium-only context when the pro license is lost.
   const clearActiveModeOnLicenseLoss = (): void => {
     try {
       const { DatabaseManager } = require('./db/DatabaseManager');
-      DatabaseManager.getInstance().setActiveMode(null);
+      const db = DatabaseManager.getInstance();
+      db.setActiveMode(null);
+      db.clearProfilePersona?.();
+      const llmHelper = appState.processingHelper?.getLLMHelper?.();
+      llmHelper?.setPersonaPrompt?.('');
       BrowserWindow.getAllWindows().forEach(win => {
         if (!win.isDestroyed()) win.webContents.send('modes-active-cleared');
       });
-      console.log('[IPC] Active mode cleared due to license loss');
+      console.log('[IPC] Premium-only context cleared due to license loss');
     } catch (e) { /* non-fatal */ }
   };
 
@@ -2550,7 +2553,11 @@ export function initializeIpcHandlers(appState: AppState): void {
 
       const parsed = new URL(url);
       const allowedWebUrl = parsed.protocol === 'https:' && parsed.hostname === 'mail.google.com' && parsed.pathname === '/mail/';
-      const allowedSystemSettingsUrl = parsed.protocol === 'x-apple.systempreferences:';
+      // x-apple.systempreferences is a macOS-only URI scheme. Allowing it on
+      // Windows let renderer regressions hand Windows shell an unknown
+      // protocol → Microsoft Store popup (issue #252). Gate the allowlist on
+      // the actual platform so the IPC layer is the last line of defense.
+      const allowedSystemSettingsUrl = parsed.protocol === 'x-apple.systempreferences:' && process.platform === 'darwin';
 
       if (allowedWebUrl || allowedSystemSettingsUrl) {
         await shell.openExternal(url);
@@ -3630,6 +3637,34 @@ export function initializeIpcHandlers(appState: AppState): void {
 
       const llmHelper = appState.processingHelper?.getLLMHelper?.();
       if (llmHelper?.setCustomNotes) llmHelper.setCustomNotes(trimmed);
+
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  safeHandle("profile:get-persona", async () => {
+    try {
+      if (!isProOrTrialActive()) return { success: false, content: '', error: 'pro_required' };
+      const content = DatabaseManager.getInstance().getPersona();
+      const llmHelper = appState.processingHelper?.getLLMHelper?.();
+      if (llmHelper?.setPersonaPrompt) llmHelper.setPersonaPrompt(content);
+      return { success: true, content };
+    } catch (error: any) {
+      return { success: false, content: '', error: error.message };
+    }
+  });
+
+  safeHandle("profile:save-persona", async (_, content: string) => {
+    try {
+      if (!isProOrTrialActive()) return { success: false, error: 'pro_required' };
+      if (typeof content !== 'string') return { success: false, error: 'invalid_persona' };
+      const trimmed = content.trim().slice(0, 4000);
+      DatabaseManager.getInstance().savePersona(trimmed);
+
+      const llmHelper = appState.processingHelper?.getLLMHelper?.();
+      if (llmHelper?.setPersonaPrompt) llmHelper.setPersonaPrompt(trimmed);
 
       return { success: true };
     } catch (error: any) {

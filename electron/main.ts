@@ -118,8 +118,8 @@ async function ensureMacMicrophoneAccess(context: string): Promise<boolean> {
  */
 function getMacScreenCaptureStatus(): 'granted' | 'denied' | 'not-determined' | 'restricted' {
   if (process.platform !== 'darwin') return 'granted';
-  
-  // In development mode, macOS TCC often falsely reports 'denied' for the electron binary 
+
+  // In development mode, macOS TCC often falsely reports 'denied' for the electron binary
   // even if the user has granted permission to their Terminal app.
   if (!app.isPackaged) {
     console.log('[Main] Ignoring screen capture permission check in development mode');
@@ -132,6 +132,59 @@ function getMacScreenCaptureStatus(): 'granted' | 'denied' | 'not-determined' | 
   } catch (error) {
     console.error('[Main] Failed to check screen recording permission:', error);
     return 'not-determined';
+  }
+}
+
+/**
+ * Format a user-facing audio/permission message for the current platform.
+ * macOS has TCC (Screen Recording, Microphone) panes under System Settings;
+ * Windows has no equivalent for screen-capture (system audio loopback runs
+ * via WASAPI without OS-level gating) and gates the microphone via
+ * Settings → Privacy → Microphone. Reusing macOS copy on Windows is the
+ * cross-contamination class behind issue #252.
+ */
+// Variants prefixed `mac-` are macOS-only and reference TCC / CoreAudio /
+// ScreenCaptureKit concepts that don't exist on Windows. Call sites for those
+// must themselves be gated behind `process.platform === 'darwin'` — the
+// prefix makes that constraint visible during code review. Cross-platform
+// variants have no prefix and branch internally on isMac.
+type PermissionReason =
+  | 'screen-recording-denied'
+  | 'mac-screen-recording-revoked-rebuild'
+  | 'mic-denied'
+  | 'mic-zero-fill'
+  | 'mac-same-device-input-output'
+  | 'system-audio-stuck';
+function formatPermissionMessage(reason: PermissionReason, extra?: { device?: string }): string {
+  const isMac = process.platform === 'darwin';
+  switch (reason) {
+    case 'screen-recording-denied':
+      return isMac
+        ? 'Screen Recording permission denied. Interviewer audio will not be captured. Enable in System Settings → Privacy & Security → Screen Recording, then restart the app.'
+        : 'System audio capture is unavailable. Interviewer audio will not be captured. Check your audio device routing in Settings and restart the meeting.';
+    case 'mac-screen-recording-revoked-rebuild':
+      // Defense-in-depth: even though all call sites must be darwin-gated
+      // (the `mac-` prefix marks this constraint), if a future contributor
+      // calls this from a cross-platform path we degrade gracefully rather
+      // than leak macOS UI strings to Windows users.
+      if (!isMac) return formatPermissionMessage('system-audio-stuck');
+      return 'System audio is being captured but every sample is silent. This usually means macOS Screen Recording permission needs to be re-granted to this build of Natively. Open System Settings → Privacy & Security → Screen Recording, toggle Natively off and back on, then restart the app. (If you recently rebuilt or updated, the previous grant may not apply.)';
+    case 'mic-denied':
+      return isMac
+        ? 'Microphone access denied. Please allow microphone access in System Settings → Privacy & Security → Microphone, then restart Natively.'
+        : 'Microphone access denied. Please allow microphone access in Settings → Privacy → Microphone, then restart Natively.';
+    case 'mic-zero-fill':
+      return isMac
+        ? 'Microphone is producing silent audio. Check that the device is unmuted and that macOS Microphone permission is granted to Natively in System Settings → Privacy & Security → Microphone.'
+        : 'Microphone is producing silent audio. Check that the device is unmuted and that Natively has microphone access in Settings → Privacy → Microphone.';
+    case 'mac-same-device-input-output':
+      // Defense-in-depth: see comment on `mac-screen-recording-revoked-rebuild`.
+      // The CoreAudio Process Tap same-device limitation is macOS-specific;
+      // on Windows WASAPI loopback works fine on the same device as the mic.
+      if (!isMac) return formatPermissionMessage('system-audio-stuck');
+      return `Silent capture detected — input and output are the same device (${extra?.device ?? 'unknown'}). macOS cannot tap a device while it is also the active microphone. Switch input to built-in mic or output to built-in speakers.`;
+    case 'system-audio-stuck':
+      return 'No audio detected on system output for 8s. If your meeting app is using a different output device (Bluetooth headset, virtual cable, second monitor), switch it to your default output, or restart the meeting after switching.';
   }
 }
 
@@ -590,7 +643,7 @@ export class AppState {
 
     // Initialize RAGManager (requires database to be ready)
     this.initializeRAGManager()
-    
+
     // Check and prep Ollama embedding model
     this.bootstrapOllamaEmbeddings()
 
@@ -678,7 +731,7 @@ export class AppState {
         const cm = CredentialsManager.getInstance();
         const openaiKey = cm.getOpenaiApiKey() || process.env.OPENAI_API_KEY;
         const geminiKey = cm.getGeminiApiKey() || process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
-        
+
         const providerDataScopes = (() => { try { const { SettingsManager } = require('./services/SettingsManager'); return SettingsManager.getInstance().get('providerDataScopes'); } catch { return undefined; } })();
         this.ragManager = new RAGManager({
             db: sqliteDb,
@@ -1291,9 +1344,14 @@ export class AppState {
         // zero frames. The 8s watchdog is the most reliable signal we get.
         // Surface the actual cause instead of a generic "route mismatch"
         // hint so the user knows what to change.
-        const sameDeviceName = this.detectSameInputOutputDevice();
+        // The same-device-input-output limitation is a CoreAudio Process Tap
+        // constraint — only relevant on macOS. detectSameInputOutputDevice
+        // is itself macOS-specific; skip the check on other platforms.
+        const sameDeviceName = process.platform === 'darwin'
+          ? this.detectSameInputOutputDevice()
+          : null;
         if (sameDeviceName) {
-          const msg = `Silent capture detected — input and output are the same device (${sameDeviceName}). macOS cannot tap a device while it is also the active microphone. Switch input to built-in mic or output to built-in speakers.`;
+          const msg = formatPermissionMessage('mac-same-device-input-output', { device: sameDeviceName });
           console.warn(`${prefix}SystemAudioCapture ${msg}`);
           this.broadcast('audio-capture-failed', {
             channel: 'system',
@@ -1309,7 +1367,7 @@ export class AppState {
         console.warn(`${prefix}SystemAudioCapture produced 0 chunks in 8s — likely silent capture (route mismatch or permission revoked).`);
         this.broadcast('audio-capture-failed', {
           channel: 'system',
-          message: 'No audio detected on system output for 8s. If your meeting app is using a different output device (AirPods/HFP, virtual cable), switch it to your default output, or restart the meeting after switching.',
+          message: formatPermissionMessage('system-audio-stuck'),
           attempt: 0,
           maxAttempts: 3,
           terminal: false,
@@ -1375,8 +1433,11 @@ export class AppState {
         console.log(`${prefix}SystemAudio->STT: chunk #${chunkCount}, ${chunk.length}B, googleSTT=${this.googleSTT ? 'active' : 'NULL'}`);
       }
 
-      // TCC zero-fill check. Skip work entirely once latched off.
-      if (!zerofillLatched && !zerofillTriggered) {
+      // TCC zero-fill check. macOS-specific: WASAPI loopback on Windows does
+      // not produce sustained zero-fill on permission revocation, so the
+      // detector has no diagnostic value off Darwin and the suggested fix
+      // (System Settings → Screen Recording) doesn't apply.
+      if (process.platform === 'darwin' && !zerofillLatched && !zerofillTriggered) {
         if (firstChunkAt === 0) firstChunkAt = Date.now();
         // Stride-sample 16 samples across the chunk — sufficient to catch any
         // real audio content, ~32× cheaper than scanning all 960 samples.
@@ -1395,7 +1456,7 @@ export class AppState {
           console.warn(`${prefix}SystemAudio chunks all zero-filled for ${ZEROFILL_OBSERVATION_MS / 1000}s — TCC denial suspected (Screen Recording grant may not apply to this binary).`);
           this.broadcast('audio-capture-failed', {
             channel: 'system',
-            message: 'System audio is being captured but every sample is silent. This usually means macOS Screen Recording permission needs to be re-granted to this build of Natively. Open System Settings → Privacy & Security → Screen Recording, toggle Natively off and back on, then restart the app. (If you recently rebuilt or updated, the previous grant may not apply.)',
+            message: formatPermissionMessage('mac-screen-recording-revoked-rebuild'),
             attempt: 0,
             maxAttempts: 3,
             terminal: false,
@@ -1501,7 +1562,7 @@ export class AppState {
           console.warn(`${prefix}Mic chunks all zero-filled for ${ZEROFILL_OBSERVATION_MS / 1000}s — TCC denial or device-mute suspected.`);
           this.broadcast('audio-capture-failed', {
             channel: 'mic',
-            message: 'Your microphone is connected but every audio sample is silent. Check that (1) macOS Microphone permission is granted to Natively in System Settings → Privacy & Security → Microphone, (2) your input device is unmuted in the menu bar, and (3) no other app is holding the mic in exclusive mode.',
+            message: formatPermissionMessage('mic-zero-fill'),
             attempt: 0,
             maxAttempts: 3,
             terminal: false,
@@ -1540,7 +1601,7 @@ export class AppState {
         if (process.platform === 'darwin' && getMacScreenCaptureStatus() === 'denied') {
           console.warn('[Main] Skipping SystemAudioCapture init — Screen Recording permission denied. Meeting will run mic-only.');
           this.broadcast('system-audio-permission-denied',
-            'Screen Recording permission denied. Interviewer audio will not be captured. Enable in System Settings → Privacy & Security → Screen Recording, then restart the app.');
+            formatPermissionMessage('screen-recording-denied'));
           this.broadcastDeviceSelection({
             kind: 'output',
             requested: null,
@@ -2440,7 +2501,7 @@ export class AppState {
     this.stopAudioTest(); // Stop any existing test
 
     if (!(await ensureMacMicrophoneAccess('audio test'))) {
-      throw new Error('Microphone access denied. Please allow microphone access in System Settings and try again.');
+      throw new Error(formatPermissionMessage('mic-denied'));
     }
 
     const attachAudioTestListeners = (capture: MicrophoneCapture) => {
@@ -2541,7 +2602,7 @@ export class AppState {
     }
 
     if (!(await ensureMacMicrophoneAccess('meeting start'))) {
-      const message = 'Microphone access denied. Please allow microphone access in System Settings.';
+      const message = formatPermissionMessage('mic-denied');
       this.broadcast('meeting-audio-error', message);
       throw new Error(message);
     }
@@ -2560,7 +2621,7 @@ export class AppState {
         // auto-open System Settings. Forcing that window open every meeting start
         // is extremely disruptive, especially when mic transcription is still working.
         // The UI will show a non-blocking banner; the user can fix it deliberately.
-        const message = 'Screen Recording permission denied. System audio will not be captured. To fix: System Settings → Privacy & Security → Screen Recording → enable Natively.';
+        const message = formatPermissionMessage('screen-recording-denied');
         console.warn('[Main]', message);
         this.broadcast('system-audio-permission-denied', message);
         // NOTE: Do NOT call shell.openExternal() here — it hijacks focus on every meeting
@@ -3197,9 +3258,9 @@ export class AppState {
       "Extra screenshots: ",
       this.screenshotHelper.getExtraScreenshotQueue().length
     )
-    
+
     const mode = this.windowHelper.getCurrentWindowMode();
-    
+
     if (mode === 'launcher') {
       // In launcher mode, just physically hide/show the window
       this.windowHelper.toggleMainWindow();
@@ -4146,7 +4207,7 @@ async function initializeApp() {
         app.dock.show();
       }
     }
-    
+
     // If no window exists, create it
     if (appState.getMainWindow() === null) {
       appState.createWindow()

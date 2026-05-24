@@ -38,6 +38,7 @@ import { oneLight, vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/
 import TopPill from './ui/TopPill';
 import RollingTranscript from './ui/RollingTranscript';
 import { NegotiationCoachingCard } from '../premium';
+import { isMac, getModifierSymbol } from '../utils/platformUtils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -660,21 +661,30 @@ const NativelyInterface: React.FC<NativelyInterfaceProps> = ({
         return () => unsub?.();
     }, []);
 
-    // Screen Recording Permission Warning Banner
-    const [systemAudioWarning, setSystemAudioWarning] = useState<string | null>(null);
+    // Audio capture / screen-recording warning banner. Two distinct IPC
+    // events feed the same banner surface but require different title and
+    // action: the macOS screen-recording-permission denial points at the
+    // OS Privacy pane, while generic audio-capture failures (no-chunks
+    // watchdog, TCC zero-fill, terminal STT init failure, SCK errors) are
+    // cross-platform and should open Natively's own Settings. Bundling
+    // both under a hardcoded "Screen Recording Permission Denied" title
+    // with an x-apple.systempreferences action was issue #252: on Windows
+    // the audio-capture-failed path fired, the user saw a macOS-only title
+    // and the Open Settings button handed Windows shell a URI scheme it
+    // couldn't resolve (Microsoft Store popup).
+    type SystemAudioWarning = {
+        kind: 'screen-recording-permission' | 'audio-capture-failure';
+        message: string;
+    };
+    const [systemAudioWarning, setSystemAudioWarning] = useState<SystemAudioWarning | null>(null);
     useEffect(() => {
         const unsub = window.electronAPI?.onSystemAudioPermissionDenied?.((message: string) => {
-            setSystemAudioWarning(message);
+            setSystemAudioWarning({ kind: 'screen-recording-permission', message });
             setIsExpanded(true); // Force overlay open so user sees the warning
         });
         return () => unsub?.();
     }, []);
 
-    // Audio capture failure banner — surfaces specific Rust-side errors
-    // (CoreAudio Tap failure, SCK timeout, no displays) and the stuck-watchdog
-    // signal (capture started but no chunks for 8s, suggesting a routing
-    // mismatch). Without this, users staring at an empty interviewer transcript
-    // had no signal that anything was wrong.
     useEffect(() => {
         const unsub = window.electronAPI?.onAudioCaptureFailed?.((payload) => {
             if (payload.channel !== 'system') return;  // mic failures already shown via STT status
@@ -682,7 +692,7 @@ const NativelyInterface: React.FC<NativelyInterfaceProps> = ({
             // recovery attempts shouldn't spam the banner since recovery
             // typically succeeds within ~1.5s.
             if (payload.terminal || payload.stuck) {
-                setSystemAudioWarning(payload.message);
+                setSystemAudioWarning({ kind: 'audio-capture-failure', message: payload.message });
                 setIsExpanded(true);
             }
         });
@@ -1393,7 +1403,7 @@ const NativelyInterface: React.FC<NativelyInterfaceProps> = ({
         // It was handled separate locally in this component maybe?
         // Ah, I need to see the existing listener for 'onIntelligenceFollowUpQuestionsUpdate'
 
-        // Let's implemented token streaming for it anyway, likely it updates a message bubble 
+        // Let's implemented token streaming for it anyway, likely it updates a message bubble
         // OR it might update a specialized "Suggested Questions" area.
         // Assuming it's a message for consistency with "Copilot" approach.
 
@@ -2482,7 +2492,7 @@ Provide only the answer, nothing else.`;
     // We listen here to handle them when the window is focused (renderer side)
     // Global shortcuts (when window blurred) are handled by Main process -> GlobalShortcuts
     // But Main process events might not reach here if we don't listen, or we want unified handling.
-    // Actually, KeybindManager registers global shortcuts. If they are registered as global, 
+    // Actually, KeybindManager registers global shortcuts. If they are registered as global,
     // Electron might consume them before they reach here?
     // 'toggle-app' is Global.
     // 'toggle-visibility' is NOT Global in default config (isGlobal: false), so it depends on focus.
@@ -3169,7 +3179,7 @@ Provide only the answer, nothing else.`;
                                 </div>
                             </div>
 
-                            {/* System Audio Permission Warning Banner */}
+                            {/* System Audio / Screen Recording Warning Banner */}
                             {systemAudioWarning && (
                                 <div className="flex items-center justify-between mx-4 mt-3 mb-1 px-3.5 py-2.5 bg-yellow-500/10 border border-yellow-500/20 rounded-[12px] shadow-sm relative no-drag group/warning">
                                     <div className="flex flex-col gap-1 pr-3">
@@ -3179,19 +3189,38 @@ Provide only the answer, nothing else.`;
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                                 </svg>
                                             </div>
-                                            <span>Screen Recording Permission Denied</span>
+                                            <span>
+                                                {systemAudioWarning.kind === 'screen-recording-permission'
+                                                    ? 'Screen Recording Permission Denied'
+                                                    : 'Audio Capture Issue'}
+                                            </span>
                                         </div>
                                         <p className="text-[11px] text-yellow-600/70 dark:text-yellow-400/60 leading-snug pl-[26px]">
-                                            {systemAudioWarning}
+                                            {systemAudioWarning.message}
                                         </p>
                                     </div>
                                     <div className="flex items-center gap-2 shrink-0">
-                                        <button
-                                            onClick={() => { window.electronAPI.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture'); }}
-                                            className="px-3 py-1.5 rounded-lg bg-yellow-500/15 hover:bg-yellow-500/25 text-yellow-700 dark:text-yellow-500 text-[11px] font-semibold transition-all active:scale-95 border border-yellow-500/20 shadow-sm"
-                                        >
-                                            Open Settings
-                                        </button>
+                                        {systemAudioWarning.kind === 'screen-recording-permission' ? (
+                                            <button
+                                                // Defense-in-depth: kind === 'screen-recording-permission'
+                                                // is only ever set from a darwin-gated broadcast site
+                                                // in main.ts (and the IPC allowlist rejects x-apple
+                                                // URLs on non-darwin), but we still guard at call time
+                                                // so a future regression in the broadcast layer can't
+                                                // produce a no-op or worse on Windows.
+                                                onClick={() => { if (isMac) window.electronAPI.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture'); }}
+                                                className="px-3 py-1.5 rounded-lg bg-yellow-500/15 hover:bg-yellow-500/25 text-yellow-700 dark:text-yellow-500 text-[11px] font-semibold transition-all active:scale-95 border border-yellow-500/20 shadow-sm"
+                                            >
+                                                Open Settings
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={() => { window.electronAPI?.toggleSettingsWindow?.(); }}
+                                                className="px-3 py-1.5 rounded-lg bg-yellow-500/15 hover:bg-yellow-500/25 text-yellow-700 dark:text-yellow-500 text-[11px] font-semibold transition-all active:scale-95 border border-yellow-500/20 shadow-sm"
+                                            >
+                                                Open Settings
+                                            </button>
+                                        )}
                                         <button
                                             onClick={() => setSystemAudioWarning(null)}
                                             className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-yellow-600/50 hover:text-yellow-700 dark:text-yellow-500/50 dark:hover:text-yellow-400 transition-colors absolute top-1 right-1 opacity-0 group-hover/warning:opacity-100"
@@ -3407,10 +3436,10 @@ Provide only the answer, nothing else.`;
                                 )}
 
                                 {/* Stealth hotkey conflict banner — shown if globalShortcut.register()
-                                    failed for chat:focusInput (typically because Cmd+Shift+Space is
-                                    already claimed by another app, or by macOS in some configs).
-                                    Click-to-activate still works (mousedown listener is independent
-                                    of the hotkey), but the user can rebind to anything in Settings. */}
+                                    failed for chat:focusInput (typically because the configured
+                                    activation hotkey is already claimed by another app or by the
+                                    OS). Click-to-activate still works (mousedown listener is
+                                    independent of the hotkey), but the user can rebind in Settings. */}
                                 {stealthHotkeyConflict && (
                                     <div className="mb-2 px-3 py-2 rounded-xl border border-rose-400/40 bg-rose-500/10 text-[11px] flex items-center gap-2"
                                          data-stealth-ignore="true">
@@ -3435,10 +3464,11 @@ Provide only the answer, nothing else.`;
 
                                 {/* Stealth tap permission banner — shown only when the user
                                     pressed the activation hotkey but Accessibility wasn't
-                                    granted. Inline above the input so it's discoverable without
-                                    blocking the rest of the UI. Dismissed automatically once
-                                    the next start() succeeds. */}
-                                {stealthPermissionMissing && (
+                                    granted. macOS-only: Accessibility is a TCC concept that
+                                    doesn't exist on Windows, and the underlying CGEventTap
+                                    Rust module ships only in the Darwin binary. Gating here
+                                    is belt-and-suspenders on top of the native-side gate. */}
+                                {isMac && stealthPermissionMissing && (
                                     <div className="mb-2 px-3 py-2 rounded-xl border border-amber-400/40 bg-amber-500/10 text-[11px] flex items-center gap-2"
                                          data-stealth-ignore="true">
                                         <span className="overlay-text-primary flex-1">
@@ -3492,7 +3522,7 @@ Provide only the answer, nothing else.`;
                                         <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-none text-[13px] overlay-text-muted">
                                             <span>Ask anything on screen or conversation, or</span>
                                             <div className="flex items-center gap-1 opacity-80">
-                                                {(shortcuts.selectiveScreenshot || ['⌘', 'Shift', 'H']).map((key, i) => (
+                                                {(shortcuts.selectiveScreenshot || [getModifierSymbol('cmd'), 'Shift', 'H']).map((key, i) => (
                                                     <React.Fragment key={i}>
                                                         {i > 0 && <span className="text-[10px]">+</span>}
                                                         <kbd className="px-1.5 py-0.5 rounded border text-[10px] font-sans min-w-[20px] text-center overlay-control-surface overlay-text-secondary" style={appearance.controlStyle}>{key}</kbd>

@@ -1178,7 +1178,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   ragIsMeetingProcessed: (meetingId: string) => ipcRenderer.invoke('rag:is-meeting-processed', meetingId),
   ragGetQueueStatus: () => ipcRenderer.invoke('rag:get-queue-status'),
   ragRetryEmbeddings: () => ipcRenderer.invoke('rag:retry-embeddings'),
-  
+
   onIncompatibleProviderWarning: (callback: (data: { count: number, oldProvider: string, newProvider: string }) => void) => {
     const subscription = (_: any, data: any) => callback(data)
     ipcRenderer.on('embedding:incompatible-provider-warning', subscription)
@@ -1280,6 +1280,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   profileResetNegotiation: () => ipcRenderer.invoke('profile:reset-negotiation'),
   profileGetNotes: () => ipcRenderer.invoke('profile:get-notes'),
   profileSaveNotes: (content: string) => ipcRenderer.invoke('profile:save-notes', content),
+  profileGetPersona: () => ipcRenderer.invoke('profile:get-persona'),
+  profileSavePersona: (content: string) => ipcRenderer.invoke('profile:save-persona', content),
 
   // Tavily Search API
   setTavilyApiKey: (apiKey: string) => ipcRenderer.invoke('set-tavily-api-key', apiKey),
@@ -1365,7 +1367,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
   getLogFilePath: () => ipcRenderer.invoke('get-log-file-path'),
   openLogFile: () => ipcRenderer.invoke('open-log-file'),
-  
+
   // Arch
   getArch: () => ipcRenderer.invoke('get-arch'),
   getOsVersion: () => ipcRenderer.invoke('get-os-version'),

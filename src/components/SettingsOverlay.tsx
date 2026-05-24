@@ -19,6 +19,7 @@ import { LocalWhisperModelPanel } from './LocalWhisperModelPanel';
 import { NativelyLogoMark } from './NativelyLogoMark';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useShortcuts } from '../hooks/useShortcuts';
+import { isMac } from '../utils/platformUtils';
 import { useResolvedTheme } from '../hooks/useResolvedTheme';
 import {
     clampOverlayOpacity,
@@ -354,16 +355,16 @@ interface SettingsOverlayProps {
 const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, initialTab = 'general' }) => {
     const isLight = useResolvedTheme() === 'light';
     const [activeTab, setActiveTab] = useState(initialTab);
-    
+
     // Sync active tab when modal opens
     useEffect(() => {
         if (isOpen && initialTab) {
             setActiveTab(initialTab);
-            
-            
+
+
         }
     }, [isOpen, initialTab]);
-    
+
     const { shortcuts, updateShortcut, resetShortcuts } = useShortcuts();
     const [isUndetectable, setIsUndetectable] = useState(false);
     const [isMousePassthrough, setIsMousePassthrough] = useState(false);
@@ -379,7 +380,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
     const [isInterfaceThemeDropdownOpen, setIsInterfaceThemeDropdownOpen] = useState(false);
     const interfaceThemeDropdownRef = React.useRef<HTMLDivElement>(null);
 
-    
+
     const [verboseLogging, setVerboseLogging] = useState(false);
     const [meetingRetention, setMeetingRetention] = useState<'forever' | '7d' | '30d' | 'never'>('forever');
     const [providerDataScopes, setProviderDataScopes] = useState<{ transcript?: boolean; screenshots?: boolean; reference_files?: boolean; profile_history?: boolean; embeddings?: boolean; post_call_summary?: boolean }>({});
@@ -392,8 +393,8 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
     // Sync with global state changes
     useEffect(() => {
         if (isOpen) {
-            
-            
+
+
             // Fetch true initial state from main process
             window.electronAPI?.getUndetectable?.().then(setIsUndetectable).catch(() => { });
             window.electronAPI?.getOverlayMousePassthrough?.().then(setIsMousePassthrough).catch(() => { });
@@ -437,7 +438,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
         };
     }, [showVerboseToast]);
 
-    
+
 
     useEffect(() => {
         if (window.electronAPI?.onUndetectableChanged) {
@@ -565,7 +566,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
         document.querySelectorAll('.opacity-percent-label').forEach(el => el.textContent = percentText);
         setPreviewOverlayOpacity(val);
         latestOpacityRef.current = val;
-        
+
         // Broadcast IPC in real-time so actual meeting overlay tracks slider instantly
         // (safe to do at 60fps, does not trigger React renders)
         window.electronAPI?.setOverlayOpacity?.(val);
@@ -592,7 +593,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
 
         // Direct DOM mutation for sub-millisecond instant hide (bypassing slow React tree diffs)
         document.body.classList.add('disable-transitions');
-        
+
         const backdrop = document.getElementById('settings-backdrop');
         const wrapper = document.getElementById('settings-panel-wrapper');
         const panel = document.getElementById('settings-panel');
@@ -616,7 +617,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
         if (launcher) {
             launcher.style.visibility = 'hidden';
         }
-        
+
         if (card) {
             card.style.visibility = 'visible';
             card.style.position = 'relative';
@@ -913,7 +914,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                     if (creds.azureRegion) setSttAzureRegion(creds.azureRegion);
                     setHasStoredIbmWatsonKey(creds.hasIbmWatsonKey);
                     setHasStoredSonioxKey(creds.hasSonioxKey || false);
-                    
+
                     setHasNativelyKey(creds.hasNativelyKey || false);
                     // Populate key fields so switching providers doesn't make saved keys appear gone
                     if (creds.sttGroqKey) setSttGroqKey(creds.sttGroqKey);
@@ -1089,8 +1090,8 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
 
         try {
             await window.electronAPI?.setTavilyApiKey?.('');
-            
-            
+
+
         } catch (e) {
             console.error('Failed to remove Tavily API key:', e);
         }
@@ -1336,16 +1337,16 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                         initial={{ scale: 0.94, opacity: 0, y: 20 }}
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{ scale: 0.94, opacity: 0, y: 20 }}
-                        transition={{ 
-                            type: "spring", 
-                            stiffness: 400, 
+                        transition={{
+                            type: "spring",
+                            stiffness: 400,
                             damping: 32,
                             mass: 1
                         }}
                         className="bg-bg-elevated w-full max-w-4xl h-[80vh] rounded-2xl border border-border-subtle shadow-2xl overflow-hidden relative"
                     >
-                        <div 
-                            id="settings-panel" 
+                        <div
+                            id="settings-panel"
                             className="flex w-full h-full"
                             style={{ visibility: isPreviewingOpacity ? 'hidden' : 'visible' }}
                         >
@@ -2112,7 +2113,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
 
                                 </div>
                             )}
-                            
+
                             {activeTab === 'ai-providers' && (
                                 <AIProvidersSettings />
                             )}
@@ -2746,37 +2747,45 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                                                 </button>
                                             </div>
 
-                                            <div className="h-px bg-border-subtle my-2" />
-
-                                            {/* SCK Backend Toggle */}
-                                            <div className="bg-amber-500/5 rounded-xl border border-amber-500/20 p-4">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-start gap-3">
-                                                        <div className="mt-0.5 p-1.5 rounded-lg bg-amber-500/10 text-amber-500">
-                                                            <FlaskConical size={18} />
-                                                        </div>
-                                                        <div>
-                                                            <div className="flex items-center gap-2 mb-0.5">
-                                                                <h3 className="text-sm font-bold text-text-primary">SCK Backend</h3>
-                                                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-400 uppercase tracking-wide">Alternative</span>
+                                            {/* SCK Backend Toggle — macOS only. The ScreenCaptureKit
+                                                backend is a CoreAudio alternative implemented in the
+                                                Rust speaker module under #[cfg(target_os="macos")];
+                                                Windows audio runs via WASAPI loopback so the toggle
+                                                has no meaning there and routing "sck" as a device id
+                                                silently breaks system audio (issue #252 audit / F-003). */}
+                                            {isMac && (
+                                                <>
+                                                    <div className="h-px bg-border-subtle my-2" />
+                                                    <div className="bg-amber-500/5 rounded-xl border border-amber-500/20 p-4">
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-start gap-3">
+                                                                <div className="mt-0.5 p-1.5 rounded-lg bg-amber-500/10 text-amber-500">
+                                                                    <FlaskConical size={18} />
+                                                                </div>
+                                                                <div>
+                                                                    <div className="flex items-center gap-2 mb-0.5">
+                                                                        <h3 className="text-sm font-bold text-text-primary">SCK Backend</h3>
+                                                                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-400 uppercase tracking-wide">Alternative</span>
+                                                                    </div>
+                                                                    <p className="text-xs text-text-secondary leading-relaxed max-w-[300px]">
+                                                                        Use the ScreenCaptureKit backend. An optimized alternative to CoreAudio if you experience any capture issues.
+                                                                    </p>
+                                                                </div>
                                                             </div>
-                                                            <p className="text-xs text-text-secondary leading-relaxed max-w-[300px]">
-                                                                Use the ScreenCaptureKit backend. An optimized alternative to CoreAudio if you experience any capture issues.
-                                                            </p>
+                                                            <div
+                                                                onClick={() => {
+                                                                    const newState = !useExperimentalSck;
+                                                                    setUseExperimentalSck(newState);
+                                                                    window.localStorage.setItem('useExperimentalSckBackend', newState ? 'true' : 'false');
+                                                                }}
+                                                                className={`w-11 h-6 rounded-full relative transition-colors shrink-0 ${useExperimentalSck ? 'bg-amber-500' : 'bg-bg-toggle-switch border border-border-muted'}`}
+                                                            >
+                                                                <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${useExperimentalSck ? 'translate-x-5' : 'translate-x-0'}`} />
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                    <div
-                                                        onClick={() => {
-                                                            const newState = !useExperimentalSck;
-                                                            setUseExperimentalSck(newState);
-                                                            window.localStorage.setItem('useExperimentalSckBackend', newState ? 'true' : 'false');
-                                                        }}
-                                                        className={`w-11 h-6 rounded-full relative transition-colors shrink-0 ${useExperimentalSck ? 'bg-amber-500' : 'bg-bg-toggle-switch border border-border-muted'}`}
-                                                    >
-                                                        <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${useExperimentalSck ? 'translate-x-5' : 'translate-x-0'}`} />
-                                                    </div>
-                                                </div>
-                                            </div>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
