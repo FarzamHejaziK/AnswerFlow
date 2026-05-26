@@ -125,20 +125,8 @@ export class PromptAssembler {
         }
 
         // 6. MEETING HISTORY — untrusted past meetings
-        let profileHistoryAllowed = true;
-        try {
-            const { SettingsManager } = require('../SettingsManager');
-            profileHistoryAllowed = SettingsManager.getInstance().get('providerDataScopes')?.profile_history !== false;
-        } catch (_scopeErr: any) {
-            profileHistoryAllowed = false;
-            console.warn('[ScopeFallback] profile_history policy unavailable; Ollama unavailable, omitting from context');
-        }
         if (params.meetingHistory && params.meetingHistory.length > 0) {
-            if (profileHistoryAllowed) {
-                this.addBlock(packet, this.buildMeetingHistoryBlock(params.meetingHistory));
-            } else {
-                console.warn('[ScopeFallback] profile_history denied; Ollama unavailable, omitting from context');
-            }
+            this.addBlock(packet, this.buildMeetingHistoryBlock(params.meetingHistory));
         }
 
         // 6. CUSTOM CONTEXT (user-provided extra context)

@@ -116,6 +116,11 @@ export class OpenAIStreamingSTT extends EventEmitter {
     private ringEvictedThisSession = false;
     private ringEvictedBytes = 0;
 
+    // Rate-limit warning de-dup: per-session set of rate-limit names we've
+    // already surfaced an upstream warning for. Server emits rate_limits.updated
+    // on every turn; we only warn once per crossing per session.
+    private rateLimitWarned: Set<string> = new Set();
+
     // REST fallback state
     private restChunks: Buffer[]   = [];
     private restTotalBytes         = 0;
@@ -146,8 +151,20 @@ export class OpenAIStreamingSTT extends EventEmitter {
     // ─── Public Configuration (STTProvider interface) ─────────────────────────
 
     public setApiKey(apiKey: string): void {
+        const changed = this.apiKey !== apiKey;
         this.apiKey = apiKey;
         console.log('[OpenAIStreaming] API key updated');
+        // The WebSocket's Authorization header is sent in the handshake and cannot
+        // be updated on an established connection. If we're already streaming, the
+        // live socket would continue to authenticate with the previous key until
+        // its next reconnect — which is the wrong behavior for a security-relevant
+        // setter (e.g. rotation of a leaked key). Mirror setRecognitionLanguage's
+        // close+reopen so a rotated key takes effect immediately.
+        if (changed && this.isActive && this.mode === 'ws') {
+            console.log('[OpenAIStreaming] Reconnecting WS to apply new API key');
+            this._closeWs(true);
+            this._connectWs();
+        }
     }
 
     public setSampleRate(rate: number): void {
@@ -187,6 +204,12 @@ export class OpenAIStreamingSTT extends EventEmitter {
         this.reconnectAttempts = 0;
         this.ringEvictedThisSession = false;
         this.ringEvictedBytes = 0;
+        this.rateLimitWarned.clear();
+        // Defensive: if a prior stop() raced an in-flight REST upload, these
+        // flags might be stale. Clean slate guarantees the first REST flush
+        // after restart isn't surprise-deferred by an orphaned axios promise.
+        this.restIsUploading  = false;
+        this.restFlushPending = false;
 
         // Custom endpoints (e.g. Speaches) don't implement OpenAI's Realtime WebSocket
         // protocol. Go straight to REST mode for them.
@@ -331,6 +354,13 @@ export class OpenAIStreamingSTT extends EventEmitter {
         this.isConnecting  = true;
         this.isSessionReady = false;
 
+        // Defensive: ensure no stale timers from a previous connect attempt
+        // remain armed against the next socket. _closeWs() should have cleared
+        // these, but if _connectWs is ever called without a prior close (e.g.
+        // future refactor), we don't want an orphaned 10s timer to kill the
+        // new socket out of nowhere.
+        this._clearConnectAndSessionTimers();
+
         const model: WsModel = WS_MODELS[this.wsModelIndex] ?? WS_MODELS[0];
         console.log(`[OpenAIStreaming] Connecting WebSocket (model=${model}, attempt=${this.reconnectAttempts + 1})...`);
 
@@ -365,11 +395,15 @@ export class OpenAIStreamingSTT extends EventEmitter {
             // Start 5-second timeout waiting for session.created
             this.sessionSetupTimer = setTimeout(() => {
                 console.warn(`[OpenAIStreaming] Server accepted connection but failed to create session within 5s. Forcing disconnect...`);
-                // Force a disconnect to trigger the fallback logic
+                // Force a disconnect to trigger the fallback logic. Mirror the
+                // connectionTimeoutTimer callback by explicitly clearing
+                // isConnecting — _handleWsClose will also clear it, but the
+                // symmetry guards against a refactor that breaks one path.
                 if (this.ws) {
                     this.ws.removeAllListeners();
                     this.ws.close();
                     this.ws = null;
+                    this.isConnecting = false;
                     this._handleWsClose(1008, Buffer.from('Session Setup Timeout'));
                 }
             }, 5_000);
@@ -429,15 +463,11 @@ export class OpenAIStreamingSTT extends EventEmitter {
     private _handleWsClose(code: number, reason: Buffer): void {
         this.isConnecting   = false;
         this.isSessionReady = false;
+        // Tear down per-connect timers + keepalive. We deliberately leave
+        // `reconnectTimer` alone here — the close path may want to (re-)arm it
+        // a few lines down via _scheduleWsReconnect when shouldReconnect=true.
         this._clearKeepAlive();
-        if (this.connectionTimeoutTimer) {
-            clearTimeout(this.connectionTimeoutTimer);
-            this.connectionTimeoutTimer = null;
-        }
-        if (this.sessionSetupTimer) {
-            clearTimeout(this.sessionSetupTimer);
-            this.sessionSetupTimer = null;
-        }
+        this._clearConnectAndSessionTimers();
         console.log(`[OpenAIStreaming] WS closed (code=${code}, reason=${reason.toString() || 'none'})`);
 
         if (!this.shouldReconnect) return;
@@ -451,8 +481,14 @@ export class OpenAIStreamingSTT extends EventEmitter {
             this.wsFailures = 0;
 
             if (this.wsModelIndex >= WS_MODELS.length) {
-                // All WS models exhausted — fall back to REST
-                console.warn('[OpenAIStreaming] All WebSocket models failed — falling back to whisper-1 REST');
+                // All WS models exhausted — fall back to REST. Surface this to
+                // upstream so main.ts's _consecutiveErrors counter advances on
+                // sustained WS-layer outages (DNS/TLS/RST) that otherwise churn
+                // silently — without this emit, the user would see no banner and
+                // no transcripts, just dead air.
+                const msg = 'All WebSocket transcription models failed — falling back to whisper-1 REST';
+                console.warn(`[OpenAIStreaming] ${msg}`);
+                this.emit('error', new Error(msg));
                 this._switchToRest();
             } else {
                 const nextModel = WS_MODELS[this.wsModelIndex];
@@ -467,6 +503,12 @@ export class OpenAIStreamingSTT extends EventEmitter {
     }
 
     private _handleWsMessage(msg: Record<string, any>): void {
+        // Late-arrival guard. The ws library can deliver a buffered server frame
+        // (e.g. transcription_session.created) after we have called stop() but
+        // before removeAllListeners() drained. Without this guard, the late
+        // frame would set isSessionReady=true and call _startKeepAlive(), leaking
+        // a 20s setInterval against a class the caller thinks is shut down.
+        if (!this.isActive) return;
         switch (msg.type) {
             case 'transcription_session.created':
                 if (this.sessionSetupTimer) {
@@ -507,6 +549,47 @@ export class OpenAIStreamingSTT extends EventEmitter {
                         confidence: 1.0,
                     });
                 }
+                break;
+
+            // Quota observability. OpenAI emits rate_limits.updated each turn
+            // with { name, limit, remaining, reset_seconds } per limit type
+            // (requests, tokens, ...). Surface a one-shot upstream warning per
+            // limit name when remaining/limit drops below 10% — gives the user
+            // a soft heads-up before hard 'error' events from the server.
+            case 'rate_limits.updated': {
+                const limits = Array.isArray(msg.rate_limits) ? msg.rate_limits : [];
+                for (const entry of limits) {
+                    if (!entry || typeof entry !== 'object') continue;
+                    const name = String(entry.name ?? 'unknown');
+                    const limit = Number(entry.limit);
+                    const remaining = Number(entry.remaining);
+                    if (!Number.isFinite(limit) || !Number.isFinite(remaining) || limit <= 0) continue;
+                    const ratio = remaining / limit;
+                    if (ratio < 0.1 && !this.rateLimitWarned.has(name)) {
+                        this.rateLimitWarned.add(name);
+                        const resetSec = Number(entry.reset_seconds);
+                        console.warn(
+                            `[OpenAIStreaming] Rate limit low: ${name} ${remaining}/${limit} ` +
+                            `(${(ratio * 100).toFixed(1)}%${Number.isFinite(resetSec) ? `, resets in ${resetSec}s` : ''})`
+                        );
+                        this.emit('warning', {
+                            code: 'rate_limit_low',
+                            message: `OpenAI ${name} quota near exhaustion`,
+                            name,
+                            limit,
+                            remaining,
+                            resetSeconds: Number.isFinite(resetSec) ? resetSec : undefined,
+                        });
+                    }
+                }
+                break;
+            }
+
+            // Server's ACK of our transcription_session.update. Useful for
+            // confirming the server applied our requested config — log only,
+            // no behavior change required.
+            case 'transcription_session.updated':
+                console.log('[OpenAIStreaming] Session config applied by server');
                 break;
 
             // VAD events emitted by the server (informational — we don't need to act on them)
@@ -577,9 +660,13 @@ export class OpenAIStreamingSTT extends EventEmitter {
     }
 
     private _closeWs(graceful: boolean): void {
-        // Always tear down the keepalive interval first so an in-flight tick
-        // can't fire against a stale (or about-to-be-replaced) socket.
-        this._clearKeepAlive();
+        // Tear down ALL pending timers before touching the socket:
+        //   - keepAliveTimer: prevent stale-socket sends
+        //   - reconnectTimer: prevent a 30s-pending reconnect from firing into a
+        //     replacement socket (the phantom-reconnect bug after language change)
+        //   - connectionTimeoutTimer / sessionSetupTimer: prevent the next
+        //     connect from being killed by a previous connect's timer.
+        this._clearTimers();
         if (!this.ws) return;
         // GA transcription intent has no client→server session.close — that event
         // only exists for the translation subresource. Sending it on intent=transcription
@@ -617,14 +704,7 @@ export class OpenAIStreamingSTT extends EventEmitter {
         this.isConnecting = false; // Allow immediate reconnect (e.g. language change)
         this.pcmAccumulator = [];
         this.pcmAccumulatorLen = 0;
-        if (this.connectionTimeoutTimer) {
-            clearTimeout(this.connectionTimeoutTimer);
-            this.connectionTimeoutTimer = null;
-        }
-        if (this.sessionSetupTimer) {
-            clearTimeout(this.sessionSetupTimer);
-            this.sessionSetupTimer = null;
-        }
+        // Timers were already cleared at the top of this method via _clearTimers().
     }
 
     private _scheduleWsReconnect(): void {
@@ -648,11 +728,13 @@ export class OpenAIStreamingSTT extends EventEmitter {
     /** 8 bytes of PCM silence (4 samples × 2 bytes) — safest keepalive for the Realtime API */
     private static readonly KEEPALIVE_AUDIO_B64 = Buffer.alloc(8).toString('base64');
 
-    /** Strip Bearer / sk-… tokens from any string we might log or propagate upstream. */
+    /** Strip Bearer / sk-… tokens from any string we might log or propagate upstream.
+     *  Case-insensitive: HTTP header names are case-insensitive and lowercased
+     *  `bearer …` shows up in JSON-serialized error bodies from some proxies. */
     private static _scrubBearerTokens(s: string): string {
         return s
-            .replace(/Bearer\s+[A-Za-z0-9_\-.]+/g, 'Bearer [REDACTED]')
-            .replace(/sk-[A-Za-z0-9_\-]{10,}/g, 'sk-[REDACTED]');
+            .replace(/Bearer\s+[A-Za-z0-9_\-.]+/gi, 'Bearer [REDACTED]')
+            .replace(/sk-[A-Za-z0-9_\-]{10,}/gi, 'sk-[REDACTED]');
     }
 
     private _startKeepAlive(): void {
@@ -678,12 +760,10 @@ export class OpenAIStreamingSTT extends EventEmitter {
         }
     }
 
-    private _clearTimers(): void {
-        this._clearKeepAlive();
-        if (this.reconnectTimer) {
-            clearTimeout(this.reconnectTimer);
-            this.reconnectTimer = null;
-        }
+    /** Per-connect timers (10s handshake + 5s session-setup). Cleared in three
+     *  places (start of `_connectWs`, after a synthetic close in `_handleWsClose`,
+     *  and via `_clearTimers`) — factor so adding a new one means editing once. */
+    private _clearConnectAndSessionTimers(): void {
         if (this.connectionTimeoutTimer) {
             clearTimeout(this.connectionTimeoutTimer);
             this.connectionTimeoutTimer = null;
@@ -692,6 +772,15 @@ export class OpenAIStreamingSTT extends EventEmitter {
             clearTimeout(this.sessionSetupTimer);
             this.sessionSetupTimer = null;
         }
+    }
+
+    private _clearTimers(): void {
+        this._clearKeepAlive();
+        if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = null;
+        }
+        this._clearConnectAndSessionTimers();
     }
 
     // ─── Ring Buffer (pre-buffer during connecting / transitions) ────────────
@@ -741,9 +830,13 @@ export class OpenAIStreamingSTT extends EventEmitter {
 
     // ─── REST Fallback Path ───────────────────────────────────────────────────
 
+    /** REST mode is terminal for this STT instance — once we fall back to
+     *  whisper-1 REST, we don't try to climb back to WS within the same session.
+     *  A user must call `stop()` and `start()` again to retry the WS path. */
     private _switchToRest(): void {
         this.mode = 'rest';
-        this._clearTimers();
+        // _closeWs() now routes through _clearTimers() (R3-1), so we don't
+        // need a separate _clearTimers() call here.
         this._closeWs(false);
 
         // Transfer ring-buffer contents to the REST accumulator so buffered audio isn't lost
