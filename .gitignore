@@ -211,6 +211,7 @@ docs/superpowers/
 
 # Agent documentation patterns
 **/AGENTS.md
+!/AGENTS.md
 **/CLAUDE.md
 **/.claude/
 

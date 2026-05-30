@@ -649,6 +649,17 @@ interface ElectronAPI {
     error?: string;
   }>;
   profileResetNegotiation: () => Promise<{ success: boolean; error?: string }>;
+  profileImportMarkdownContext: () => Promise<{
+    success?: boolean;
+    cancelled?: boolean;
+    fileName?: string;
+    content?: string;
+    error?: string;
+  }>;
+  profileGetNotes: () => Promise<{ success: boolean; content: string; error?: string }>;
+  profileSaveNotes: (content: string) => Promise<{ success: boolean; error?: string }>;
+  profileGetPersona: () => Promise<{ success: boolean; content: string; error?: string }>;
+  profileSavePersona: (content: string) => Promise<{ success: boolean; error?: string }>;
 
   // Tavily Search API
   setTavilyApiKey: (apiKey: string) => Promise<{ success: boolean; error?: string }>;
@@ -1873,6 +1884,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('profile:generate-negotiation', force),
   profileGetNegotiationState: () => ipcRenderer.invoke('profile:get-negotiation-state'),
   profileResetNegotiation: () => ipcRenderer.invoke('profile:reset-negotiation'),
+  profileImportMarkdownContext: () => ipcRenderer.invoke('profile:import-markdown-context'),
   profileGetNotes: () => ipcRenderer.invoke('profile:get-notes'),
   profileSaveNotes: (content: string) => ipcRenderer.invoke('profile:save-notes', content),
   profileGetPersona: () => ipcRenderer.invoke('profile:get-persona'),

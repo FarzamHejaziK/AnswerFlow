@@ -4410,6 +4410,41 @@ export function initializeIpcHandlers(appState: AppState): void {
   // Profile Custom Notes
   // ==========================================
 
+  safeHandle('profile:import-markdown-context', async () => {
+    try {
+      const result = await dialog.showOpenDialog({
+        properties: ['openFile'],
+        filters: [
+          { name: 'Markdown Files', extensions: ['md', 'markdown'] },
+        ],
+      });
+
+      if (result.canceled || result.filePaths.length === 0) {
+        return { cancelled: true };
+      }
+
+      const filePath = result.filePaths[0];
+      const ext = path.extname(filePath).toLowerCase();
+      if (!['.md', '.markdown'].includes(ext)) {
+        return { success: false, error: 'Select a Markdown file (.md or .markdown).' };
+      }
+
+      const stat = fs.lstatSync(filePath);
+      if (!stat.isFile()) {
+        return { success: false, error: 'Selected path is not a regular file.' };
+      }
+
+      const content = fs.readFileSync(filePath, 'utf8');
+      return {
+        success: true,
+        fileName: path.basename(filePath),
+        content,
+      };
+    } catch (error: any) {
+      return { success: false, error: error.message || 'Could not import Markdown file.' };
+    }
+  });
+
   safeHandle('profile:get-notes', async () => {
     try {
       const content = DatabaseManager.getInstance().getCustomNotes();
@@ -4421,16 +4456,15 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle('profile:save-notes', async (_, content: string) => {
     try {
-      // Enforce a max length of 4000 chars to prevent prompt bloat
-      const trimmed = typeof content === 'string' ? content.slice(0, 4000) : '';
-      DatabaseManager.getInstance().saveCustomNotes(trimmed);
+      const notes = typeof content === 'string' ? content : '';
+      DatabaseManager.getInstance().saveCustomNotes(notes);
 
       // Propagate to orchestrator (premium path) and LLMHelper (all-provider path)
       const orchestrator = appState.getKnowledgeOrchestrator();
-      if (orchestrator?.setCustomNotes) orchestrator.setCustomNotes(trimmed);
+      if (orchestrator?.setCustomNotes) orchestrator.setCustomNotes(notes);
 
       const llmHelper = appState.processingHelper?.getLLMHelper?.();
-      if (llmHelper?.setCustomNotes) llmHelper.setCustomNotes(trimmed);
+      if (llmHelper?.setCustomNotes) llmHelper.setCustomNotes(notes);
 
       return { success: true };
     } catch (error: any) {
@@ -4454,7 +4488,7 @@ export function initializeIpcHandlers(appState: AppState): void {
     try {
       if (!isProOrTrialActive()) return { success: false, error: 'pro_required' };
       if (typeof content !== 'string') return { success: false, error: 'invalid_persona' };
-      const trimmed = content.trim().slice(0, 4000);
+      const trimmed = content.trim();
       DatabaseManager.getInstance().savePersona(trimmed);
 
       const llmHelper = appState.processingHelper?.getLLMHelper?.();

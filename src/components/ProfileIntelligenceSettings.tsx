@@ -1,13 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     X, RefreshCw, Upload, Briefcase, Trash2, Pencil, Check, Globe,
-    Building2, Search, AlertCircle, Gift, Info, Star, Sparkles, User, CheckCircle, ArrowUpRight
+    Building2, Search, AlertCircle, Gift, Info, Star, Sparkles, User, CheckCircle, ArrowUpRight, FileText
 } from 'lucide-react';
 import { ProfileVisualizer, PremiumUpgradeModal } from '../premium';
 import { useResolvedTheme } from '../hooks/useResolvedTheme';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const spring = { type: "spring" as const, stiffness: 100, damping: 20 };
+
+const escapeInstructionFileName = (value: string) =>
+    value
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
 
 // ─── Profile Intelligence Apple-style CSS (mirrors ModesSettings GATE_CSS) ────
 // Lives at module scope so it's not re-allocated on each render.
@@ -446,6 +453,8 @@ export function ProfileIntelligenceSettings({ onClose }: { onClose: () => void }
     const [negotiationError, setNegotiationError] = useState('');
     const [customNotes, setCustomNotes] = useState('');
     const [customNotesSaved, setCustomNotesSaved] = useState(false);
+    const [customNotesImporting, setCustomNotesImporting] = useState(false);
+    const [customNotesImportError, setCustomNotesImportError] = useState('');
     const customNotesDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [persona, setPersona] = useState('');
     const [personaSaved, setPersonaSaved] = useState(false);
@@ -498,6 +507,45 @@ export function ProfileIntelligenceSettings({ onClose }: { onClose: () => void }
             if (res?.success) setPersona(res.content ?? '');
         }).catch(() => { });
     }, [hasProfileAccess]);
+
+    const handleImportMarkdownContext = async () => {
+        setCustomNotesImportError('');
+        setCustomNotesImporting(true);
+
+        try {
+            const result = await window.electronAPI?.profileImportMarkdownContext?.();
+            if (!result || result.cancelled) return;
+            if (!result.success) {
+                setCustomNotesImportError(result.error || 'Could not import Markdown file.');
+                return;
+            }
+
+            const fileName = escapeInstructionFileName(result.fileName || 'context.md');
+            const fileBlock = [
+                `<custom_instruction_file name="${fileName}">`,
+                result.content || '',
+                '</custom_instruction_file>',
+            ].join('\n');
+            const nextNotes = customNotes.trimEnd()
+                ? `${customNotes.trimEnd()}\n\n${fileBlock}`
+                : fileBlock;
+
+            if (customNotesDebounceRef.current) clearTimeout(customNotesDebounceRef.current);
+            setCustomNotes(nextNotes);
+            const saveResult = await window.electronAPI?.profileSaveNotes?.(nextNotes);
+            if (saveResult && !saveResult.success) {
+                setCustomNotesImportError(saveResult.error || 'Imported file, but could not save Custom Context.');
+                return;
+            }
+
+            setCustomNotesSaved(true);
+            setTimeout(() => setCustomNotesSaved(false), 2000);
+        } catch (error: any) {
+            setCustomNotesImportError(error?.message || 'Could not import Markdown file.');
+        } finally {
+            setCustomNotesImporting(false);
+        }
+    };
 
     const handleRemoveTavilyKey = async () => {
         if (!confirm('Are you sure you want to remove your Tavily API key?')) return;
@@ -906,15 +954,29 @@ export function ProfileIntelligenceSettings({ onClose }: { onClose: () => void }
                                                             Add any context the AI should know about you — saved across all sessions.
                                                         </p>
                                                     </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleImportMarkdownContext}
+                                                        disabled={customNotesImporting}
+                                                        className="shrink-0 h-8 px-2.5 rounded-lg bg-bg-input border border-border-subtle text-[11px] font-semibold text-text-secondary hover:text-text-primary hover:border-accent-primary/40 transition-colors flex items-center gap-1.5 disabled:opacity-60"
+                                                        aria-busy={customNotesImporting}
+                                                        aria-label={customNotesImporting ? 'Importing Markdown context' : 'Import Markdown context'}
+                                                        title="Import Markdown context"
+                                                    >
+                                                        {customNotesImporting
+                                                            ? <RefreshCw size={13} className="pi-upload-spinner" strokeWidth={2.5} />
+                                                            : <FileText size={13} strokeWidth={2.5} />}
+                                                        <span>Import .md</span>
+                                                    </button>
                                                 </div>
                                                 <div className="space-y-3">
                                                     <textarea
                                                         value={customNotes}
                                                         onChange={(e) => {
                                                             const val = e.target.value;
-                                                            if (val.length > 4000) return;
                                                             setCustomNotes(val);
                                                             setCustomNotesSaved(false);
+                                                            setCustomNotesImportError('');
                                                             if (customNotesDebounceRef.current) clearTimeout(customNotesDebounceRef.current);
                                                             customNotesDebounceRef.current = setTimeout(async () => {
                                                                 try {
@@ -928,12 +990,17 @@ export function ProfileIntelligenceSettings({ onClose }: { onClose: () => void }
                                                         rows={6}
                                                         className="w-full bg-bg-input border border-border-subtle rounded-lg px-3 py-2.5 text-xs text-text-primary placeholder-text-tertiary focus:outline-none focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20 transition-all resize-none leading-relaxed"
                                                     />
+                                                    {customNotesImportError && (
+                                                        <div className="px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-[11px] text-red-500 font-medium">
+                                                            <X size={12} /> {customNotesImportError}
+                                                        </div>
+                                                    )}
                                                     <div className="flex items-center justify-between px-0.5">
                                                         <p className="text-[10px] text-text-tertiary">
-                                                            Auto-saved · Works with all modes and providers
+                                                            Auto-saved · Imported Markdown is embedded with its filename
                                                         </p>
-                                                        <span className={`text-[10px] tabular-nums ${customNotes.length > 3600 ? 'text-amber-500' : 'text-text-tertiary'}`}>
-                                                            {customNotes.length}/4000
+                                                        <span className="text-[10px] tabular-nums text-text-tertiary">
+                                                            {customNotes.length} chars
                                                         </span>
                                                     </div>
                                                 </div>
@@ -971,7 +1038,6 @@ export function ProfileIntelligenceSettings({ onClose }: { onClose: () => void }
                                                             return;
                                                         }
                                                         const val = e.target.value;
-                                                        if (val.length > 4000) return;
                                                         setPersona(val);
                                                         setPersonaSaved(false);
                                                         if (personaDebounceRef.current) clearTimeout(personaDebounceRef.current);
@@ -1000,8 +1066,8 @@ export function ProfileIntelligenceSettings({ onClose }: { onClose: () => void }
                                                     <p className="text-[10px] text-text-tertiary">
                                                         {hasProfileAccess ? 'Auto-saved · Treated as user-provided context' : 'Upgrade to Pro to personalize AI persona'}
                                                     </p>
-                                                    <span className={`text-[10px] tabular-nums ${persona.length > 3600 ? 'text-amber-500' : 'text-text-tertiary'}`}>
-                                                        {persona.length}/4000
+                                                    <span className="text-[10px] tabular-nums text-text-tertiary">
+                                                        {persona.length} chars
                                                     </span>
                                                 </div>
                                             </div>
