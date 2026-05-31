@@ -99,10 +99,9 @@ async function updatePromptCache(promptText: string): Promise<void> {
   }
 }
 
-// Distil-Whisper checkpoints have NO multilingual decoder. If the user picks
-// 'auto' or any non-English language, the worker will silently transcribe
-// non-English audio as phonetic English. Force language='english' so the
-// behaviour is at least documented and consistent.
+// Distil-Whisper, Moonshine, and Whisper .en checkpoints have NO multilingual
+// decoder. Transformers v3 rejects `task` and `language` for these models, so
+// we must omit both options instead of trying to force `english`.
 const ENGLISH_ONLY_MODELS = new Set([
   // Moonshine — English-only by design
   'onnx-community/moonshine-tiny-ONNX',
@@ -233,16 +232,9 @@ parentPort.on('message', async (msg: any) => {
       return;
     }
     try {
-      let language: string | null = LANG_MAP[msg.language] ?? null;
+      const englishOnly = ENGLISH_ONLY_MODELS.has(loadedModelId);
+      const language: string | null = englishOnly ? null : (LANG_MAP[msg.language] ?? null);
       const streaming: boolean = !!msg.streaming;
-
-      // English-only checkpoints (Distil-Whisper + .en variants) have no
-      // multilingual decoder. Force language='english' regardless of the
-      // user's auto/non-English setting so the model isn't asked to
-      // transcribe phonetically into the wrong language.
-      if (ENGLISH_ONLY_MODELS.has(loadedModelId)) {
-        language = 'english';
-      }
 
       // Streaming partial passes use deterministic settings so consecutive
       // overlapping windows are stable enough for LocalAgreement-2 to
@@ -252,7 +244,6 @@ parentPort.on('message', async (msg: any) => {
       const opts: any = streaming
         ? {
             sampling_rate: 16000,
-            task: 'transcribe',
             temperature: 0,
             no_speech_threshold: 0.6,
             // Whisper's anti-loop check — drops outputs whose token gzip
@@ -266,13 +257,15 @@ parentPort.on('message', async (msg: any) => {
           }
         : {
             sampling_rate: 16000,
-            task: 'transcribe',
             condition_on_previous_text: false,
             compression_ratio_threshold: 2.4,
             logprob_threshold: -1.0,
             no_speech_threshold: 0.6,
           };
-      if (language) opts.language = language;
+      if (!englishOnly) {
+        opts.task = 'transcribe';
+        if (language) opts.language = language;
+      }
 
       // Use the pre-tokenized prompt cache populated by setPrompt messages.
       // Skip for Moonshine (cached IDs are null in that case anyway).

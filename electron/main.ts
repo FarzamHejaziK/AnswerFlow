@@ -311,7 +311,8 @@ type PermissionReason =
   | 'mic-denied'
   | 'mic-zero-fill'
   | 'mac-same-device-input-output'
-  | 'system-audio-stuck';
+  | 'system-audio-stuck'
+  | 'system-audio-output-mismatch';
 function formatPermissionMessage(reason: PermissionReason, extra?: { device?: string }): string {
   const isMac = process.platform === 'darwin';
   switch (reason) {
@@ -344,7 +345,9 @@ function formatPermissionMessage(reason: PermissionReason, extra?: { device?: st
       if (!isMac) return formatPermissionMessage('system-audio-stuck');
       return `Silent capture detected — input and output are the same device (${extra?.device ?? 'unknown'}). macOS cannot tap a device while it is also the active microphone. Switch input to built-in mic or output to built-in speakers.`;
     case 'system-audio-stuck':
-      return 'No audio detected on system output for 8s. If your meeting app is using a different output device (Bluetooth headset, virtual cable, second monitor), switch it to your default output, or restart the meeting after switching.';
+      return 'No audio detected on system output for 12s. If your meeting app is using a different output device (Bluetooth headset, virtual cable, second monitor), switch it to your default output, or restart the meeting after switching.';
+    case 'system-audio-output-mismatch':
+      return 'No audio detected on the selected output device. Natively is listening to an output that is different from the Windows default, so the meeting audio may be playing somewhere else. In Natively Settings choose Default Speakers, or set the meeting app to the selected output, then restart the meeting.';
   }
 }
 
@@ -1700,10 +1703,28 @@ export class AppState {
           return;
         }
 
+        let stuckMessage = formatPermissionMessage('system-audio-stuck');
+        if (process.platform === 'win32' && this._lastRequestedOutputDeviceId) {
+          try {
+            const NativeModule: any = loadNativeModule();
+            const getDefaultOutputDeviceId = NativeModule?.getDefaultOutputDeviceId;
+            const defaultOutputId = typeof getDefaultOutputDeviceId === 'function'
+              ? String(getDefaultOutputDeviceId() || '')
+              : '';
+            const requested = this._lastRequestedOutputDeviceId;
+            if (defaultOutputId && defaultOutputId.toLowerCase() !== requested.toLowerCase()) {
+              stuckMessage = formatPermissionMessage('system-audio-output-mismatch');
+              console.warn(`${prefix}Selected output differs from Windows default: selected=${requested}, default=${defaultOutputId}`);
+            }
+          } catch (err) {
+            console.warn(`${prefix}Could not compare selected output with Windows default output:`, err);
+          }
+        }
+
         console.warn(`${prefix}SystemAudioCapture produced 0 chunks in ${STUCK_WATCHDOG_MS / 1000}s — likely silent capture (route mismatch or permission revoked).`);
         this.sendAudioCaptureFailed( {
           channel: 'system',
-          message: formatPermissionMessage('system-audio-stuck'),
+          message: stuckMessage,
           attempt: 0,
           maxAttempts: 3,
           terminal: false,

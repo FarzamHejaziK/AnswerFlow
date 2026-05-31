@@ -111,6 +111,24 @@ test('screen recording denied broadcasts are guarded by effective capability che
   assert.doesNotMatch(main, rawDeniedBroadcast, 'raw denied status must not directly broadcast the permission banner without the capability probe');
 });
 
+test('Windows selected-output mismatch has a specific system audio warning', () => {
+  assert.match(
+    main,
+    /'system-audio-output-mismatch'/,
+    'PermissionReason should include a cross-platform output mismatch variant',
+  );
+  assert.match(
+    main,
+    /Natively is listening to an output that is different from the Windows default/,
+    'output mismatch copy should tell Windows users why interviewer audio is silent',
+  );
+  assert.match(
+    main,
+    /process\.platform === 'win32'[\s\S]*getDefaultOutputDeviceId[\s\S]*formatPermissionMessage\('system-audio-output-mismatch'\)/,
+    'stuck watchdog should compare the selected output with the Windows default before showing the generic warning',
+  );
+});
+
 test('no renderer file outside src/utils references x-apple.systempreferences without a darwin/isMac gate', () => {
   // Defense-in-depth: the IPC allowlist already gates this scheme, but the
   // renderer should never *construct* such a URL on Windows either. This
