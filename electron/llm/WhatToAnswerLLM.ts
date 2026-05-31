@@ -98,6 +98,8 @@ ANSWER SHAPE: ${intentResult.answerShape}
                 ? intentContextParts.join('\n\n')
                 : undefined;
 
+            const customNotesContext = this.llmHelper.getCustomNotesContextBlock?.() || '';
+
             if (MEASURE) tTemporal = performance.now();
 
             // ── Step 2: Truncate transcript to fit model context window ──────
@@ -153,6 +155,7 @@ ANSWER SHAPE: ${intentResult.answerShape}
             const assemblerBudget = 2000
                 + estimateTokens(intentContext || '')
                 + estimateTokens(modeContextBlock)
+                + estimateTokens(customNotesContext)
                 + estimateTokens(screenContext?.ocrText || '')
                 + estimateTokens((temporalContext?.previousResponses || []).join('\n'));
             const reservedForFit =
@@ -197,6 +200,7 @@ ANSWER SHAPE: ${intentResult.answerShape}
                 priorResponses: temporalContext?.hasRecentResponses ? temporalContext.previousResponses : undefined,
                 intentContext,
                 retrievedModeContext: modeContextBlock || undefined,
+                customContext: customNotesContext || undefined,
                 tokenBudget: Math.max(1000, assemblerBudget),
                 systemPrompt: finalPromptOverride,
             });
@@ -213,6 +217,7 @@ ANSWER SHAPE: ${intentResult.answerShape}
             const streamedBuffer: string[] = [];
             const packetScopes: ProviderDataScope[] = [];
             if (modeContextBlock) packetScopes.push('reference_files');
+            if (customNotesContext) packetScopes.push('profile_history');
             if (temporalContext?.hasRecentResponses && temporalContext.previousResponses.length > 0) packetScopes.push('profile_history');
             for await (const token of this.llmHelper.streamChat(packet.userMessage, imagePaths, undefined, finalPromptOverride, true, true, packetScopes)) {
                 if (MEASURE) {

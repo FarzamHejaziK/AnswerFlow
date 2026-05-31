@@ -39,9 +39,9 @@ test('generateSuggestion keeps active mode suffix in system prompt without user 
 
 test('generateSuggestion sends custom notes and mode context as user message content', () => {
   assert.match(generateSuggestionSource, /const suggestionContext = \[customNotesBlock, enrichedContext\]\.filter\(Boolean\)\.join\('\\n\\n'\);/);
-  const streamChatMatches = generateSuggestionSource.match(/streamChat\(promptMessage, undefined, undefined, basePrompt, true\)/g) ?? [];
+  const streamChatMatches = generateSuggestionSource.match(/streamChat\(promptMessage, undefined, suggestionContext, basePrompt, true\)/g) ?? [];
   assert.equal(streamChatMatches.length, 2);
-  assert.match(generateSuggestionSource, /generateWithCodexCli\(promptMessage, basePrompt\)/);
+  assert.match(generateSuggestionSource, /chatWithGemini\(promptMessage, undefined, suggestionContext, true\)/);
   assert.match(generateSuggestionSource, /callOllama\(promptMessage, undefined, systemPrompt\)/);
   assert.doesNotMatch(generateSuggestionSource, /generateWithFlash\(\[\{ text: `\$\{systemPrompt\}/);
   assert.doesNotMatch(generateSuggestionSource, /\$\{systemPrompt\}\\n\\n\$\{promptMessage\}/);
@@ -53,7 +53,7 @@ test('generateSuggestion does not append custom notes to any system prompt branc
 });
 
 test('WhatToAnswerLLM does not append active mode context to system prompt override', () => {
-  assert.match(whatToAnswerSource, /const finalPromptOverride = modePromptSuffix[\s\S]*## ACTIVE MODE\\n\$\{modePromptSuffix\}/);
+  assert.match(whatToAnswerSource, /const finalPromptOverride = activeSkill[\s\S]*## ACTIVE MODE\\n\$\{modePromptSuffix\}/);
   assert.doesNotMatch(whatToAnswerSource, /activeModePromptParts = \[modePromptSuffix, modeContextBlock\]/);
   assert.doesNotMatch(whatToAnswerSource, /modeContextBlock\]\.filter\(Boolean\)/);
 });
@@ -78,6 +78,7 @@ test('WhatToAnswerLLM sends mode context only through user content at runtime', 
     getCapabilities: () => ({ outputBudgetTokens: 2000 }),
     getPromptTier: () => 'full',
     fitContextForCurrentModel: text => text,
+    canUseLocalFallback: async () => true,
     async *streamChat(...args) {
       calls.push(args);
       yield 'ok';
@@ -192,6 +193,57 @@ test('WhatToAnswerLLM sends dynamic action prompt instruction as user content', 
   assert.match(message, /DYNAMIC_ACTION_PROMPT_INSTRUCTION_SENTINEL/);
   assert.match(message, /CURRENT_TRANSCRIPT_SENTINEL/);
   assert.doesNotMatch(systemPromptOverride, /DYNAMIC_ACTION_PROMPT_INSTRUCTION_SENTINEL/);
+});
+
+test('WhatToAnswerLLM can answer from imported Markdown custom instruction context', async () => {
+  const { WhatToAnswerLLM } = require(distWhatToAnswerPath);
+  const calls = [];
+  const importedMarkdownContext = `<custom_instruction_file name="interview-context.md">
+# Interview memory
+
+When asked about business management timing, answer with:
+I used the ORCHID-RIVER operating cadence during quarterly planning, starting before kickoff and revisiting it every Friday.
+</custom_instruction_file>`;
+
+  const llmHelper = {
+    getCapabilities: () => ({ outputBudgetTokens: 2000 }),
+    getPromptTier: () => 'full',
+    fitContextForCurrentModel: text => text,
+    getCustomNotesContextBlock: () => `<user_context>
+${importedMarkdownContext}
+</user_context>
+Use this context naturally if relevant. Never quote it verbatim.`,
+    async *streamChat(...args) {
+      calls.push(args);
+      const prompt = args[0];
+      yield prompt.includes('ORCHID-RIVER')
+        ? 'I used the ORCHID-RIVER operating cadence during quarterly planning.'
+        : 'I do not have enough context to answer that.';
+    },
+  };
+  const modesManager = {
+    getActiveModeSystemPromptSuffix: () => '',
+    buildRetrievedActiveModeContextBlock: () => '',
+    buildActiveModeContextBlock: () => '',
+  };
+
+  const answerer = new WhatToAnswerLLM(llmHelper, modesManager);
+  const chunks = [];
+  for await (const chunk of answerer.generateStream('Interviewer: You know that we in business management? but when?')) {
+    chunks.push(chunk);
+  }
+
+  assert.equal(chunks.join(''), 'I used the ORCHID-RIVER operating cadence during quarterly planning.');
+  assert.equal(calls.length, 1);
+
+  const [message, _imagePaths, context, _systemPromptOverride, ignoreKnowledgeMode, skipModeInjection, packetScopes] = calls[0];
+  assert.equal(context, undefined);
+  assert.equal(ignoreKnowledgeMode, true);
+  assert.equal(skipModeInjection, true);
+  assert.match(message, /<custom_instruction_file name="interview-context\.md">/);
+  assert.match(message, /ORCHID-RIVER operating cadence/);
+  assert.match(message, /Interviewer: You know that we in business management\? but when\?/);
+  assert.ok(packetScopes.includes('profile_history'));
 });
 
 test('WhatToAnswerLLM assembles runtime intent, prior responses, and screen context as user content', async () => {

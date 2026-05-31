@@ -52,8 +52,9 @@ function disguiseHelperPlists(appOutDir, appName) {
 }
 
 exports.default = async function (context) {
-    // Only process on macOS
-    if (process.platform !== 'darwin') {
+    // Only process macOS app bundles. Cross-building Windows/Linux on a Mac still
+    // runs this hook, but those targets must not be sent through codesign.
+    if (process.platform !== 'darwin' || context.electronPlatformName !== 'darwin') {
         return;
     }
 

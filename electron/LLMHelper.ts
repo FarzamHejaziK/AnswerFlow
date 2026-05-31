@@ -1186,9 +1186,7 @@ CRITICAL RULES:
       ? `${modeContextBlock}\n\n${context}`
       : context;
 
-    const customNotesBlock = this.customNotes?.trim()
-      ? `<user_context>\n${this.customNotes.trim()}\n</user_context>\nUse this context naturally if relevant. Never quote it verbatim.`
-      : '';
+    const customNotesBlock = this.getCustomNotesContextBlock();
 
     const suggestionContext = [customNotesBlock, enrichedContext].filter(Boolean).join('\n\n');
 
@@ -1284,6 +1282,15 @@ ANSWER DIRECTLY:`;
 
   public setCustomNotes(notes: string): void {
     this.customNotes = notes;
+  }
+
+  public getCustomNotesContextBlock(): string {
+    const notes = this.customNotes?.trim();
+    if (!notes) return '';
+    return `<user_context>
+${notes}
+</user_context>
+Use this context naturally if relevant. Never quote it verbatim.`;
   }
 
   public setPersonaPrompt(prompt: string): void {
@@ -3031,7 +3038,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
       if (rotation > 0) {
         const backoffMs = 1000 * rotation;
         console.log(`[LLMHelper] 🔄 Starting rotation ${rotation + 1}/${MAX_FULL_ROTATIONS} after ${backoffMs}ms backoff...`);
-        await delayWithAbort(backoffMs).catch(() => undefined);
+        await delayWithAbort(backoffMs).catch((): undefined => undefined);
         if (abortSignal?.aborted) return;
       }
 
