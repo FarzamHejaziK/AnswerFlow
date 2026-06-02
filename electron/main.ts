@@ -1715,6 +1715,9 @@ export class AppState {
             if (defaultOutputId && defaultOutputId.toLowerCase() !== requested.toLowerCase()) {
               stuckMessage = formatPermissionMessage('system-audio-output-mismatch');
               console.warn(`${prefix}Selected output differs from Windows default: selected=${requested}, default=${defaultOutputId}`);
+              this.recoverSystemAudioToDefaultOutput(capture, defaultOutputId, label).catch(err => {
+                console.error(`${prefix}Failed to recover system audio by rebinding to Windows default output:`, err);
+              });
             }
           } catch (err) {
             console.warn(`${prefix}Could not compare selected output with Windows default output:`, err);
@@ -2966,6 +2969,54 @@ export class AppState {
     }
   }
 
+  private async recoverSystemAudioToDefaultOutput(
+    expectedCapture: SystemAudioCapture,
+    defaultOutputId: string,
+    label: string,
+  ): Promise<void> {
+    if (process.platform !== 'win32') return;
+    if (!defaultOutputId) return;
+    if (!this.isMeetingActive) return;
+    if (this.systemAudioCapture !== expectedCapture) return;
+    if (this._defaultOutputSwitchInProgress || this._systemAudioRecoveryInProgress) return;
+
+    const requested = this._lastRequestedOutputDeviceId;
+    if (!requested || requested.toLowerCase() === defaultOutputId.toLowerCase()) return;
+
+    console.warn(
+      `[DefaultOutputWatcher] ${label || '(Stuck)'} system audio is silent on selected output; rebinding to Windows default output.`,
+    );
+
+    this._defaultOutputSwitchInProgress = true;
+    try {
+      const oldCapture = this.systemAudioCapture;
+      oldCapture?.destroy();
+      if (this.systemAudioCapture === oldCapture) {
+        this.systemAudioCapture = null;
+      }
+      this._sysSttRateApplied = false;
+      this._systemAudioRecoveryAttempts = 0;
+      this._systemAudioConsecutiveFailures = 0;
+
+      const fresh = new SystemAudioCapture(undefined);
+      this.systemAudioCapture = fresh;
+      this._lastRequestedOutputDeviceId = undefined;
+      this._lastObservedDefaultOutputId = defaultOutputId;
+      this.wireSystemCapture(fresh, '(DefaultAfterMismatch)');
+      fresh.start();
+
+      this.broadcastDeviceSelection({
+        kind: 'output',
+        requested: requested || null,
+        actual: 'default',
+        fellBack: true,
+        reason: 'windows-output-mismatch-silent-capture',
+      });
+    } finally {
+      this._defaultOutputSwitchInProgress = false;
+    }
+  }
+
   // Mic-side equivalent of setupAudioRecoveryHandler. Pre-fix the cpal err_fn
   // (USB unplug, device-format change, exclusive-mode steal) only logged to
   // stderr — JS never learned the mic stream had stopped producing samples
@@ -3152,7 +3203,33 @@ export class AppState {
     // Listeners include a TCC zero-fill detector (peak-to-peak < 100 for
     // the entire probe = TCC silently denied even though SCK started).
     const attachSystemTestListeners = (capture: SystemAudioCapture) => {
+      let systemProbeChunkCount = 0;
+      let noSystemAudioTimer: NodeJS.Timeout | null = setTimeout(() => {
+        if (!isCurrentTest() || systemProbeChunkCount > 0) return;
+        let message = 'No system audio detected on the selected output. Play audio through the same speakers Zoom uses, then try the test again.';
+        if (process.platform === 'win32' && wantedOutputDeviceId) {
+          try {
+            const NativeModule: any = loadNativeModule();
+            const defaultOutputId = typeof NativeModule?.getDefaultOutputDeviceId === 'function'
+              ? String(NativeModule.getDefaultOutputDeviceId() || '')
+              : '';
+            if (defaultOutputId && defaultOutputId.toLowerCase() !== wantedOutputDeviceId.toLowerCase()) {
+              message = 'No system audio detected on the selected output. Windows reports a different default output endpoint, so Zoom may still be playing through another route even if the device names look similar.';
+            }
+          } catch {
+            // Keep the generic no-audio message.
+          }
+        }
+        for (const target of broadcastTargets()) {
+          target.webContents.send('audio-test-system-error', message);
+        }
+      }, 12000);
       capture.on('data', (chunk: Buffer) => {
+        systemProbeChunkCount++;
+        if (noSystemAudioTimer) {
+          clearTimeout(noSystemAudioTimer);
+          noSystemAudioTimer = null;
+        }
         const targets = broadcastTargets();
         if (targets.length === 0) return;
         const level = computeRmsLevel(chunk);
@@ -3161,6 +3238,10 @@ export class AppState {
         }
       });
       capture.on('error', (err: Error) => {
+        if (noSystemAudioTimer) {
+          clearTimeout(noSystemAudioTimer);
+          noSystemAudioTimer = null;
+        }
         console.error('[Main] AudioTest System Error:', err);
         for (const target of broadcastTargets()) {
           target.webContents.send('audio-test-system-error', err.message || String(err));
