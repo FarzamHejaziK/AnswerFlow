@@ -1278,7 +1278,10 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                 setMicLevel(Math.max(0, Math.min(100, level * 100)));
             });
 
-            window.electronAPI?.startAudioTest(selectedInput || undefined).catch((error) => {
+            window.electronAPI?.startAudioTest(
+                selectedInput || undefined,
+                selectedOutput || undefined,
+            ).catch((error) => {
                 console.error("Error starting native microphone test:", error);
                 setMicLevel(0);
             });

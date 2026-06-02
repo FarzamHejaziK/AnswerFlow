@@ -320,7 +320,7 @@ export interface ElectronAPI {
   openMailto: (params: { to: string; subject: string; body: string }) => Promise<{ success: boolean; error?: string }>;
 
   // Audio Test
-  startAudioTest: (deviceId?: string) => Promise<{ success: boolean }>;
+  startAudioTest: (deviceId?: string, outputDeviceId?: string) => Promise<{ success: boolean }>;
   stopAudioTest: () => Promise<{ success: boolean }>;
   onAudioTestLevel: (callback: (level: number) => void) => () => void;
   // UX4: parallel system-audio probe — level + error events emitted during

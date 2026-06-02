@@ -2915,8 +2915,8 @@ export function initializeIpcHandlers(appState: AppState): void {
     return AudioDevices.getOutputDevices();
   });
 
-  safeHandle('start-audio-test', async (event, deviceId?: string) => {
-    await appState.startAudioTest(deviceId);
+  safeHandle('start-audio-test', async (event, deviceId?: string, outputDeviceId?: string) => {
+    await appState.startAudioTest(deviceId, outputDeviceId);
     return { success: true };
   });
 

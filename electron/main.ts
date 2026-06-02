@@ -3059,7 +3059,7 @@ export class AppState {
   }
 
 
-  public async startAudioTest(deviceId?: string): Promise<void> {
+  public async startAudioTest(deviceId?: string, outputDeviceId?: string): Promise<void> {
     // P2-12: guard against two concurrent calls both passing the async permission check
     // before either has created a capture — the second call would orphan the first capture.
     if (this._audioTestStarting) return;
@@ -3076,7 +3076,7 @@ export class AppState {
     }
     this._audioTestStarting = true;
     try {
-      await this._startAudioTestImpl(deviceId);
+      await this._startAudioTestImpl(deviceId, outputDeviceId);
     } finally {
       this._audioTestStarting = false;
     }
@@ -3097,8 +3097,9 @@ export class AppState {
   // changed by the time the await resolves.
   private _audioTestEpoch = 0;
 
-  private async _startAudioTestImpl(deviceId?: string): Promise<void> {
-    console.log(`[Main] Starting Audio Test on device: ${deviceId || 'default'}`);
+  private async _startAudioTestImpl(deviceId?: string, outputDeviceId?: string): Promise<void> {
+    const wantedOutputDeviceId = this.normalizeDeviceId(outputDeviceId);
+    console.log(`[Main] Starting Audio Test on device: ${deviceId || 'default'}, output: ${wantedOutputDeviceId || 'default'}`);
     this.stopAudioTest(); // Stop any existing test (also bumps _audioTestEpoch)
     // UX4 hardening: snapshot epoch BEFORE the system-audio probe's awaited
     // permission probe. If stopAudioTest fires while we're awaiting, the
@@ -3207,7 +3208,7 @@ export class AppState {
           );
         }
       } else {
-        this.audioTestSystemCapture = new SystemAudioCapture();
+        this.audioTestSystemCapture = new SystemAudioCapture(wantedOutputDeviceId);
         attachSystemTestListeners(this.audioTestSystemCapture);
         this.audioTestSystemCapture.start();
         // Final defense: if epoch changed between the start() call setup

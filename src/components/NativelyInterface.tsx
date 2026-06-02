@@ -1807,16 +1807,15 @@ const NativelyInterface: React.FC<NativelyInterfaceProps> = ({
           return; // Don't add to messages while recording
         }
 
-        // Ignore user mic transcripts when not recording
-        // Only interviewer (system audio) transcripts should appear in chat
-        if (transcript.speaker === 'user') {
-          return; // Skip user mic input - only relevant when Answer button is active
-        }
-
-        // Only show interviewer (system audio) transcripts in rolling bar
-        if (transcript.speaker !== 'interviewer') {
+        // Show both channels in the rolling bar when Answer mode is not
+        // active. Local STT users need visible mic feedback during smoke
+        // tests, and system audio can be unavailable because of route
+        // mismatches even when the mic path is transcribing correctly.
+        if (transcript.speaker !== 'interviewer' && transcript.speaker !== 'user') {
           return; // Safety check for any other speaker types
         }
+        const rollingText =
+          transcript.speaker === 'user' ? `You: ${transcript.text}` : transcript.text;
 
         // Route to rolling transcript bar — partials debounced; finals commit immediately.
         if (!transcript.final) {
@@ -1824,14 +1823,14 @@ const NativelyInterface: React.FC<NativelyInterfaceProps> = ({
             interviewerSpeakingRef.current = true;
             setIsInterviewerSpeaking(true);
           }
-          applyRollingPartialPreview(transcript.text);
+          applyRollingPartialPreview(rollingText);
           return;
         }
 
         flushRollingPartialPreview();
         interviewerSpeakingRef.current = false;
         setIsInterviewerSpeaking(false);
-        setRollingTranscript((prev) => mergeRollingTranscriptFinal(prev, transcript.text));
+        setRollingTranscript((prev) => mergeRollingTranscriptFinal(prev, rollingText));
 
         setTimeout(() => {
           setIsInterviewerSpeaking(false);
