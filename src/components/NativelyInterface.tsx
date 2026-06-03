@@ -615,7 +615,7 @@ const NativelyInterface: React.FC<NativelyInterfaceProps> = ({
   }, []);
 
   // Model Selection State
-  const [currentModel, setCurrentModel] = useState<string>('gemini-3-flash-preview');
+  const [currentModel, setCurrentModel] = useState<string>('gemini-3.5-flash');
 
   // Dynamic Action Button Mode (Recap vs Brainstorm)
   const [actionButtonMode, setActionButtonMode] = useState<'recap' | 'brainstorm'>('recap');
@@ -4815,9 +4815,11 @@ Provide only the answer, nothing else.`;
                           const codexCliName = getCodexCliModelDisplayName(m);
                           if (codexCliName) return codexCliName;
                           if (m.startsWith('ollama-')) return m.replace('ollama-', '');
+                          if (m === 'gemini-3.5-flash') return 'Gemini 3.5 Flash';
                           if (m === 'gemini-3.1-flash-lite-preview') return 'Gemini 3.1 Flash';
                           if (m === 'gemini-3.1-pro-preview') return 'Gemini 3.1 Pro';
                           if (m === 'llama-3.3-70b-versatile') return 'Groq Llama 3.3';
+                          if (m === 'chat-latest') return 'GPT 5.5 Instant';
                           if (m === 'gpt-5.4') return 'GPT 5.4';
                           if (m === 'claude-sonnet-4-6') return 'Sonnet 4.6';
                           return m;

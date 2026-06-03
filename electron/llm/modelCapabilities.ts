@@ -43,7 +43,7 @@ function isCloudIdentifier(id: string): boolean {
   const s = id.toLowerCase();
   if (s === 'natively' || s.startsWith('natively-')) return true;
   if (s.startsWith('gemini-') || s.startsWith('models/gemini')) return true;
-  if (s.startsWith('gpt-') || s.startsWith('o1-') || s.startsWith('o3-') || s.startsWith('o4-') || s.startsWith('chatgpt-')) return true;
+  if (s === 'chat-latest' || s.startsWith('gpt-') || s.startsWith('o1-') || s.startsWith('o3-') || s.startsWith('o4-') || s.startsWith('chatgpt-')) return true;
   if (s.startsWith('claude-')) return true;
   // DeepSeek cloud API (OpenAI-compatible). The local Ollama "deepseek-coder"
   // family is handled by the isOllama branch above.
@@ -108,7 +108,7 @@ export function getModelCapabilities(modelId: string, isOllama: boolean): ModelC
   if (isCloudIdentifier(id)) {
     const b = TIER_BUDGETS['cloud'];
     const supportsImages = lower.startsWith('gemini-') || lower.startsWith('claude-')
-      || lower.startsWith('gpt-4o') || lower.startsWith('gpt-4.1') || lower.startsWith('gpt-5')
+      || lower === 'chat-latest' || lower.startsWith('gpt-4o') || lower.startsWith('gpt-4.1') || lower.startsWith('gpt-5')
       || lower === 'natively' || lower.startsWith('natively-');
     return {
       tier: 'cloud',

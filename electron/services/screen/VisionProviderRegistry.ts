@@ -77,7 +77,7 @@ function openai(creds: CredentialsManager, _inputs: VisionProviderBuildInputs): 
   return {
     id: 'openai',
     displayName: 'OpenAI',
-    modelId: 'gpt-4o',
+    modelId: 'chat-latest',
     isLocal: false,
     isConfigured: !!apiKey,
     supportsVision: !!apiKey,
@@ -92,7 +92,7 @@ function geminiFlash(creds: CredentialsManager, _inputs: VisionProviderBuildInpu
   return {
     id: 'gemini_flash',
     displayName: 'Gemini Flash',
-    modelId: 'gemini-3.1-flash-lite-preview',
+    modelId: 'gemini-3.5-flash',
     isLocal: false,
     isConfigured: !!apiKey,
     supportsVision: !!apiKey,

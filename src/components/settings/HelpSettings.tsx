@@ -1148,7 +1148,7 @@ export const HelpSettings: React.FC<{ onNavigate?: (tab: string) => void }> = ({
                                         </span>
                                         <button onClick={() => { (window as any).electronAPI?.openExternal('https://platform.openai.com/api-keys') }} className="text-accent-primary hover:underline text-[10px] flex items-center gap-1"><ExternalLink size={10} /> Get Key</button>
                                     </h5>
-                                    <p className="text-[11px] opacity-80 mb-2">Industry standard pipeline. Default models: <strong>gpt-5.4-mini</strong> & <strong>gpt-5.4</strong>.</p>
+                                    <p className="text-[11px] opacity-80 mb-2">Industry standard pipeline. Default model: <strong>chat-latest</strong>.</p>
                                     <span className={kbdClass}>sk-proj-...</span>
                                 </div>
                                 <div className="p-3 rounded-xl border bg-bg-item-surface border-border-subtle hover:border-border-muted transition-colors">
@@ -1168,7 +1168,7 @@ export const HelpSettings: React.FC<{ onNavigate?: (tab: string) => void }> = ({
                                         </span>
                                         <button onClick={() => { (window as any).electronAPI?.openExternal('https://aistudio.google.com/app/apikey') }} className="text-accent-primary hover:underline text-[10px] flex items-center gap-1"><ExternalLink size={10} /> Get Key</button>
                                     </h5>
-                                    <p className="text-[11px] opacity-80 mb-2">Immense contextual window. Default model: <strong>gemini-3.1-pro</strong>.</p>
+                                    <p className="text-[11px] opacity-80 mb-2">Immense contextual window. Default model: <strong>gemini-3.5-flash</strong>.</p>
                                     <span className={kbdClass}>AIzaSy...</span>
                                 </div>
                             </div>

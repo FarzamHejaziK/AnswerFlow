@@ -7,16 +7,16 @@ export const STANDARD_CLOUD_MODELS: Record<string, {
 }> = {
     gemini: {
         hasKeyCheck: (creds) => !!creds?.hasGeminiKey,
-        ids: ['gemini-3.1-flash-lite-preview', 'gemini-3.1-pro-preview'],
-        names: ['Gemini 3.1 Flash', 'Gemini 3.1 Pro'],
-        descs: ['Fastest • Multimodal', 'Reasoning • High Quality'],
+        ids: ['gemini-3.5-flash', 'gemini-3.1-flash-lite-preview', 'gemini-3.1-pro-preview'],
+        names: ['Gemini 3.5 Flash', 'Gemini 3.1 Flash', 'Gemini 3.1 Pro'],
+        descs: ['Fast • Multimodal', 'Fastest • Multimodal', 'Reasoning • High Quality'],
         pmKey: 'geminiPreferredModel'
     },
     openai: {
         hasKeyCheck: (creds) => !!creds?.hasOpenaiKey,
-        ids: ['gpt-5.4'],
-        names: ['GPT 5.4'],
-        descs: ['OpenAI'],
+        ids: ['chat-latest', 'gpt-5.4'],
+        names: ['GPT 5.5 Instant', 'GPT 5.4'],
+        descs: ['OpenAI chat-latest', 'OpenAI'],
         pmKey: 'openaiPreferredModel'
     },
     claude: {

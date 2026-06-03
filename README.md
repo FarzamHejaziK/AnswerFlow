@@ -611,7 +611,7 @@ OLLAMA_MODEL=llama3.2
 OLLAMA_URL=http://localhost:11434
 
 # Default Model Configuration
-DEFAULT_MODEL=gemini-3.1-flash-lite-preview
+DEFAULT_MODEL=gemini-3.5-flash
 ```
 
 ### Run (Development)

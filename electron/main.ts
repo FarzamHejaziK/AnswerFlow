@@ -3,6 +3,7 @@ import * as crypto from "crypto"
 import path from "path"
 import fs from "fs"
 import { autoUpdater } from "electron-updater"
+import { ensureNativeModuleAbi } from "./utils/nativeModuleGuard"
 if (!app.isPackaged) {
   require('dotenv').config();
 }
@@ -58,6 +59,16 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (reason, promise) => {
   logToFile('[CRITICAL] Unhandled Rejection: ' + redactArgsForLog([reason]));
 });
+
+// Enforce single instance before any startup path can rebuild native modules
+// or relaunch the app.
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  console.log('[Main] Another instance is already running. Exiting this instance.');
+  process.exit(0);
+}
+
+ensureNativeModuleAbi();
 
 // CQ-04 fix: do NOT call app.getPath() at module load time.
 // app.getPath('documents') is not guaranteed to be available before app.whenReady().
@@ -882,6 +893,17 @@ export class AppState {
     };
     sendOnce(this.settingsWindowHelper.getSettingsWindow());
     sendOnce(this.windowHelper.getLauncherWindow());
+  }
+
+  public sendModelChanged(modelId: string): void {
+    const sent = new Set<number>();
+    const sendOnce = (win: BrowserWindow | null | undefined) => {
+      if (!win || sent.has(win.id)) return;
+      if (this.sendToWindow(win, 'model-changed', modelId)) sent.add(win.id);
+    };
+    sendOnce(this.windowHelper.getLauncherWindow());
+    sendOnce(this.windowHelper.getOverlayWindow());
+    sendOnce(this.modelSelectorWindowHelper.getWindow());
   }
 
   private sendSttStatus(payload: any): void {
@@ -3715,9 +3737,7 @@ export class AppState {
           const all = [...(cm.getCurlProviders() || []), ...(cm.getCustomProviders() || [])];
           console.log(`[Main] Reverting model to default: ${defaultModel}`);
           this.processingHelper.getLLMHelper().setModel(defaultModel, all);
-          BrowserWindow.getAllWindows().forEach(win => {
-            if (!win.isDestroyed()) win.webContents.send('model-changed', defaultModel);
-          });
+          this.sendModelChanged(defaultModel);
         } catch (e) {
           console.error('[Main] Failed to revert model:', e);
         }
@@ -4849,21 +4869,6 @@ export class AppState {
 // Application initialization
 
 async function initializeApp() {
-  // 1. Enforce single instance — prevent duplicate dock icons from leftover processes.
-  // In development mode with hot-reload this is still safe because electron is restarted
-  // by the build step, not re-launched by concurrently while the old process is alive.
-  const gotLock = app.requestSingleInstanceLock();
-  if (!gotLock) {
-    console.log('[Main] Another instance is already running. Exiting this instance.');
-    // Use app.exit(0) — app.quit() before whenReady can be deferred or no-op'd
-    // (it tries to close all windows first, but none exist yet), leaving the
-    // duplicate process alive long enough to register a second tray icon on
-    // macOS Tahoe + Spotlight launches. exit() terminates immediately and
-    // cannot be intercepted by before-quit handlers.
-    app.exit(0);
-    return;
-  }
-
   // When a duplicate launch is attempted (e.g. user invokes Spotlight again
   // while Natively is running), focus and recenter the existing window so the
   // launch is visibly handled instead of silently absorbed.
@@ -4888,6 +4893,8 @@ async function initializeApp() {
     const isUndetectableOnStartup = SettingsManager.getInstance().get('isUndetectable') ?? false;
     if (isUndetectableOnStartup) {
       app.dock.hide();
+    } else {
+      app.setActivationPolicy('accessory');
     }
   }
 
@@ -4976,6 +4983,9 @@ async function initializeApp() {
   // Apply initial stealth state based on isUndetectable setting.
   // NOTE: app.dock.hide() was already called pre-emptively before createWindow()
   // when isUndetectable=true. Here we only need to initialize the tray for non-stealth mode.
+  if (process.platform === 'darwin' && !appState.getUndetectable()) {
+    app.setActivationPolicy('regular');
+  }
   if (!appState.getUndetectable()) {
     // Normal mode: show tray (dock is already showing — no need to call dock.show() again)
     appState.showTray();

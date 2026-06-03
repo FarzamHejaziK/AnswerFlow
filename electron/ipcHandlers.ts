@@ -2629,7 +2629,7 @@ export function initializeIpcHandlers(appState: AppState): void {
         let response;
 
         if (provider === 'gemini') {
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent`;
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent`;
           response = await axios.post(
             url,
             {
@@ -2656,8 +2656,9 @@ export function initializeIpcHandlers(appState: AppState): void {
           response = await axios.post(
             'https://api.openai.com/v1/chat/completions',
             {
-              model: 'gpt-4o-mini',
+              model: 'chat-latest',
               messages: [{ role: 'user', content: 'Hello' }],
+              max_completion_tokens: 10,
             },
             {
               headers: { Authorization: `Bearer ${apiKey}` },
@@ -2869,7 +2870,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       return { model: cm.getDefaultModel() };
     } catch (error: any) {
       console.error('Error getting default model:', error);
-      return { model: 'gemini-3.1-flash-lite-preview' };
+      return { model: 'gemini-3.5-flash' };
     }
   });
 

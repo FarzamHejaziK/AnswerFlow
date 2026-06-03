@@ -47,7 +47,7 @@ interface CacheEntry {
  *   - gemini-2.0+ / 3.x: 1024 tokens
  *   - gemini-1.5: 32,768 tokens
  *
- * The codebase uses gemini-3.1 models exclusively; the 1024-token floor
+ * The codebase uses Gemini 3.x models; the 1024-token floor
  * applies. 4096 chars is a conservative proxy (≈1024 tokens at 4 chars/tok);
  * a tighter bound rejects prompts that would be borderline. Bumping to 4500
  * leaves a safety margin so we don't waste an API round-trip on

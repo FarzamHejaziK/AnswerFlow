@@ -157,7 +157,7 @@ export const AIProvidersSettings: React.FC = () => {
     const [codexCliError, setCodexCliError] = useState('');
 
     // --- Default Model ---
-    const [defaultModel, setDefaultModel] = useState<string>('gemini-3.1-flash-lite-preview');
+    const [defaultModel, setDefaultModel] = useState<string>('gemini-3.5-flash');
     const [fastResponseMode, setFastResponseMode] = useState(false);
     const [credentialsLoaded, setCredentialsLoaded] = useState(false);
     const canUseFastMode = !!(hasStoredKey.groq || hasStoredKey.natively || codexCliConfig.enabled);
@@ -1096,12 +1096,12 @@ export const AIProvidersSettings: React.FC = () => {
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -d '{
-    "model": "gpt-4o-mini",
+    "model": "chat-latest",
     "messages": [
       {"role": "system", "content": "You are a helpful assistant."},
       {"role": "user", "content": "{{TEXT}}"}
     ],
-    "temperature": 0.7
+    "max_completion_tokens": 1024
   }'`}
                                                     </code>
                                                 </div>

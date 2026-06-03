@@ -85,8 +85,8 @@ interface PersistedState {
 
 /** Hardcoded baseline models for vision Tier 1 (initial pinned stable) */
 const BASELINE_MODELS: Record<ModelFamily, string> = {
-  [ModelFamily.OPENAI]: 'gpt-5.4',
-  [ModelFamily.GEMINI_FLASH]: 'gemini-3.1-flash-lite-preview',
+  [ModelFamily.OPENAI]: 'chat-latest',
+  [ModelFamily.GEMINI_FLASH]: 'gemini-3.5-flash',
   [ModelFamily.GEMINI_PRO]: 'gemini-3.1-pro-preview',
   [ModelFamily.CLAUDE]: 'claude-sonnet-4-6',
   [ModelFamily.GROQ_LLAMA]: 'meta-llama/llama-4-scout-17b-16e-instruct',
@@ -94,8 +94,8 @@ const BASELINE_MODELS: Record<ModelFamily, string> = {
 
 /** Hardcoded baseline models for text Tier 1 */
 const TEXT_BASELINE_MODELS: Record<TextModelFamily, string> = {
-  [TextModelFamily.OPENAI]: 'gpt-5.4',
-  [TextModelFamily.GEMINI_FLASH]: 'gemini-3.1-flash-lite-preview',
+  [TextModelFamily.OPENAI]: 'chat-latest',
+  [TextModelFamily.GEMINI_FLASH]: 'gemini-3.5-flash',
   [TextModelFamily.GEMINI_PRO]: 'gemini-3.1-pro-preview',
   [TextModelFamily.CLAUDE]: 'claude-sonnet-4-6',
   [TextModelFamily.GROQ]: 'llama-3.3-70b-versatile',
@@ -134,8 +134,9 @@ const EVENT_DISCOVERY_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
  * Extract a semantic version from a model identifier string.
  *
  * Handles diverse and irregular naming conventions:
+ *   "chat-latest"                              → { major:5, minor:5, patch:0 }
  *   "gpt-5.4"                                  → { major:5, minor:4, patch:0 }
- *   "gpt-5.4"                                  → { major:5, minor:4, patch:0 }
+ *   "gemini-3.5-flash"                         → { major:3, minor:5, patch:0 }
  *   "gemini-3.1-flash-lite-preview"            → { major:3, minor:1, patch:0 }
  *   "gemini-3.1-pro-preview"                   → { major:3, minor:1, patch:0 }
  *   "claude-sonnet-4-6"                        → { major:4, minor:6, patch:0 }
@@ -147,6 +148,10 @@ const EVENT_DISCOVERY_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
  * are intentionally stripped before parsing. They are NOT version indicators.
  */
 export function parseModelVersion(modelId: string): ModelVersion | null {
+  if (modelId.toLowerCase() === 'chat-latest') {
+    return { major: 5, minor: 5, patch: 0, raw: modelId };
+  }
+
   // Normalize: strip vendor prefixes and non-version suffixes
   let cleaned = modelId
     .replace(/^meta-llama\//, '')                // vendor prefix
@@ -252,7 +257,7 @@ export function classifyModel(modelId: string): ModelFamily | null {
   const lower = modelId.toLowerCase();
 
   // OpenAI GPT vision models (exclude instruct-only variants)
-  if (lower.startsWith('gpt-') && !lower.includes('instruct')) {
+  if ((lower === 'chat-latest' || lower.startsWith('gpt-')) && !lower.includes('instruct')) {
     return ModelFamily.OPENAI;
   }
 
@@ -287,7 +292,7 @@ export function classifyTextModel(modelId: string): TextModelFamily | null {
   const lower = modelId.toLowerCase();
 
   // OpenAI GPT text models
-  if (lower.startsWith('gpt-') && !lower.includes('instruct')) {
+  if ((lower === 'chat-latest' || lower.startsWith('gpt-')) && !lower.includes('instruct')) {
     return TextModelFamily.OPENAI;
   }
 

@@ -200,7 +200,7 @@ export class CredentialsManager {
         return this.credentials.aiResponseLanguage || 'auto';
     }
     public getDefaultModel(): string {
-        return this.credentials.defaultModel || 'gemini-3.1-flash-lite-preview';
+        return this.credentials.defaultModel || 'gemini-3.5-flash';
     }
 
     public getNativelyApiKey(): string | undefined {
@@ -221,7 +221,7 @@ export class CredentialsManager {
      */
     public anyVisionProviderConfigured(): boolean {
         if (this.credentials.nativelyApiKey) return true;       // Natively API supports vision
-        if (this.credentials.openaiApiKey) return true;          // gpt-4o / gpt-5 vision
+        if (this.credentials.openaiApiKey) return true;          // chat-latest / GPT vision
         if (this.credentials.claudeApiKey) return true;          // Claude vision
         if (this.credentials.geminiApiKey) return true;          // Gemini vision
         if (this.credentials.groqApiKey) return true;            // Groq llama-4-scout vision
@@ -414,7 +414,7 @@ export class CredentialsManager {
         } else {
             // Key cleared — revert natively-auto-set defaults back to safe fallbacks
             if (this.credentials.defaultModel === 'natively') {
-                this.credentials.defaultModel = 'gemini-3.1-flash-lite-preview';
+                this.credentials.defaultModel = 'gemini-3.5-flash';
                 console.log('[CredentialsManager] Natively key cleared — reset default model to Gemini Flash');
             }
             if (this.credentials.sttProvider === 'natively') {

@@ -128,7 +128,7 @@ const MockupNativelyInterface = ({ opacity }: { opacity: number }) => {
                             <div className="flex items-center justify-between mt-3 px-0.5">
                                 <div className="flex items-center gap-1.5">
                                     <div className="flex items-center gap-2 px-3 py-1.5 border rounded-lg text-xs font-medium w-[140px] overlay-control-surface overlay-text-interactive" style={appearance.controlStyle}>
-                                        <span className="truncate min-w-0 flex-1">Gemini 3 Flash</span>
+                                        <span className="truncate min-w-0 flex-1">Gemini 3.5 Flash</span>
                                         <ChevronDown size={14} className="shrink-0" />
                                     </div>
                                     <div className="w-px h-3 mx-1" style={appearance.dividerStyle} />

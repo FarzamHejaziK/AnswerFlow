@@ -53,11 +53,11 @@ interface OllamaResponse {
   done: boolean
 }
 
-// Model constant for Gemini 3 Flash
-const GEMINI_FLASH_MODEL = "gemini-3.1-flash-lite-preview"
+// Model constant for Gemini 3.5 Flash
+const GEMINI_FLASH_MODEL = "gemini-3.5-flash"
 const GEMINI_PRO_MODEL = "gemini-3.1-pro-preview"
 const GROQ_MODEL = "llama-3.3-70b-versatile"
-const OPENAI_MODEL = "gpt-5.4"
+const OPENAI_MODEL = "chat-latest"
 const CLAUDE_MODEL = "claude-sonnet-4-6"
 const DEEPSEEK_MODEL = "deepseek-v4-flash"
 const DEEPSEEK_BASE_URL = "https://api.deepseek.com"
@@ -378,7 +378,7 @@ export class LLMHelper {
           { inlineData: { mimeType: 'image/jpeg', data: b64 } },
         ];
         const modelId = providerId === 'gemini_flash'
-          ? 'gemini-3.1-flash-lite-preview'
+          ? GEMINI_FLASH_MODEL
           : 'gemini-3.1-pro-preview';
         return this.generateContent(contents, modelId);
       }
@@ -457,7 +457,8 @@ export class LLMHelper {
 
   // --- Model Type Checkers ---
   private isOpenAiModel(modelId: string): boolean {
-    return modelId.startsWith("gpt-") || modelId.startsWith("o1-") || modelId.startsWith("o3-") || modelId.includes("openai");
+    const id = modelId.toLowerCase();
+    return id === "chat-latest" || id.startsWith("gpt-") || id.startsWith("o1-") || id.startsWith("o3-") || id.startsWith("o4-") || id.startsWith("chatgpt-") || id.includes("openai");
   }
 
   private isClaudeModel(modelId: string): boolean {
@@ -810,7 +811,7 @@ export class LLMHelper {
   }
 
   /**
-   * Generate content using Gemini 3 Flash (text reasoning)
+   * Generate content using Gemini 3.5 Flash (text reasoning)
    * Used by IntelligenceManager for mode-specific prompts
    * NOTE: Migrated from Pro to Flash for consistency
    */
@@ -832,7 +833,7 @@ export class LLMHelper {
   }
 
   /**
-   * Generate content using Gemini 3 Flash (audio + fast multimodal)
+   * Generate content using Gemini 3.5 Flash (audio + fast multimodal)
    * CRITICAL: Audio input MUST use this model, not Pro
    */
   public async generateWithFlash(contents: any[]): Promise<string> {
