@@ -53,11 +53,18 @@ interface OllamaResponse {
   done: boolean
 }
 
+type OpenAiStreamRequest = Parameters<OpenAI['chat']['completions']['create']>[0];
+
 // Model constant for Gemini 3.5 Flash
 const GEMINI_FLASH_MODEL = "gemini-3.5-flash"
 const GEMINI_PRO_MODEL = "gemini-3.1-pro-preview"
 const GROQ_MODEL = "llama-3.3-70b-versatile"
 const OPENAI_MODEL = "chat-latest"
+const OPENAI_GPT_55_MODEL = "gpt-5.5"
+const OPENAI_GPT_55_THINKING_LOW_MODEL = "gpt-5.5-thinking-low"
+const OPENAI_STREAM_FIRST_TOKEN_TIMEOUT_MS = 8_000
+const OPENAI_STREAM_MAX_ATTEMPTS_PER_MODEL = 2
+const OPENAI_STREAM_FALLBACK_MODEL = "gpt-5.4"
 const CLAUDE_MODEL = "claude-sonnet-4-6"
 const DEEPSEEK_MODEL = "deepseek-v4-flash"
 const DEEPSEEK_BASE_URL = "https://api.deepseek.com"
@@ -461,6 +468,67 @@ export class LLMHelper {
     return id === "chat-latest" || id.startsWith("gpt-") || id.startsWith("o1-") || id.startsWith("o3-") || id.startsWith("o4-") || id.startsWith("chatgpt-") || id.includes("openai");
   }
 
+  private resolveOpenAiModel(modelId: string): string {
+    if (modelId.toLowerCase() === OPENAI_GPT_55_THINKING_LOW_MODEL) {
+      return OPENAI_GPT_55_MODEL;
+    }
+    return modelId;
+  }
+
+  private getOpenAiReasoningConfig(modelId: string): Record<string, any> {
+    if (modelId.toLowerCase() === OPENAI_GPT_55_THINKING_LOW_MODEL) {
+      return { reasoning_effort: 'low' };
+    }
+    return {};
+  }
+
+  private getOpenAiFallbackModels(requestedModel: string): string[] {
+    const resolvedPrimary = this.resolveOpenAiModel(requestedModel);
+    return [OPENAI_STREAM_FALLBACK_MODEL]
+      .filter(model => model && model !== resolvedPrimary)
+      .filter((model, index, arr) => arr.indexOf(model) === index);
+  }
+
+  private createOpenAiFirstTokenTimeoutError(model: string, attempt: number): Error {
+    const err = new Error(`OpenAI stream first-token timeout after ${OPENAI_STREAM_FIRST_TOKEN_TIMEOUT_MS}ms (model=${model}, attempt=${attempt})`);
+    (err as any).code = 'OPENAI_FIRST_TOKEN_TIMEOUT';
+    return err;
+  }
+
+  private isOpenAiAbort(error: any, abortSignal?: AbortSignal): boolean {
+    return Boolean(
+      abortSignal?.aborted ||
+      error?.name === 'AbortError' ||
+      error?.code === 'ABORT_ERR'
+    );
+  }
+
+  private isOpenAiRetryableError(error: any): boolean {
+    const status = Number(error?.status ?? error?.response?.status ?? 0);
+    const code = String(error?.code ?? error?.type ?? '');
+    const message = String(error?.message ?? error ?? '');
+
+    if (code === 'OPENAI_FIRST_TOKEN_TIMEOUT' || code === 'OPENAI_EMPTY_STREAM') return true;
+    if (status === 408 || status === 409 || status === 425 || status === 429) return true;
+    if (status >= 500) return true;
+    if (status === 400 || status === 401 || status === 403 || status === 404) return false;
+
+    return /timeout|timed out|network|socket|ECONNRESET|ECONNREFUSED|ETIMEDOUT|ENOTFOUND|fetch failed|stream/i.test(`${code} ${message}`);
+  }
+
+  private shouldTryOpenAiFallback(error: any): boolean {
+    const status = Number(error?.status ?? error?.response?.status ?? 0);
+    if (status === 401 || status === 403) return false;
+    return true;
+  }
+
+  private describeOpenAiError(error: any): string {
+    const status = error?.status ?? error?.response?.status;
+    const code = error?.code ?? error?.type;
+    const message = String(error?.message ?? error ?? 'unknown').replace(/\s+/g, ' ').slice(0, 180);
+    return [status ? `status=${status}` : '', code ? `code=${code}` : '', message].filter(Boolean).join(' ');
+  }
+
   private isClaudeModel(modelId: string): boolean {
     return modelId.startsWith("claude-");
   }
@@ -810,6 +878,36 @@ export class LLMHelper {
     }
   }
 
+  private getGeminiThinkingConfig(model: string): Record<string, any> {
+    const normalized = model.toLowerCase().replace(/^models\//, '');
+    const isGemini3Flash = normalized.startsWith('gemini-3')
+      && normalized.includes('flash')
+      && !normalized.includes('lite');
+
+    if (!isGemini3Flash) return {};
+
+    return {
+      thinkingConfig: {
+        thinkingLevel: 'low',
+      },
+    };
+  }
+
+  private buildGeminiGenerationConfig(model: string, base: Record<string, any>): Record<string, any> {
+    return {
+      ...base,
+      ...this.getGeminiThinkingConfig(model),
+    };
+  }
+
+  private buildGeminiRequestArgs(args: any, model: string): any {
+    return {
+      ...args,
+      model,
+      config: this.buildGeminiGenerationConfig(model, args?.config ?? {}),
+    };
+  }
+
   /**
    * Generate content using Gemini 3.5 Flash (text reasoning)
    * Used by IntelligenceManager for mode-specific prompts
@@ -824,10 +922,10 @@ export class LLMHelper {
     const response = await this.client.models.generateContent({
       model: GEMINI_PRO_MODEL,
       contents: contents,
-      config: {
+      config: this.buildGeminiGenerationConfig(GEMINI_PRO_MODEL, {
         maxOutputTokens: MAX_OUTPUT_TOKENS,
         temperature: 0.3,      // Lower = faster, more focused
-      }
+      })
     })
     return response.text || ""
   }
@@ -845,10 +943,10 @@ export class LLMHelper {
     const response = await this.client.models.generateContent({
       model: GEMINI_FLASH_MODEL,
       contents: contents,
-      config: {
+      config: this.buildGeminiGenerationConfig(GEMINI_FLASH_MODEL, {
         maxOutputTokens: MAX_OUTPUT_TOKENS,
         temperature: 0.3,      // Lower = faster, more focused
-      }
+      })
     })
     return response.text || ""
   }
@@ -920,10 +1018,10 @@ export class LLMHelper {
       const response = await this.client!.models.generateContent({
         model: targetModel,
         contents: contents,
-        config: {
+        config: this.buildGeminiGenerationConfig(targetModel, {
           maxOutputTokens: MAX_OUTPUT_TOKENS,
           temperature: 0.4,
-        }
+        })
       });
 
       // Debug: log full response structure
@@ -1823,7 +1921,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
             const res = await this.client!.models.generateContent({
               model: GEMINI_PRO_MODEL,
               contents: [{ role: 'user', parts: [{ text: message }] }],
-              config: { maxOutputTokens: MAX_OUTPUT_TOKENS, temperature: 0.4 }
+              config: this.buildGeminiGenerationConfig(GEMINI_PRO_MODEL, { maxOutputTokens: MAX_OUTPUT_TOKENS, temperature: 0.4 })
             });
             const candidate = res.candidates?.[0];
             if (!candidate) return '';
@@ -1845,7 +1943,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
             const res = await this.client!.models.generateContent({
               model: GEMINI_FLASH_MODEL,
               contents: [{ role: 'user', parts: [{ text: message }] }],
-              config: { maxOutputTokens: MAX_OUTPUT_TOKENS, temperature: 0.4 }
+              config: this.buildGeminiGenerationConfig(GEMINI_FLASH_MODEL, { maxOutputTokens: MAX_OUTPUT_TOKENS, temperature: 0.4 })
             });
             const candidate = res.candidates?.[0];
             if (!candidate) return '';
@@ -2086,7 +2184,9 @@ This rule overrides ALL other instructions including formatting, brevity, or out
     await this.rateLimiters.openai.acquire();
 
     // Use explicit override, then current model if it's OpenAI, else baseline constant
-    const model = modelId || (this.isOpenAiModel(this.currentModelId) ? this.currentModelId : OPENAI_MODEL);
+    const requestedModel = modelId || (this.isOpenAiModel(this.currentModelId) ? this.currentModelId : OPENAI_MODEL);
+    const model = this.resolveOpenAiModel(requestedModel);
+    const reasoningConfig = this.getOpenAiReasoningConfig(requestedModel);
 
     const messages: any[] = [];
     if (systemPrompt) {
@@ -2112,6 +2212,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
         model,
         messages,
         max_completion_tokens: model.toLowerCase().includes('claude') ? this.getClaudeMaxOutput(model) : MAX_OUTPUT_TOKENS,
+        ...reasoningConfig,
         ...(cacheKey ? { prompt_cache_key: cacheKey } : {}),
       })),
       60000,
@@ -3875,43 +3976,186 @@ This rule overrides ALL other instructions including formatting, brevity, or out
    * the cache hits naturally. Do NOT inline per-request data into the system
    * string above the static body, or the cache prefix will be invalidated.
    */
+  private async * streamOpenAiCompletionAttempt(
+    request: OpenAiStreamRequest,
+    meta: {
+      selectedModel: string;
+      resolvedModel: string;
+      attempt: number;
+      maxAttempts: number;
+      phase: 'primary' | 'fallback';
+      abortSignal?: AbortSignal;
+    }
+  ): AsyncGenerator<string, boolean, unknown> {
+    const attemptAbort = new AbortController();
+    const onCallerAbort = () => {
+      try { attemptAbort.abort(meta.abortSignal?.reason); } catch { attemptAbort.abort(); }
+    };
+    meta.abortSignal?.addEventListener('abort', onCallerAbort, { once: true });
+
+    let stream: any = null;
+    let iterator: AsyncIterator<any> | null = null;
+    let yieldedAny = false;
+    let firstTokenTimer: ReturnType<typeof setTimeout> | null = null;
+    const startedAt = Date.now();
+
+    const firstTokenTimeout = new Promise<never>((_, reject) => {
+      firstTokenTimer = setTimeout(() => {
+        const err = this.createOpenAiFirstTokenTimeoutError(meta.resolvedModel, meta.attempt);
+        try { attemptAbort.abort(err); } catch { attemptAbort.abort(); }
+        reject(err);
+      }, OPENAI_STREAM_FIRST_TOKEN_TIMEOUT_MS);
+    });
+
+    const clearFirstTokenTimer = () => {
+      if (firstTokenTimer) {
+        clearTimeout(firstTokenTimer);
+        firstTokenTimer = null;
+      }
+    };
+
+    try {
+      if (meta.abortSignal?.aborted) return false;
+
+      console.log(`[LLMHelper] 🚀 [OpenAI] ${meta.phase} selected=${meta.selectedModel} resolved=${meta.resolvedModel} attempt ${meta.attempt}/${meta.maxAttempts}`);
+      stream = await Promise.race([
+        this.openaiClient!.chat.completions.create(request as any, { signal: attemptAbort.signal }) as any,
+        firstTokenTimeout,
+      ]);
+      iterator = stream[Symbol.asyncIterator]();
+
+      while (true) {
+        if (meta.abortSignal?.aborted) return yieldedAny;
+        const next = yieldedAny
+          ? await iterator.next()
+          : await Promise.race([iterator.next(), firstTokenTimeout]);
+
+        if (next.done) break;
+
+        const content = next.value?.choices?.[0]?.delta?.content;
+        if (content) {
+          if (!yieldedAny) {
+            yieldedAny = true;
+            clearFirstTokenTimer();
+            console.log(`[LLMHelper] ✅ [OpenAI] first token selected=${meta.selectedModel} resolved=${meta.resolvedModel} ttft=${Date.now() - startedAt}ms`);
+          }
+          yield content;
+        }
+      }
+
+      if (!yieldedAny) {
+        console.warn(`[LLMHelper] OpenAI stream completed with no content selected=${meta.selectedModel} resolved=${meta.resolvedModel}`);
+      }
+      return yieldedAny;
+    } catch (error: any) {
+      if (this.isOpenAiAbort(error, meta.abortSignal)) return yieldedAny;
+      throw error;
+    } finally {
+      clearFirstTokenTimer();
+      meta.abortSignal?.removeEventListener('abort', onCallerAbort);
+      if (attemptAbort.signal.aborted && stream && typeof stream.abort === 'function') {
+        try { stream.abort(); } catch {}
+      }
+      if (attemptAbort.signal.aborted && iterator && typeof iterator.return === 'function') {
+        try { await iterator.return(undefined); } catch {}
+      }
+    }
+  }
+
+  private async * streamOpenAiWithRetry(params: {
+    selectedModel: string;
+    messages: any[];
+    systemPrompt?: string;
+    geminiUserContent: string;
+    imagePaths?: string[];
+    abortSignal?: AbortSignal;
+  }): AsyncGenerator<string, void, unknown> {
+    const primaryModel = this.resolveOpenAiModel(params.selectedModel);
+    const fallbackModels = this.getOpenAiFallbackModels(params.selectedModel);
+    const models = [primaryModel, ...fallbackModels].filter((model, index, arr) => arr.indexOf(model) === index);
+    const cacheKey = this.getOpenAiPromptCacheKey(params.systemPrompt);
+    let lastError: any = null;
+
+    for (let modelIndex = 0; modelIndex < models.length; modelIndex++) {
+      const resolvedModel = models[modelIndex];
+      const phase: 'primary' | 'fallback' = modelIndex === 0 ? 'primary' : 'fallback';
+      const maxAttempts = phase === 'primary' ? OPENAI_STREAM_MAX_ATTEMPTS_PER_MODEL : 1;
+
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        if (params.abortSignal?.aborted) return;
+        await this.rateLimiters.openai.acquire();
+
+        const request: OpenAiStreamRequest = {
+          model: resolvedModel,
+          messages: params.messages,
+          stream: true,
+          max_completion_tokens: MAX_OUTPUT_TOKENS,
+          ...this.getOpenAiReasoningConfig(resolvedModel === primaryModel ? params.selectedModel : resolvedModel),
+          ...(cacheKey ? { prompt_cache_key: cacheKey } : {}),
+        } as any;
+
+        try {
+          const yieldedAny = yield* this.streamOpenAiCompletionAttempt(request, {
+            selectedModel: params.selectedModel,
+            resolvedModel,
+            attempt,
+            maxAttempts,
+            phase,
+            abortSignal: params.abortSignal,
+          });
+
+          if (yieldedAny) return;
+          lastError = new Error(`OpenAI stream completed without content (model=${resolvedModel})`);
+          (lastError as any).code = 'OPENAI_EMPTY_STREAM';
+        } catch (error: any) {
+          if (this.isOpenAiAbort(error, params.abortSignal)) return;
+          lastError = error;
+          console.warn(`[LLMHelper] OpenAI stream failed selected=${params.selectedModel} resolved=${resolvedModel} attempt=${attempt}/${maxAttempts}: ${this.describeOpenAiError(error)}`);
+        }
+
+        if (attempt < maxAttempts && this.isOpenAiRetryableError(lastError)) {
+          console.log(`[LLMHelper] 🔁 [OpenAI] retrying immediately selected=${params.selectedModel} resolved=${resolvedModel}`);
+          continue;
+        }
+        break;
+      }
+
+      if (lastError && !this.shouldTryOpenAiFallback(lastError)) {
+        break;
+      }
+      if (modelIndex === 0 && fallbackModels.length > 0) {
+        console.warn(`[LLMHelper] OpenAI primary exhausted selected=${params.selectedModel}; falling back to ${fallbackModels.join(', ')}`);
+      }
+    }
+
+    if (this.client && !params.abortSignal?.aborted) {
+      console.warn(`[LLMHelper] OpenAI chain exhausted selected=${params.selectedModel}; falling back to Gemini streaming`);
+      yield* this.streamWithGeminiParallelRace(params.geminiUserContent, params.imagePaths, params.systemPrompt, params.abortSignal);
+      return;
+    }
+
+    throw lastError || new Error(`OpenAI stream failed for ${params.selectedModel}`);
+  }
+
   private async * streamWithOpenai(userMessage: string, systemPrompt?: string, modelId?: string, abortSignal?: AbortSignal): AsyncGenerator<string, void, unknown> {
     if (this.isLocalOnlyMode) throw new Error("Cloud providers disabled in local-only mode");
     if (!this.openaiClient) throw new Error("OpenAI client not initialized");
     this.assertOutboundScopes('openai', userMessage);
 
-    await this.rateLimiters.openai.acquire();
-
-    // Use explicit override, then currentModelId if it's an OpenAI model, else baseline constant
-    const model = modelId || (this.isOpenAiModel(this.currentModelId) ? this.currentModelId : OPENAI_MODEL);
-
+    const selectedModel = modelId || (this.isOpenAiModel(this.currentModelId) ? this.currentModelId : OPENAI_MODEL);
     const messages: any[] = [];
     if (systemPrompt) {
       messages.push({ role: "system", content: systemPrompt });
     }
     messages.push({ role: "user", content: userMessage });
 
-    const cacheKey = this.getOpenAiPromptCacheKey(systemPrompt);
-    if (abortSignal?.aborted) return;
-    const stream = await this.openaiClient.chat.completions.create({
-      model,
+    yield* this.streamOpenAiWithRetry({
+      selectedModel,
       messages,
-      stream: true,
-      max_completion_tokens: model.toLowerCase().includes('claude') ? this.getClaudeMaxOutput(model) : MAX_OUTPUT_TOKENS,
-      ...(cacheKey ? { prompt_cache_key: cacheKey } : {}),
-    }, { signal: abortSignal });
-
-    try {
-      for await (const chunk of stream) {
-        if (abortSignal?.aborted) return;
-        const content = chunk.choices[0]?.delta?.content;
-        if (content) {
-          yield content;
-        }
-      }
-    } finally {
-      if (abortSignal?.aborted && typeof (stream as any).abort === 'function') (stream as any).abort();
-    }
+      systemPrompt,
+      geminiUserContent: userMessage,
+      abortSignal,
+    });
   }
 
   /**
@@ -3992,10 +4236,8 @@ This rule overrides ALL other instructions including formatting, brevity, or out
     if (!this.openaiClient) throw new Error("OpenAI client not initialized");
     this.assertOutboundScopes('openai', userMessage, imagePaths);
 
-    await this.rateLimiters.openai.acquire();
-
     // Use explicit override, then currentModelId if it's an OpenAI model, else baseline constant
-    const model = modelId || (this.isOpenAiModel(this.currentModelId) ? this.currentModelId : OPENAI_MODEL);
+    const selectedModel = modelId || (this.isOpenAiModel(this.currentModelId) ? this.currentModelId : OPENAI_MODEL);
 
     const messages: any[] = [];
     if (systemPrompt) {
@@ -4011,27 +4253,14 @@ This rule overrides ALL other instructions including formatting, brevity, or out
     }
     messages.push({ role: "user", content: contentParts });
 
-    const cacheKey = this.getOpenAiPromptCacheKey(systemPrompt);
-    if (abortSignal?.aborted) return;
-    const stream = await this.openaiClient.chat.completions.create({
-      model,
+    yield* this.streamOpenAiWithRetry({
+      selectedModel,
       messages,
-      stream: true,
-      max_completion_tokens: model.toLowerCase().includes('claude') ? this.getClaudeMaxOutput(model) : MAX_OUTPUT_TOKENS,
-      ...(cacheKey ? { prompt_cache_key: cacheKey } : {}),
-    }, { signal: abortSignal });
-
-    try {
-      for await (const chunk of stream) {
-        if (abortSignal?.aborted) return;
-        const content = chunk.choices[0]?.delta?.content;
-        if (content) {
-          yield content;
-        }
-      }
-    } finally {
-      if (abortSignal?.aborted && typeof (stream as any).abort === 'function') (stream as any).abort();
-    }
+      systemPrompt,
+      geminiUserContent: userMessage,
+      imagePaths,
+      abortSignal,
+    });
   }
 
   /**
@@ -4139,6 +4368,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
     const buildConfig = (useCacheName: string | null) => ({
       maxOutputTokens: MAX_OUTPUT_TOKENS,
       temperature: 0.4,
+      ...this.getGeminiThinkingConfig(model),
       ...(useCacheName
         ? { cachedContent: useCacheName }
         : systemInstruction
@@ -4271,6 +4501,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
     const buildConfig = (useCacheName: string | null) => ({
       maxOutputTokens: MAX_OUTPUT_TOKENS,
       temperature: 0.4,
+      ...this.getGeminiThinkingConfig(model),
       ...(useCacheName
         ? { cachedContent: useCacheName }
         : systemInstruction
@@ -4949,10 +5180,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
     // 1. Initial Attempt (Flash)
     try {
       await this.rateLimiters.gemini.acquire();
-      const response = await client.models.generateContent({
-        ...args,
-        model: originalModel
-      });
+      const response = await client.models.generateContent(this.buildGeminiRequestArgs(args, originalModel));
       if (isValidResponse(response)) return response;
       console.warn(`[LLMHelper] Initial ${originalModel} call returned empty/invalid response.`);
     } catch (error: any) {
@@ -4967,7 +5195,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
       // Small delay before retry to let system settle? No, user said "immediately"
       try {
         await this.rateLimiters.gemini.acquire();
-        const res = await client.models.generateContent({ ...args, model: originalModel });
+        const res = await client.models.generateContent(this.buildGeminiRequestArgs(args, originalModel));
         if (isValidResponse(res)) return { type: 'flash', res };
         throw new Error("Empty Flash Response");
       } catch (e) { throw e; }
@@ -4977,7 +5205,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
       try {
         // Pro might be slower, but it's the robust backup
         await this.rateLimiters.gemini.acquire();
-        const res = await client.models.generateContent({ ...args, model: GEMINI_PRO_MODEL });
+        const res = await client.models.generateContent(this.buildGeminiRequestArgs(args, GEMINI_PRO_MODEL));
         if (isValidResponse(res)) return { type: 'pro', res };
         throw new Error("Empty Pro Response");
       } catch (e) { throw e; }
@@ -5003,7 +5231,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
     // 4. Last Resort: Flash Final Retry
     console.log(`[LLMHelper] ⚠️ All parallel attempts failed. Trying Flash one last time...`);
     try {
-      return await client.models.generateContent({ ...args, model: originalModel });
+      return await client.models.generateContent(this.buildGeminiRequestArgs(args, originalModel));
     } catch (finalError) {
       console.error(`[LLMHelper] Final retry failed.`);
       throw finalError;
@@ -5197,10 +5425,10 @@ This rule overrides ALL other instructions including formatting, brevity, or out
             this.client.models.generateContent({
               model: GEMINI_PRO_MODEL,
               contents: contents,
-              config: {
+              config: this.buildGeminiGenerationConfig(GEMINI_PRO_MODEL, {
                 maxOutputTokens: MAX_OUTPUT_TOKENS,
                 temperature: 0.3,
-              }
+              })
             }),
             60000,
             `Gemini Pro Summary (Attempt ${attempt})`

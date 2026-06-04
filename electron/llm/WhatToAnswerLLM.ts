@@ -53,7 +53,8 @@ export class WhatToAnswerLLM {
         // When set, the skill's promptBlock REPLACES the mode suffix and the
         // mode-context retrieval step is skipped — the skill defines the entire
         // intent and mixing custom-mode reference docs in just dilutes it.
-        activeSkill?: { id: string; name: string; promptBlock: string }
+        activeSkill?: { id: string; name: string; promptBlock: string },
+        abortSignal?: AbortSignal,
     ): AsyncGenerator<string> {
         const MEASURE = process.env.MEASURE_LATENCY === 'true';
         let tStart = 0, tIntent = 0, tTemporal = 0, tMode = 0, tTrunc = 0, tPrompt = 0, tStream = 0;
@@ -219,7 +220,7 @@ ANSWER SHAPE: ${intentResult.answerShape}
             if (modeContextBlock) packetScopes.push('reference_files');
             if (customNotesContext) packetScopes.push('profile_history');
             if (temporalContext?.hasRecentResponses && temporalContext.previousResponses.length > 0) packetScopes.push('profile_history');
-            for await (const token of this.llmHelper.streamChat(packet.userMessage, imagePaths, undefined, finalPromptOverride, true, true, packetScopes)) {
+            for await (const token of this.llmHelper.streamChat(packet.userMessage, imagePaths, undefined, finalPromptOverride, true, true, packetScopes, abortSignal)) {
                 if (MEASURE) {
                     const now = performance.now();
                     if (tPrevToken > 0) interTokenLatencies.push(now - tPrevToken);

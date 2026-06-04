@@ -2634,6 +2634,12 @@ export function initializeIpcHandlers(appState: AppState): void {
             url,
             {
               contents: [{ parts: [{ text: 'Hello' }] }],
+              generationConfig: {
+                maxOutputTokens: 10,
+                thinkingConfig: {
+                  thinkingLevel: 'low',
+                },
+              },
             },
             {
               headers: { 'x-goog-api-key': apiKey },

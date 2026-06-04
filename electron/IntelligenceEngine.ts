@@ -541,6 +541,8 @@ export class IntelligenceEngine extends EventEmitter {
             this.speculativeTextExpiry = Infinity;
         }
 
+        let streamAbortController: AbortController | null = null;
+
         try {
             if (!this.whatToAnswerLLM) {
                 if (!this.answerLLM) {
@@ -620,7 +622,18 @@ export class IntelligenceEngine extends EventEmitter {
             let fullAnswer = "";
             // RC-03 fix: hold a reference to the generator so we can call .return()
             // to properly terminate the network request when a new generation starts.
-            const stream = this.whatToAnswerLLM.generateStream(preparedTranscript, temporalContext, intentResult, imagePaths, screenContext, options?.promptInstruction, options?.activeSkill);
+            streamAbortController = new AbortController();
+            this.assistCancellationToken = streamAbortController;
+            const stream = this.whatToAnswerLLM.generateStream(
+                preparedTranscript,
+                temporalContext,
+                intentResult,
+                imagePaths,
+                screenContext,
+                options?.promptInstruction,
+                options?.activeSkill,
+                streamAbortController.signal,
+            );
             let streamAborted = false;
 
             for await (const token of stream) {
@@ -689,6 +702,10 @@ export class IntelligenceEngine extends EventEmitter {
             this.emit('error', error as Error, 'what_to_say');
             this.setMode('idle');
             return "Could you repeat that? I want to make sure I address your question properly.";
+        } finally {
+            if (streamAbortController && this.assistCancellationToken === streamAbortController) {
+                this.assistCancellationToken = null;
+            }
         }
     }
 

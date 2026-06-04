@@ -12,8 +12,8 @@ const importDist = rel => import(pathToFileURL(path.join(repoRoot, 'dist-electro
 test('standard cloud model list exposes the API-valid GPT 5.5 Instant and Gemini 3.5 Flash IDs', () => {
   const src = read('src/utils/modelUtils.ts');
 
-  assert.match(src, /ids:\s*\['chat-latest', 'gpt-5\.4'\]/);
-  assert.match(src, /names:\s*\['GPT 5\.5 Instant', 'GPT 5\.4'\]/);
+  assert.match(src, /ids:\s*\['chat-latest', 'gpt-5\.5', 'gpt-5\.5-thinking-low', 'gpt-5\.4'\]/);
+  assert.match(src, /names:\s*\['GPT 5\.5 Instant', 'GPT 5\.5', 'GPT 5\.5 Thinking', 'GPT 5\.4'\]/);
   assert.match(src, /ids:\s*\['gemini-3.5-flash', 'gemini-3\.1-flash-lite-preview', 'gemini-3\.1-pro-preview'\]/);
   assert.match(src, /names:\s*\['Gemini 3\.5 Flash', 'Gemini 3\.1 Flash', 'Gemini 3\.1 Pro'\]/);
 });
@@ -29,12 +29,55 @@ test('OpenAI and Gemini defaults stay aligned across runtime constants and conne
   assert.match(ipcHandlers, /models\/gemini-3.5-flash:generateContent/);
 });
 
+test('GPT 5.5 Thinking dropdown ID maps to GPT 5.5 with low reasoning', () => {
+  const llmHelper = read('electron/LLMHelper.ts');
+
+  assert.match(llmHelper, /const OPENAI_GPT_55_MODEL = "gpt-5\.5"/);
+  assert.match(llmHelper, /const OPENAI_GPT_55_THINKING_LOW_MODEL = "gpt-5\.5-thinking-low"/);
+  assert.match(llmHelper, /return OPENAI_GPT_55_MODEL;/);
+  assert.match(llmHelper, /return \{ reasoning_effort: 'low' \};/);
+  assert.match(llmHelper, /\.\.\.reasoningConfig/);
+});
+
+test('OpenAI streaming has first-token timeout, retry, fallback, and cancellation wiring', () => {
+  const llmHelper = read('electron/LLMHelper.ts');
+  const whatToAnswer = read('electron/llm/WhatToAnswerLLM.ts');
+  const intelligenceEngine = read('electron/IntelligenceEngine.ts');
+
+  assert.match(llmHelper, /const OPENAI_STREAM_FIRST_TOKEN_TIMEOUT_MS = 8_000/);
+  assert.match(llmHelper, /const OPENAI_STREAM_MAX_ATTEMPTS_PER_MODEL = 2/);
+  assert.match(llmHelper, /const OPENAI_STREAM_FALLBACK_MODEL = "gpt-5\.4"/);
+  assert.match(llmHelper, /createOpenAiFirstTokenTimeoutError/);
+  assert.match(llmHelper, /OPENAI_FIRST_TOKEN_TIMEOUT/);
+  assert.match(llmHelper, /OPENAI_EMPTY_STREAM/);
+  assert.match(llmHelper, /streamOpenAiCompletionAttempt/);
+  assert.match(llmHelper, /streamOpenAiWithRetry/);
+  assert.match(llmHelper, /falling back to Gemini streaming/);
+  assert.match(whatToAnswer, /abortSignal\?: AbortSignal/);
+  assert.match(whatToAnswer, /packetScopes,\s*abortSignal/);
+  assert.match(intelligenceEngine, /streamAbortController = new AbortController\(\)/);
+  assert.match(intelligenceEngine, /streamAbortController\.signal/);
+});
+
+test('Gemini 3 Flash calls opt into low thinking for live latency', () => {
+  const llmHelper = read('electron/LLMHelper.ts');
+  const ipcHandlers = read('electron/ipcHandlers.ts');
+
+  assert.match(llmHelper, /thinkingConfig:\s*\{\s*thinkingLevel:\s*'low'/);
+  assert.match(llmHelper, /normalized\.startsWith\('gemini-3'\)[\s\S]*!normalized\.includes\('lite'\)/);
+  assert.match(llmHelper, /this\.getGeminiThinkingConfig\(model\)/);
+  assert.match(llmHelper, /this\.buildGeminiGenerationConfig\(GEMINI_FLASH_MODEL/);
+  assert.match(ipcHandlers, /generationConfig:\s*\{[\s\S]*thinkingConfig:\s*\{[\s\S]*thinkingLevel:\s*'low'/);
+});
+
 test('OpenAI chat-latest alias is classified as cloud, OpenAI, and vision-capable', async () => {
   const { getModelCapabilities } = await importDist('llm/modelCapabilities.js');
   const { parseModelVersion, classifyModel, classifyTextModel, ModelFamily, TextModelFamily } =
     await importDist('services/ModelVersionManager.js');
 
   assert.deepEqual(parseModelVersion('chat-latest'), { major: 5, minor: 5, patch: 0, raw: 'chat-latest' });
+  assert.deepEqual(parseModelVersion('gpt-5.5'), { major: 5, minor: 5, patch: 0, raw: 'gpt-5.5' });
+  assert.deepEqual(parseModelVersion('gpt-5.5-thinking-low'), { major: 5, minor: 5, patch: 0, raw: 'gpt-5.5-thinking-low' });
   assert.deepEqual(parseModelVersion('gemini-3.5-flash'), { major: 3, minor: 5, patch: 0, raw: 'gemini-3.5-flash' });
   assert.equal(classifyModel('chat-latest'), ModelFamily.OPENAI);
   assert.equal(classifyTextModel('chat-latest'), TextModelFamily.OPENAI);

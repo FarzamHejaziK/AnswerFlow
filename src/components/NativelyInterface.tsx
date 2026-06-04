@@ -4820,6 +4820,8 @@ Provide only the answer, nothing else.`;
                           if (m === 'gemini-3.1-pro-preview') return 'Gemini 3.1 Pro';
                           if (m === 'llama-3.3-70b-versatile') return 'Groq Llama 3.3';
                           if (m === 'chat-latest') return 'GPT 5.5 Instant';
+                          if (m === 'gpt-5.5') return 'GPT 5.5';
+                          if (m === 'gpt-5.5-thinking-low') return 'GPT 5.5 Thinking';
                           if (m === 'gpt-5.4') return 'GPT 5.4';
                           if (m === 'claude-sonnet-4-6') return 'Sonnet 4.6';
                           return m;
