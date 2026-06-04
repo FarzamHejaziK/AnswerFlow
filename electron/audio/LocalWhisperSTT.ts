@@ -80,6 +80,27 @@ export class LocalWhisperSTT extends EventEmitter {
     // Optional channel label ('mic' / 'system') — disambiguates log lines
     // when both LocalWhisperSTT instances run the same model.
     private channelLabel = '';
+
+    // Non-sensitive transcription diagnostics. These counters intentionally
+    // avoid transcript text; they only describe audio, segmentation, and model
+    // pipeline behavior so bad sessions can be diagnosed from logs.
+    private static readonly DIAGNOSTIC_LOG_EVERY_MS = 10_000;
+    private diagnosticsStartedAt = 0;
+    private lastDiagnosticLogAt = 0;
+    private audioChunkCount = 0;
+    private totalInputAudioMs = 0;
+    private totalResampledAudioMs = 0;
+    private rmsAccumulator = 0;
+    private peakAccumulator = 0;
+    private nearSilentChunkCount = 0;
+    private vadClosedSegmentCount = 0;
+    private gapFlushCount = 0;
+    private softCommitCount = 0;
+    private finalDispatchCount = 0;
+    private partialEmitCount = 0;
+    private finalEmitCount = 0;
+    private filteredPartialCount = 0;
+    private filteredFinalCount = 0;
     private worker: Worker | null = null;
     private vad: VadProcessor | null = null;
     private isActive = false;
@@ -176,6 +197,87 @@ export class LocalWhisperSTT extends EventEmitter {
      */
     setChannel(label: string): void { this.channelLabel = (label ?? '').trim(); }
 
+    private diagnosticTag(): string {
+        const channelTag = this.channelLabel ? `:${this.channelLabel}` : '';
+        return `[LocalWhisperSTT/${this.modelId.split('/').pop()}${channelTag}]`;
+    }
+
+    private resetDiagnostics(): void {
+        const now = Date.now();
+        this.diagnosticsStartedAt = now;
+        this.lastDiagnosticLogAt = now;
+        this.audioChunkCount = 0;
+        this.totalInputAudioMs = 0;
+        this.totalResampledAudioMs = 0;
+        this.rmsAccumulator = 0;
+        this.peakAccumulator = 0;
+        this.nearSilentChunkCount = 0;
+        this.vadClosedSegmentCount = 0;
+        this.gapFlushCount = 0;
+        this.softCommitCount = 0;
+        this.finalDispatchCount = 0;
+        this.partialEmitCount = 0;
+        this.finalEmitCount = 0;
+        this.filteredPartialCount = 0;
+        this.filteredFinalCount = 0;
+    }
+
+    private recordAudioDiagnostics(inputChunk: Buffer, resampled: Float32Array): void {
+        this.audioChunkCount++;
+        const inputSamples = Math.floor(inputChunk.length / 2);
+        this.totalInputAudioMs += (inputSamples / Math.max(1, this.inputSampleRate)) * 1000;
+        this.totalResampledAudioMs += (resampled.length / 16000) * 1000;
+
+        let sumSquares = 0;
+        let peak = 0;
+        for (let i = 0; i < resampled.length; i++) {
+            const abs = Math.abs(resampled[i]);
+            peak = Math.max(peak, abs);
+            sumSquares += resampled[i] * resampled[i];
+        }
+        const rms = resampled.length > 0 ? Math.sqrt(sumSquares / resampled.length) : 0;
+        this.rmsAccumulator += rms;
+        this.peakAccumulator = Math.max(this.peakAccumulator, peak);
+        if (rms < 0.001 && peak < 0.003) this.nearSilentChunkCount++;
+
+        const now = Date.now();
+        if (now - this.lastDiagnosticLogAt >= LocalWhisperSTT.DIAGNOSTIC_LOG_EVERY_MS) {
+            this.logDiagnostics('interval');
+        }
+    }
+
+    private logDiagnostics(reason: 'start' | 'interval' | 'stop' | 'finalize'): void {
+        const avgRms = this.audioChunkCount > 0 ? this.rmsAccumulator / this.audioChunkCount : 0;
+        const elapsedMs = this.diagnosticsStartedAt > 0 ? Date.now() - this.diagnosticsStartedAt : 0;
+        this.lastDiagnosticLogAt = Date.now();
+        console.log(`${this.diagnosticTag()} diagnostics`, {
+            reason,
+            modelId: this.modelId,
+            channel: this.channelLabel || 'unknown',
+            language: this.language,
+            inputSampleRate: this.inputSampleRate,
+            targetSampleRate: 16000,
+            elapsedMs,
+            chunks: this.audioChunkCount,
+            inputAudioMs: Math.round(this.totalInputAudioMs),
+            resampledAudioMs: Math.round(this.totalResampledAudioMs),
+            avgRms: Number(avgRms.toFixed(5)),
+            peak: Number(this.peakAccumulator.toFixed(5)),
+            nearSilentChunks: this.nearSilentChunkCount,
+            vadClosedSegments: this.vadClosedSegmentCount,
+            gapFlushes: this.gapFlushCount,
+            softCommits: this.softCommitCount,
+            finalDispatches: this.finalDispatchCount,
+            partialEmits: this.partialEmitCount,
+            finalEmits: this.finalEmitCount,
+            filteredPartials: this.filteredPartialCount,
+            filteredFinals: this.filteredFinalCount,
+            streamingIntervalMs: this.streamingIntervalBaseMs,
+            streamingMinAudioMs: this.streamingMinAudioMs,
+            skipAgreement: this.skipAgreement,
+        });
+    }
+
     /**
      * Set a context-biasing prompt (proper nouns, jargon, attendee names).
      * Pushed to the worker out-of-band only when the value actually changes.
@@ -202,6 +304,8 @@ export class LocalWhisperSTT extends EventEmitter {
 
     start(): void {
         if (this.isActive) return;
+        this.resetDiagnostics();
+        this.logDiagnostics('start');
         this.isDrainingFinals = false;
         this.drainingFinalsInFlight = 0;
         this.isActive = true;
@@ -234,6 +338,7 @@ export class LocalWhisperSTT extends EventEmitter {
         if (this.firstPartialLatencies.length > 0 || this.finalLatencies.length > 0) {
             this.logLatencySummary();
         }
+        this.logDiagnostics('stop');
         this.firstPartialLatencies = [];
         this.finalLatencies = [];
         this.segmentOpenedAt = 0;
@@ -252,7 +357,9 @@ export class LocalWhisperSTT extends EventEmitter {
     write(chunk: Buffer): void {
         if (!this.isActive || !this.vad) return;
         const f32 = resampleToF32(chunk, this.inputSampleRate);
+        this.recordAudioDiagnostics(chunk, f32);
         const segs = this.vad.push(f32);
+        this.vadClosedSegmentCount += segs.length;
         segs.forEach(s => this.dispatchFinal(s.samples));
 
         // Soft-commit: if a segment has grown past MAX_SEGMENT_MS, force a
@@ -261,7 +368,10 @@ export class LocalWhisperSTT extends EventEmitter {
         const open = this.vad.peekOpenSegment();
         if (open && open.durationMs >= LocalWhisperSTT.MAX_SEGMENT_MS) {
             const committed = this.vad.softCommit();
-            if (committed) this.dispatchFinal(committed.samples);
+            if (committed) {
+                this.softCommitCount++;
+                this.dispatchFinal(committed.samples);
+            }
         }
 
         // Telemetry: re-stamp segmentOpenedAt whenever the open VAD segment
@@ -284,6 +394,8 @@ export class LocalWhisperSTT extends EventEmitter {
             this.gapFlushTimer = null;
             if (this.isActive && this.vad) {
                 const pending = this.vad.flush();
+                this.gapFlushCount++;
+                this.vadClosedSegmentCount += pending.length;
                 pending.forEach(s => this.dispatchFinal(s.samples));
             }
         }, LocalWhisperSTT.GAP_FLUSH_MS);
@@ -292,7 +404,9 @@ export class LocalWhisperSTT extends EventEmitter {
     finalize(): void {
         if (!this.isActive || !this.vad) return;
         const segs = this.vad.flush();
+        this.vadClosedSegmentCount += segs.length;
         segs.forEach(s => this.dispatchFinal(s.samples));
+        this.logDiagnostics('finalize');
     }
 
     /* ──────────────── Streaming inference loop ──────────────── */
@@ -393,7 +507,10 @@ export class LocalWhisperSTT extends EventEmitter {
         this.streamingNextDelayMs = this.streamingIntervalBaseMs;
 
         const cleaned = filterHallucination(text);
-        if (!cleaned) return;
+        if (!cleaned) {
+            this.filteredPartialCount++;
+            return;
+        }
 
         // Streaming-class models (Moonshine) produce stable, deterministic
         // output — emit each partial directly. Skipping LA-2's two-pass
@@ -407,6 +524,7 @@ export class LocalWhisperSTT extends EventEmitter {
             if (cleaned !== this.lastEmittedText) {
                 this.lastEmittedText = cleaned;
                 this.recordFirstPartialLatencyOnce();
+                this.partialEmitCount++;
                 this.emit('transcript', {
                     text: cleaned.trim(),
                     isFinal: false,
@@ -429,6 +547,7 @@ export class LocalWhisperSTT extends EventEmitter {
         if (agreed.length > this.lastEmittedText.length) {
             this.lastEmittedText = agreed;
             this.recordFirstPartialLatencyOnce();
+            this.partialEmitCount++;
             this.emit('transcript', {
                 text: this.lastEmittedText.trim(),
                 isFinal: false,
@@ -512,6 +631,7 @@ export class LocalWhisperSTT extends EventEmitter {
 
     private dispatchFinal(audio: Float32Array): void {
         if (!this.worker) return;
+        this.finalDispatchCount++;
 
         // A final pass closes the streaming window — clear agreement state so
         // the next segment starts clean.
@@ -599,7 +719,10 @@ export class LocalWhisperSTT extends EventEmitter {
                             this.recordLatency(this.finalLatencies, dt);
                         }
                     }
+                    this.finalEmitCount++;
                     this.emit('transcript', { text, isFinal: true, confidence: 0.9 });
+                } else {
+                    this.filteredFinalCount++;
                 }
                 // Reset segment timer regardless of emit (silent finals also close
                 // the segment). Next write() that opens a fresh VAD segment will
