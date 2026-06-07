@@ -15,6 +15,7 @@ import { useShortcuts } from '../hooks/useShortcuts';
 import { useResolvedTheme } from '../hooks/useResolvedTheme';
 import { isMac } from '../utils/platformUtils';
 import WindowControls from './WindowControls';
+import { SHOW_PROMOTIONAL_SURFACES } from '../lib/promoSurfaceFlags';
 
 interface Meeting {
     id: string;
@@ -867,10 +868,26 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
 
                                     {/* 2. Hero Section Cards */}
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 h-[198px]">
-                                        {/* Default Intro — natively support & upcoming features.
-                                            Calendar "Up Next" lives in Settings → Calendar, not here. */}
+                                        {/* Default intro panel. Calendar "Up Next" lives in Settings → Calendar, not here. */}
                                         <div className="md:col-span-2 h-full">
-                                            <FeatureSpotlight />
+                                            {SHOW_PROMOTIONAL_SURFACES ? (
+                                                <FeatureSpotlight />
+                                            ) : (
+                                                <div className="relative h-full w-full overflow-hidden rounded-xl bg-bg-elevated shadow-[inset_0_1px_1px_rgba(255,255,255,0.08)]">
+                                                    <img
+                                                        src={mainui}
+                                                        alt=""
+                                                        className="absolute inset-0 w-full h-full object-cover opacity-85"
+                                                    />
+                                                    <div className="absolute inset-0 bg-black/30" />
+                                                    <div className="absolute inset-x-0 bottom-0 p-5">
+                                                        <div className="inline-flex items-center gap-2 rounded-full bg-black/35 border border-white/10 px-3 py-1.5 text-[12px] font-semibold text-white/90 backdrop-blur-md">
+                                                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]" />
+                                                            Ready
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
 
 

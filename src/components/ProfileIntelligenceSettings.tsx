@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { ProfileVisualizer, PremiumUpgradeModal } from '../premium';
 import { useResolvedTheme } from '../hooks/useResolvedTheme';
+import { SHOW_PROMOTIONAL_SURFACES } from '../lib/promoSurfaceFlags';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const spring = { type: "spring" as const, stiffness: 100, damping: 20 };
@@ -426,6 +427,9 @@ export function ProfileIntelligenceSettings({ onClose }: { onClose: () => void }
     const [isTrialActive, setIsTrialActive] = useState(false);
     const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
     const hasProfileAccess = isPremium || isTrialActive;
+    const openPremiumModal = () => {
+        if (SHOW_PROMOTIONAL_SURFACES) setIsPremiumModalOpen(true);
+    };
     const isLight = useResolvedTheme() === 'light';
 
     // Profile Engine State
@@ -596,20 +600,22 @@ export function ProfileIntelligenceSettings({ onClose }: { onClose: () => void }
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <button
-                        onClick={() => setIsPremiumModalOpen(true)}
-                        className={`pi-cta-group${isTrialActive && !isPremium ? ' pi-cta-group--trial' : ''}`}
-                        aria-label={isPremium ? 'Manage Pro' : isTrialActive ? 'Upgrade trial' : 'Unlock Pro'}
-                    >
-                        <span>{isPremium ? 'Manage Pro' : isTrialActive ? 'Upgrade' : 'Unlock Pro'}</span>
-                        <span className="pi-cta-icon-ring">
-                            {isPremium
-                                ? <CheckCircle size={14} strokeWidth={2.5} />
-                                : isTrialActive
-                                ? <Sparkles size={14} strokeWidth={2.5} />
-                                : <ArrowUpRight size={14} strokeWidth={2.5} />}
-                        </span>
-                    </button>
+                    {SHOW_PROMOTIONAL_SURFACES && (
+                        <button
+                            onClick={openPremiumModal}
+                            className={`pi-cta-group${isTrialActive && !isPremium ? ' pi-cta-group--trial' : ''}`}
+                            aria-label={isPremium ? 'Manage Pro' : isTrialActive ? 'Upgrade trial' : 'Unlock Pro'}
+                        >
+                            <span>{isPremium ? 'Manage Pro' : isTrialActive ? 'Upgrade' : 'Unlock Pro'}</span>
+                            <span className="pi-cta-icon-ring">
+                                {isPremium
+                                    ? <CheckCircle size={14} strokeWidth={2.5} />
+                                    : isTrialActive
+                                    ? <Sparkles size={14} strokeWidth={2.5} />
+                                    : <ArrowUpRight size={14} strokeWidth={2.5} />}
+                            </span>
+                        </button>
+                    )}
                     <button
                         onClick={onClose}
                         className="pi-close-btn"
@@ -770,7 +776,7 @@ export function ProfileIntelligenceSettings({ onClose }: { onClose: () => void }
                                                     style={{ marginTop: 'auto' }}
                                                     onClick={async () => {
                                                         if (!hasProfileAccess) {
-                                                            setIsPremiumModalOpen(true);
+                                                            openPremiumModal();
                                                             return;
                                                         }
                                                         setProfileError('');
@@ -879,7 +885,7 @@ export function ProfileIntelligenceSettings({ onClose }: { onClose: () => void }
                                                     style={{ marginTop: 'auto' }}
                                                     onClick={async () => {
                                                         if (!hasProfileAccess) {
-                                                            setIsPremiumModalOpen(true);
+                                                            openPremiumModal();
                                                             return;
                                                         }
                                                         setJdError('');
@@ -1034,7 +1040,7 @@ export function ProfileIntelligenceSettings({ onClose }: { onClose: () => void }
                                                     value={persona}
                                                     onChange={(e) => {
                                                         if (!hasProfileAccess) {
-                                                            setIsPremiumModalOpen(true);
+                                                            openPremiumModal();
                                                             return;
                                                         }
                                                         const val = e.target.value;
@@ -1049,13 +1055,13 @@ export function ProfileIntelligenceSettings({ onClose }: { onClose: () => void }
                                                                     setTimeout(() => setPersonaSaved(false), 2000);
                                                                 } else if (res?.error === 'pro_required') {
                                                                     setPersona('');
-                                                                    setIsPremiumModalOpen(true);
+                                                                    openPremiumModal();
                                                                 }
                                                             } catch (_) {}
                                                         }, 800);
                                                     }}
                                                     onFocus={() => {
-                                                        if (!hasProfileAccess) setIsPremiumModalOpen(true);
+                                                        if (!hasProfileAccess) openPremiumModal();
                                                     }}
                                                     placeholder="Example: You are a senior hiring manager. Keep answers concise and ask one focused follow-up when needed."
                                                     rows={5}
@@ -1205,7 +1211,7 @@ export function ProfileIntelligenceSettings({ onClose }: { onClose: () => void }
                                                         <span className="shrink-0 mt-[1px]">⚠</span>
                                                         <span>
                                                             Web search credits exhausted for this month — showing AI-only research instead.
-                                                            Resets next billing cycle or <span className="underline cursor-pointer" onClick={() => (window.electronAPI as any)?.openExternal?.('https://checkout.dodopayments.com/buy/pdt_0NbFixGmD8CSeawb5qvVl')}>upgrade your plan</span>.
+                                                            Resets next billing cycle.
                                                         </span>
                                                     </div>
                                                 )}
@@ -1638,33 +1644,35 @@ export function ProfileIntelligenceSettings({ onClose }: { onClose: () => void }
                 </div>
             </div>
 
-            <PremiumUpgradeModal
-                isOpen={isPremiumModalOpen}
-                onClose={() => setIsPremiumModalOpen(false)}
-                isPremium={isPremium}
-                onActivated={async () => {
-                    setIsPremium(true);
-                    // Refresh plan + cache from the canonical source so the
-                    // header reflects the new state on every subsequent mount.
-                    try {
-                        const details = await window.electronAPI?.licenseGetDetails?.();
-                        const plan = details?.plan ?? '';
-                        if (plan) setPremiumPlan(plan);
-                        writePremiumCache(true, plan);
-                    } catch {
-                        writePremiumCache(true, premiumPlan);
-                    }
-                    const status = await window.electronAPI?.profileGetStatus?.();
-                    if (status) setProfileStatus(status);
-                }}
-                onDeactivated={() => {
-                    setIsPremium(false);
-                    setPremiumPlan('');
-                    writePremiumCache(false, '');
-                    // Auto-disable profile mode in UI when license is removed
-                    setProfileStatus(prev => ({ ...prev, profileMode: false }));
-                }}
-            />
+            {SHOW_PROMOTIONAL_SURFACES && (
+                <PremiumUpgradeModal
+                    isOpen={isPremiumModalOpen}
+                    onClose={() => setIsPremiumModalOpen(false)}
+                    isPremium={isPremium}
+                    onActivated={async () => {
+                        setIsPremium(true);
+                        // Refresh plan + cache from the canonical source so the
+                        // header reflects the new state on every subsequent mount.
+                        try {
+                            const details = await window.electronAPI?.licenseGetDetails?.();
+                            const plan = details?.plan ?? '';
+                            if (plan) setPremiumPlan(plan);
+                            writePremiumCache(true, plan);
+                        } catch {
+                            writePremiumCache(true, premiumPlan);
+                        }
+                        const status = await window.electronAPI?.profileGetStatus?.();
+                        if (status) setProfileStatus(status);
+                    }}
+                    onDeactivated={() => {
+                        setIsPremium(false);
+                        setPremiumPlan('');
+                        writePremiumCache(false, '');
+                        // Auto-disable profile mode in UI when license is removed
+                        setProfileStatus(prev => ({ ...prev, profileMode: false }));
+                    }}
+                />
+            )}
         </div>
     );
 }

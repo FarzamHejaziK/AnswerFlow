@@ -18,6 +18,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { NativelyLogoMark } from '../NativelyLogoMark';
 import { FreeTrialModal } from '../trial/FreeTrialModal';
 import { getMeetingInterfaceTheme, type MeetingInterfaceTheme } from '../../lib/meetingInterfaceTheme';
+import { SHOW_PROMOTIONAL_SURFACES } from '../../lib/promoSurfaceFlags';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // ─── Types ───────────────────────────────────────────────────
@@ -523,7 +524,7 @@ export const NativelyApiSettings: React.FC = () => {
       usage: res.usage ?? { ai: 0, stt_seconds: 0, search: 0 },
     });
     if (res.expired) {
-      setShowTrialModal(true);
+      if (SHOW_PROMOTIONAL_SURFACES) setShowTrialModal(true);
       if (trialPollRef.current) {
         clearInterval(trialPollRef.current);
         trialPollRef.current = null;
@@ -554,7 +555,7 @@ export const NativelyApiSettings: React.FC = () => {
             startedAt: local.startedAt ?? '',
             usage: { ai: 0, stt_seconds: 0, search: 0 },
           });
-          setShowTrialModal(true);
+          if (SHOW_PROMOTIONAL_SURFACES) setShowTrialModal(true);
           refreshTrial(); // updates usage counters in the modal
           return;
         }
@@ -980,7 +981,7 @@ export const NativelyApiSettings: React.FC = () => {
       </div>
 
       {/* ── Free Trial Modal (post-trial) ─────────────── */}
-      {showTrialModal && trialState && (
+      {SHOW_PROMOTIONAL_SURFACES && showTrialModal && trialState && (
         <FreeTrialModal usage={trialState.usage} onByok={handleByok} onDone={handleTrialDone} />
       )}
 
@@ -1036,13 +1037,15 @@ export const NativelyApiSettings: React.FC = () => {
                 </div>
 
                 {/* CTA */}
-                <button
-                  onClick={() => setShowTrialModal(true)}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-[9px] text-[12.5px] font-semibold bg-violet-600 hover:bg-violet-500 text-white shadow-[0_1px_3px_rgba(0,0,0,0.1)] transition-all active:scale-[0.98] cursor-pointer"
-                >
-                  <ArrowUpRight size={13} strokeWidth={2.3} />
-                  Keep the momentum going
-                </button>
+                {SHOW_PROMOTIONAL_SURFACES && (
+                  <button
+                    onClick={() => setShowTrialModal(true)}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-[9px] text-[12.5px] font-semibold bg-violet-600 hover:bg-violet-500 text-white shadow-[0_1px_3px_rgba(0,0,0,0.1)] transition-all active:scale-[0.98] cursor-pointer"
+                  >
+                    <ArrowUpRight size={13} strokeWidth={2.3} />
+                    Keep the momentum going
+                  </button>
+                )}
               </div>
             </Card>
           );
