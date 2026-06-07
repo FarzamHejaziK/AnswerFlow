@@ -2248,7 +2248,12 @@ RULES:
 4. If no active mode format is present, keep simple questions to 1-3 sentences max.
 5. Must sound like a real person in the live conversation. Answer → Stop.
 
-Output ONLY the answer. Nothing else.`;
+OUTPUT FORMAT:
+Question: brief clarification of the latest question or implicit ask, not a transcript quote.
+Answer:
+the exact response the active role should say next.
+
+The Question line is UI context only. The Answer section is the only speakable text.`;
 
 /**
  * UNIVERSAL: Recap / Summary

@@ -57,8 +57,14 @@ ${TINY_CANDIDATE_VOICE}
 MODE: Strategic response to live conversation. Read the transcript and answer the latest question from the other party.
 - Identify the most recent question or implicit ask.
 - Respond as the user, in first person, ready to speak aloud.
-- Do not summarize the transcript. Do not greet. Just give the spoken answer.
-- Avoid repeating phrasing from any prior responses listed.`;
+- Do not summarize the transcript. Do not greet.
+- Avoid repeating phrasing from any prior responses listed.
+- Output format:
+Question: brief clarification of the latest question or implicit ask, not a transcript quote.
+Answer:
+the spoken answer.
+
+The Question line is UI context only. The Answer section is the only speakable text.`;
 
 export const TINY_ASSIST_PROMPT = `${TINY_CORE}
 

@@ -53,6 +53,7 @@ import {
   finalizeStreamingByIntentMessages,
   prepareIntelligenceStreamPlaceholderMessages,
 } from '../lib/overlayMessagePersistence.mjs';
+import { parseWhatToAnswerFormat } from '../lib/whatToAnswerFormat.mjs';
 import {
   resolveCgEventTapAvailable,
   shouldBlockFocus as shouldBlockStealthFocus,
@@ -3115,72 +3116,118 @@ Provide only the answer, nothing else.`;
       }
 
       if (msg.intent === 'what_to_answer') {
+        const structuredAnswer = parseWhatToAnswerFormat(msg.text);
+        const answerText = structuredAnswer?.answer ?? msg.text;
         // Split text by code blocks (Handle unclosed blocks at EOF)
-        const parts = msg.text.split(/(```[\s\S]*?(?:```|$))/g);
+        const parts = answerText.split(/(```[\s\S]*?(?:```|$))/g);
+        const renderedAnswer = (
+          <div className="text-[14px] leading-relaxed overlay-text-primary">
+            {parts.map((part, i) => {
+              if (part.startsWith('```')) {
+                // Robust matching: handles unclosed blocks for streaming (```...$)
+                const match = part.match(/```(\w*)\s+([\s\S]*?)(?:```|$)/);
+
+                // Fallback logic: if it starts with ticks, treat as code (even if unclosed)
+                if (match || part.startsWith('```')) {
+                  const lang = match && match[1] ? match[1] : 'python';
+                  let code = '';
+
+                  if (match && match[2]) {
+                    code = match[2].trim();
+                  } else {
+                    // Manual strip if regex failed
+                    code = part
+                      .replace(/^```\w*\s*/, '')
+                      .replace(/```$/, '')
+                      .trim();
+                  }
+
+                  return (
+                    <HighlightedCode
+                      key={i}
+                      code={code}
+                      lang={lang}
+                      isLightTheme={isLightTheme}
+                      codeTheme={codeTheme}
+                      codeBlockClass={codeBlockClass}
+                      codeHeaderClass={codeHeaderClass}
+                      codeHeaderTextClass={codeHeaderTextClass}
+                      codeLineNumberColor={codeLineNumberColor}
+                      appearance={appearance}
+                    />
+                  );
+                }
+              }
+              // Regular text - Render Markdown
+              // PERF: hoisted components map — see mdComponents useMemo
+              // at top of component. Inline literal here would create a
+              // fresh object on every streaming token, defeating
+              // ReactMarkdown's internal render-bailout.
+              return (
+                <div key={i} className="markdown-content">
+                  <ReactMarkdown
+                    remarkPlugins={REMARK_PLUGINS}
+                    rehypePlugins={REHYPE_PLUGINS}
+                    components={mdComponents.whatToAnswerText}
+                  >
+                    {part}
+                  </ReactMarkdown>
+                </div>
+              );
+            })}
+          </div>
+        );
 
         return (
           <div
             className={`rounded-lg p-3 my-1 border ${subtleSurfaceClass}`}
             style={appearance.subtleStyle}
           >
-            <div className="flex items-center gap-2 mb-2 text-emerald-400 font-semibold text-xs uppercase tracking-wide">
+            <div
+              className={`flex items-center gap-2 mb-3 font-semibold text-xs uppercase tracking-wide ${isLightTheme ? 'text-emerald-700' : 'text-emerald-300'}`}
+            >
               <span>Say this</span>
             </div>
-            <div className="text-[14px] leading-relaxed overlay-text-primary">
-              {parts.map((part, i) => {
-                if (part.startsWith('```')) {
-                  // Robust matching: handles unclosed blocks for streaming (```...$)
-                  const match = part.match(/```(\w*)\s+([\s\S]*?)(?:```|$)/);
-
-                  // Fallback logic: if it starts with ticks, treat as code (even if unclosed)
-                  if (match || part.startsWith('```')) {
-                    const lang = match && match[1] ? match[1] : 'python';
-                    let code = '';
-
-                    if (match && match[2]) {
-                      code = match[2].trim();
-                    } else {
-                      // Manual strip if regex failed
-                      code = part
-                        .replace(/^```\w*\s*/, '')
-                        .replace(/```$/, '')
-                        .trim();
-                    }
-
-                    return (
-                      <HighlightedCode
-                        key={i}
-                        code={code}
-                        lang={lang}
-                        isLightTheme={isLightTheme}
-                        codeTheme={codeTheme}
-                        codeBlockClass={codeBlockClass}
-                        codeHeaderClass={codeHeaderClass}
-                        codeHeaderTextClass={codeHeaderTextClass}
-                        codeLineNumberColor={codeLineNumberColor}
-                        appearance={appearance}
-                      />
-                    );
-                  }
-                }
-                // Regular text - Render Markdown
-                // PERF: hoisted components map — see mdComponents useMemo
-                // at top of component. Inline literal here would create a
-                // fresh object on every streaming token, defeating
-                // ReactMarkdown's internal render-bailout.
-                return (
-                  <div key={i} className="markdown-content">
-                    <ReactMarkdown
-                      remarkPlugins={REMARK_PLUGINS}
-                      rehypePlugins={REHYPE_PLUGINS}
-                      components={mdComponents.whatToAnswerText}
-                    >
-                      {part}
-                    </ReactMarkdown>
+            {structuredAnswer ? (
+              <div className="space-y-3">
+                <div
+                  className={`rounded-md border px-3 py-2 ${
+                    isLightTheme
+                      ? 'bg-sky-50/80 border-sky-200/80 text-sky-950'
+                      : 'bg-sky-500/10 border-sky-400/20 text-sky-50'
+                  }`}
+                >
+                  <div
+                    className={`mb-1 text-[10px] font-semibold uppercase tracking-wide ${
+                      isLightTheme ? 'text-sky-700' : 'text-sky-300'
+                    }`}
+                  >
+                    Question
                   </div>
-                );
-              })}
-            </div>
+                  <div className="text-[13px] leading-snug whitespace-pre-wrap">
+                    {structuredAnswer.question}
+                  </div>
+                </div>
+                <div
+                  className={`rounded-md border px-3 py-2 ${
+                    isLightTheme
+                      ? 'bg-emerald-50/70 border-emerald-200/80'
+                      : 'bg-emerald-500/10 border-emerald-400/20'
+                  }`}
+                >
+                  <div
+                    className={`mb-1 text-[10px] font-semibold uppercase tracking-wide ${
+                      isLightTheme ? 'text-emerald-700' : 'text-emerald-300'
+                    }`}
+                  >
+                    Answer
+                  </div>
+                  {renderedAnswer}
+                </div>
+              </div>
+            ) : (
+              renderedAnswer
+            )}
           </div>
         );
       }
