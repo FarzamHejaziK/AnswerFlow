@@ -1,21 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { ToggleLeft, ToggleRight, Search, Calendar, ArrowRight, ArrowLeft, MoreHorizontal, Globe, Clock, ChevronRight, Settings, LayoutGrid, RefreshCw, Eye, EyeOff, Ghost, Plus, Mail, Link as LinkIcon, ChevronDown, Trash2, Bell, Check, Download, DownloadCloud, CheckCircle, AlertCircle, User, UserSearch, Sparkles, ArrowUpRight } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { ToggleLeft, ToggleRight, Search, Calendar, ArrowRight, ArrowLeft, MoreHorizontal, Globe, Clock, ChevronRight, Settings, LayoutGrid, RefreshCw, Eye, EyeOff, Ghost, Plus, Mail, Link as LinkIcon, ChevronDown, Trash2, Bell, Check, Download, DownloadCloud, CheckCircle, AlertCircle, User, UserSearch, Sparkles, ArrowUpRight, ArrowUp, Brain, Mic, ShieldCheck } from 'lucide-react';
 import { generateMeetingPDF } from '../utils/pdfGenerator';
 import icon from "./icon.png";
-import mainui from "../UI_comp/mainui.png";
-import calender from "../UI_comp/calender.png";
 import ConnectCalendarButton from './ui/ConnectCalendarButton';
-import MeetingDetails from './MeetingDetails';
 import TopSearchPill from './TopSearchPill';
 import GlobalChatOverlay from './GlobalChatOverlay';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FeatureSpotlight } from './FeatureSpotlight';
 import { analytics } from '../lib/analytics/analytics.service'; // Added analytics import
 import { useShortcuts } from '../hooks/useShortcuts';
 import { useResolvedTheme } from '../hooks/useResolvedTheme';
+import { useStreamBuffer } from '../hooks/useStreamBuffer';
 import { isMac } from '../utils/platformUtils';
 import WindowControls from './WindowControls';
 import { SHOW_PROMOTIONAL_SURFACES } from '../lib/promoSurfaceFlags';
+import { genMessageId } from '../utils/messageId';
 
 interface Meeting {
     id: string;
@@ -54,6 +52,584 @@ interface LauncherProps {
     ollamaPullMessage?: string;
 }
 
+type PermissionValue = 'granted' | 'denied' | 'not-determined' | 'restricted' | 'unknown';
+type ReadinessStatus = 'ready' | 'warning' | 'missing';
+
+interface SessionReadiness {
+    aiProvider: string;
+    aiModel: string;
+    aiReady: boolean;
+    sttProvider: string;
+    sttReady: boolean;
+    sttHint: string;
+    audioReady: boolean;
+    micPermission: PermissionValue;
+    screenPermission: PermissionValue;
+    calendarEmail?: string;
+    loading: boolean;
+}
+
+const INITIAL_READINESS: SessionReadiness = {
+    aiProvider: 'AI',
+    aiModel: 'Checking...',
+    aiReady: false,
+    sttProvider: 'Speech',
+    sttReady: false,
+    sttHint: 'Checking...',
+    audioReady: false,
+    micPermission: 'unknown',
+    screenPermission: 'unknown',
+    loading: true,
+};
+
+const providerLabels: Record<string, string> = {
+    ollama: 'Ollama',
+    gemini: 'Gemini',
+    custom: 'Custom',
+    'codex-cli': 'Codex CLI',
+    natively: 'Natively API',
+    groq: 'Groq',
+    openai: 'OpenAI',
+    claude: 'Claude',
+    deepseek: 'DeepSeek',
+};
+
+const sttProviderLabels: Record<string, string> = {
+    none: 'Not selected',
+    google: 'Google Speech',
+    groq: 'Groq Whisper',
+    openai: 'OpenAI Whisper',
+    deepgram: 'Deepgram',
+    elevenlabs: 'ElevenLabs',
+    azure: 'Azure Speech',
+    ibmwatson: 'IBM Watson',
+    soniox: 'Soniox',
+    natively: 'Natively API',
+};
+
+const inferProviderLabel = (provider: string | undefined, model: string | undefined) => {
+    const modelId = (model || '').toLowerCase();
+    if (modelId === 'natively') return 'Natively API';
+    if (modelId.includes('gpt') || modelId.includes('openai')) return 'OpenAI';
+    if (modelId.includes('claude')) return 'Claude';
+    if (modelId.includes('deepseek')) return 'DeepSeek';
+    if (modelId.includes('gemini')) return 'Gemini';
+    if (modelId.includes('moonshot') || modelId.includes('kimi')) return 'Moonshot';
+    return providerLabels[provider || ''] || 'AI';
+};
+
+const hasConfiguredAi = (provider: string | undefined, model: string | undefined, creds: any) => {
+    const modelId = (model || '').toLowerCase();
+    if (!modelId) return false;
+    if (provider === 'ollama' || provider === 'custom' || provider === 'codex-cli') return true;
+    if (modelId === 'natively') return !!creds?.hasNativelyKey;
+    if (modelId.includes('gpt') || modelId.includes('openai')) return !!creds?.hasOpenaiKey;
+    if (modelId.includes('claude')) return !!creds?.hasClaudeKey;
+    if (modelId.includes('deepseek')) return !!creds?.hasDeepseekKey;
+    if (modelId.includes('groq') || modelId.includes('llama') || modelId.includes('mixtral')) return !!creds?.hasGroqKey;
+    if (modelId.includes('gemini')) return !!creds?.hasGeminiKey;
+    return true;
+};
+
+const hasConfiguredStt = (creds: any) => {
+    const provider = creds?.sttProvider || 'none';
+    switch (provider) {
+        case 'google': return !!creds?.googleServiceAccountPath;
+        case 'groq': return !!creds?.hasSttGroqKey;
+        case 'openai': return !!creds?.hasSttOpenaiKey;
+        case 'deepgram': return !!creds?.hasDeepgramKey;
+        case 'elevenlabs': return !!creds?.hasElevenLabsKey;
+        case 'azure': return !!creds?.hasAzureKey && !!creds?.azureRegion;
+        case 'ibmwatson': return !!creds?.hasIbmWatsonKey && !!creds?.ibmWatsonRegion;
+        case 'soniox': return !!creds?.hasSonioxKey;
+        case 'natively': return !!creds?.hasNativelyKey;
+        default: return false;
+    }
+};
+
+const permissionLabel = (value: PermissionValue) => {
+    if (value === 'granted') return 'Granted';
+    if (value === 'denied') return 'Denied';
+    if (value === 'restricted') return 'Restricted';
+    if (value === 'not-determined') return 'Not granted';
+    return 'Unknown';
+};
+
+type TimelineRole = 'interviewer' | 'me' | 'ai';
+
+interface TranscriptTimelineItem {
+    id: string;
+    role: TimelineRole;
+    label: string;
+    timestamp: number;
+    text: string;
+    question?: string;
+    interactionType?: string;
+}
+
+type MeetingUsage = NonNullable<Meeting['usage']>[number];
+
+const isAssistantSpeaker = (speaker: string | undefined) => {
+    const normalized = (speaker || '').toLowerCase();
+    return ['assistant', 'ai', 'model'].includes(normalized);
+};
+
+const speakerRole = (speaker: string | undefined): TimelineRole => {
+    const normalized = (speaker || '').toLowerCase();
+    if (normalized === 'user' || normalized === 'me' || normalized === 'candidate') return 'me';
+    if (isAssistantSpeaker(normalized)) return 'ai';
+    return 'interviewer';
+};
+
+const roleLabel = (role: TimelineRole) => {
+    if (role === 'me') return 'Me';
+    if (role === 'ai') return 'AI response';
+    return 'Interviewer';
+};
+
+const usageLabel = (type: string | undefined) => {
+    switch (type) {
+        case 'chat':
+            return 'AI chat';
+        case 'followup':
+        case 'followup_questions':
+            return 'AI follow-up';
+        case 'assist':
+        default:
+            return 'AI response';
+    }
+};
+
+const usageText = (usage: MeetingUsage) => {
+    const answer = (usage as any).answer;
+    if (Array.isArray(answer)) return answer.join('\n');
+    if (typeof answer === 'string' && answer.trim()) return answer;
+    if (usage.items?.length) return usage.items.map(item => `- ${item}`).join('\n');
+    return '';
+};
+
+const normalizeTimestampForSort = (timestamp: number, meetingDate: string) => {
+    if (!Number.isFinite(timestamp)) return 0;
+    if (timestamp > 946684800000) return timestamp;
+    const start = Date.parse(meetingDate);
+    return Number.isFinite(start) ? start + timestamp : timestamp;
+};
+
+const formatTimelineTime = (timestamp: number) => {
+    if (!Number.isFinite(timestamp)) return '';
+    if (timestamp > 946684800000) {
+        return new Date(timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).toLowerCase();
+    }
+
+    const totalSeconds = Math.max(0, Math.floor(timestamp / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+};
+
+const buildTranscriptTimeline = (meeting: Meeting): TranscriptTimelineItem[] => {
+    const transcript = meeting.transcript || [];
+    const usage = meeting.usage || [];
+
+    const humanSpeech = transcript
+        .filter(item => item.text?.trim() && !isAssistantSpeaker(item.speaker))
+        .map((item, index) => {
+            const role = speakerRole(item.speaker);
+            return {
+                id: `speech-${index}-${item.timestamp}`,
+                role,
+                label: roleLabel(role),
+                timestamp: item.timestamp,
+                text: item.text.trim(),
+            };
+        });
+
+    const aiInteractions = usage
+        .map((item, index) => {
+            const text = usageText(item).trim();
+            if (!text && !item.question?.trim()) return null;
+            return {
+                id: `ai-${index}-${item.timestamp}`,
+                role: 'ai' as TimelineRole,
+                label: usageLabel(item.type),
+                timestamp: item.timestamp,
+                text,
+                question: item.question?.trim(),
+                interactionType: item.type,
+            };
+        })
+        .filter(Boolean) as TranscriptTimelineItem[];
+
+    const fallbackAssistantSpeech = aiInteractions.length > 0
+        ? []
+        : transcript
+            .filter(item => item.text?.trim() && isAssistantSpeaker(item.speaker))
+            .map((item, index) => ({
+                id: `assistant-${index}-${item.timestamp}`,
+                role: 'ai' as TimelineRole,
+                label: 'AI response',
+                timestamp: item.timestamp,
+                text: item.text.trim(),
+            }));
+
+    return [...humanSpeech, ...aiInteractions, ...fallbackAssistantSpeech]
+        .sort((a, b) => normalizeTimestampForSort(a.timestamp, meeting.date) - normalizeTimestampForSort(b.timestamp, meeting.date));
+};
+
+interface TranscriptTimelineProps {
+    meeting: Meeting;
+    isLight: boolean;
+}
+
+interface ConversationMessage {
+    id: string;
+    role: 'user' | 'assistant';
+    content: string;
+    isStreaming?: boolean;
+}
+
+type ConversationState = 'idle' | 'waiting' | 'streaming' | 'error';
+
+const buildMeetingChatContext = (meeting: Meeting) => {
+    const parts: string[] = [`MEETING: ${meeting.title}`];
+    if (meeting.summary) parts.push(`SUMMARY:\n${meeting.summary}`);
+    if (meeting.detailedSummary?.actionItems?.length) {
+        parts.push(`ACTION ITEMS:\n${meeting.detailedSummary.actionItems.map(item => `- ${item}`).join('\n')}`);
+    }
+    if (meeting.detailedSummary?.keyPoints?.length) {
+        parts.push(`KEY POINTS:\n${meeting.detailedSummary.keyPoints.map(item => `- ${item}`).join('\n')}`);
+    }
+
+    const timeline = buildTranscriptTimeline(meeting).slice(-120);
+    if (timeline.length) {
+        parts.push(`TRANSCRIPT AND AI RESPONSES:\n${timeline.map(item => {
+            const prompt = item.question ? `\n  Prompt: ${item.question}` : '';
+            return `[${item.label}]${prompt}\n  ${item.text}`;
+        }).join('\n')}`);
+    }
+
+    return parts.join('\n\n');
+};
+
+const MeetingConversationPanel: React.FC<{ meeting: Meeting; isLight: boolean }> = ({ meeting, isLight }) => {
+    const [messages, setMessages] = useState<ConversationMessage[]>([]);
+    const [draft, setDraft] = useState('');
+    const [state, setState] = useState<ConversationState>('idle');
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const {
+        appendToken,
+        getBufferedContent,
+        reset: resetStreamBuffer,
+    } = useStreamBuffer();
+
+    useEffect(() => {
+        setMessages([]);
+        setDraft('');
+        setState('idle');
+        setErrorMessage(null);
+        resetStreamBuffer();
+    }, [meeting.id, resetStreamBuffer]);
+
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }, [messages, state]);
+
+    const updateAssistant = useCallback((messageId: string, content: string, isStreaming: boolean) => {
+        setMessages(prev => prev.map(msg =>
+            msg.id === messageId ? { ...msg, content, isStreaming } : msg
+        ));
+    }, []);
+
+    const fallbackToContextChat = useCallback(async (question: string, assistantMessageId: string) => {
+        const context = buildMeetingChatContext(meeting);
+        const systemPrompt = `You are answering questions about one selected meeting. Use only the meeting content below. Keep answers concise and clear. If the answer is not present in the meeting content, say that it is not in this session.\n\n${context}`;
+
+        resetStreamBuffer();
+
+        let tokenCleanup: (() => void) | undefined;
+        let doneCleanup: (() => void) | undefined;
+        let errorCleanup: (() => void) | undefined;
+
+        tokenCleanup = window.electronAPI?.onGeminiStreamToken((token: string) => {
+            setState('streaming');
+            appendToken(token, (content) => updateAssistant(assistantMessageId, content, true));
+        });
+
+        doneCleanup = window.electronAPI?.onGeminiStreamDone(() => {
+            const finalContent = getBufferedContent();
+            updateAssistant(assistantMessageId, finalContent || 'I could not find enough context in this session.', false);
+            setState('idle');
+            resetStreamBuffer();
+            tokenCleanup?.();
+            doneCleanup?.();
+            errorCleanup?.();
+        });
+
+        errorCleanup = window.electronAPI?.onGeminiStreamError((error: string) => {
+            console.error('[LauncherMeetingChat] fallback stream error:', error);
+            setMessages(prev => prev.filter(msg => msg.id !== assistantMessageId));
+            setErrorMessage("Couldn't answer from this session. Check your model settings and try again.");
+            setState('error');
+            resetStreamBuffer();
+            tokenCleanup?.();
+            doneCleanup?.();
+            errorCleanup?.();
+        });
+
+        await window.electronAPI?.streamGeminiChat(
+            question,
+            undefined,
+            systemPrompt,
+            { skipSystemPrompt: true, ignoreKnowledgeMode: true }
+        );
+    }, [appendToken, getBufferedContent, meeting, resetStreamBuffer, updateAssistant]);
+
+    const submitQuestion = useCallback(async () => {
+        const question = draft.trim();
+        if (!question || state === 'waiting' || state === 'streaming') return;
+
+        const userMessage: ConversationMessage = { id: genMessageId(), role: 'user', content: question };
+        const assistantMessageId = genMessageId();
+
+        setDraft('');
+        setErrorMessage(null);
+        setMessages(prev => [
+            ...prev,
+            userMessage,
+            { id: assistantMessageId, role: 'assistant', content: '', isStreaming: true },
+        ]);
+        setState('waiting');
+
+        let tokenCleanup: (() => void) | undefined;
+        let doneCleanup: (() => void) | undefined;
+        let errorCleanup: (() => void) | undefined;
+
+        try {
+            resetStreamBuffer();
+
+            tokenCleanup = window.electronAPI?.onRAGStreamChunk((data: { meetingId?: string; chunk: string }) => {
+                if (data.meetingId && data.meetingId !== meeting.id) return;
+                setState('streaming');
+                appendToken(data.chunk, (content) => updateAssistant(assistantMessageId, content, true));
+            });
+
+            doneCleanup = window.electronAPI?.onRAGStreamComplete((data: { meetingId?: string }) => {
+                if (data.meetingId && data.meetingId !== meeting.id) return;
+                const finalContent = getBufferedContent();
+                updateAssistant(assistantMessageId, finalContent || 'I could not find enough context in this session.', false);
+                setState('idle');
+                resetStreamBuffer();
+                tokenCleanup?.();
+                doneCleanup?.();
+                errorCleanup?.();
+            });
+
+            errorCleanup = window.electronAPI?.onRAGStreamError((data: { meetingId?: string; error: string }) => {
+                if (data.meetingId && data.meetingId !== meeting.id) return;
+                console.error('[LauncherMeetingChat] RAG stream error:', data.error);
+                setMessages(prev => prev.filter(msg => msg.id !== assistantMessageId));
+                setErrorMessage("Couldn't answer from this session. Try again.");
+                setState('error');
+                resetStreamBuffer();
+                tokenCleanup?.();
+                doneCleanup?.();
+                errorCleanup?.();
+            });
+
+            const result = await window.electronAPI?.ragQueryMeeting?.(meeting.id, question);
+            if (result?.fallback || !result) {
+                tokenCleanup?.();
+                doneCleanup?.();
+                errorCleanup?.();
+                await fallbackToContextChat(question, assistantMessageId);
+            }
+        } catch (error) {
+            console.error('[LauncherMeetingChat] submit failed:', error);
+            tokenCleanup?.();
+            doneCleanup?.();
+            errorCleanup?.();
+            setMessages(prev => prev.filter(msg => msg.id !== assistantMessageId));
+            setErrorMessage("Couldn't answer from this session. Try again.");
+            setState('error');
+            resetStreamBuffer();
+        }
+    }, [appendToken, draft, fallbackToContextChat, getBufferedContent, meeting.id, resetStreamBuffer, state, updateAssistant]);
+
+    const busy = state === 'waiting' || state === 'streaming';
+
+    return (
+        <div className={`shrink-0 border-t border-border-subtle px-5 py-4 ${isLight ? 'bg-bg-secondary' : 'bg-[#101011]'}`}>
+            {(messages.length > 0 || errorMessage) && (
+                <div className="max-h-[220px] overflow-y-auto custom-scrollbar mb-3 pr-1 space-y-3">
+                    {messages.map((message) => (
+                        <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[82%] rounded-lg px-3 py-2 text-[12.5px] leading-relaxed whitespace-pre-wrap ${
+                                message.role === 'user'
+                                    ? 'bg-text-primary text-bg-primary'
+                                    : isLight
+                                        ? 'bg-white border border-border-subtle text-text-primary'
+                                        : 'bg-bg-secondary border border-border-subtle text-text-primary'
+                            }`}>
+                                {message.content || (message.isStreaming ? 'Thinking...' : '')}
+                                {message.isStreaming && message.content && (
+                                    <span className="inline-block ml-1 h-3 w-0.5 align-middle bg-text-tertiary animate-pulse" />
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                    {errorMessage && (
+                        <p className="text-[12px] text-red-400">{errorMessage}</p>
+                    )}
+                    <div ref={messagesEndRef} />
+                </div>
+            )}
+
+            <div className={`session-chat-composer rounded-2xl border shadow-sm transition-colors ${isLight ? 'bg-white border-border-muted focus-within:border-border-muted' : 'bg-[#2B2B2D] border-white/8 focus-within:border-white/15'} overflow-hidden`}>
+                <textarea
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            submitQuestion();
+                        }
+                    }}
+                    rows={2}
+                    disabled={busy}
+                    placeholder="Ask about this session"
+                    className="block w-full resize-none bg-transparent outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 px-4 pt-3 pb-1 text-[14px] leading-5 text-text-primary placeholder:text-text-tertiary max-h-28"
+                />
+                <div className="h-10 px-3 pb-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-[11px] text-text-tertiary">
+                        <Sparkles size={13} className="text-blue-500" />
+                        <span>{busy ? 'Thinking' : 'Uses selected transcript'}</span>
+                    </div>
+                    <button
+                        onClick={submitQuestion}
+                        disabled={!draft.trim() || busy}
+                        className={`h-8 w-8 shrink-0 rounded-full flex items-center justify-center transition-colors ${
+                            draft.trim() && !busy
+                                ? isLight
+                                    ? 'bg-slate-900 text-white hover:bg-slate-800'
+                                    : 'bg-slate-100 text-slate-950 hover:bg-white'
+                                : isLight
+                                    ? 'bg-slate-200 text-slate-400 cursor-default'
+                                    : 'bg-white/10 text-white/35 cursor-default'
+                        }`}
+                    >
+                        <ArrowUp size={16} strokeWidth={2.4} />
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const TranscriptTimeline: React.FC<TranscriptTimelineProps> = ({ meeting, isLight }) => {
+    const items = buildTranscriptTimeline(meeting);
+    const isFinalizing = meeting.title === 'Processing...';
+    const StatusIcon = isFinalizing ? RefreshCw : CheckCircle;
+
+    return (
+        <div className={`h-full min-h-0 flex flex-col rounded-lg border border-border-subtle ${isLight ? 'bg-bg-secondary' : 'bg-bg-primary'}`}>
+            <div className="shrink-0 px-5 py-3 border-b border-border-subtle flex items-center justify-between">
+                <div>
+                    <h2 className="text-[13px] font-semibold text-text-primary">Transcript</h2>
+                    <p className="text-[11px] text-text-tertiary">{items.length} turns · speech and AI responses</p>
+                </div>
+                <div className="flex items-center gap-2 text-[10px] font-semibold">
+                    <span className="px-2 py-1 rounded-full bg-slate-500/10 text-text-secondary">Interviewer</span>
+                    <span className="px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-500">Me</span>
+                    <span className="px-2 py-1 rounded-full bg-blue-500/10 text-blue-500">AI</span>
+                </div>
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-5 py-4 space-y-3">
+                {items.length === 0 ? (
+                    <div className="h-full flex items-center justify-center px-8 text-center">
+                        <div>
+                            <Mic size={24} className="mx-auto text-text-tertiary mb-3" />
+                            <p className="text-[14px] font-medium text-text-primary">No transcript saved</p>
+                            <p className="mt-1 text-[12px] text-text-tertiary">No speech or AI response history was saved for this session.</p>
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        {items.map((item) => {
+                            const isMe = item.role === 'me';
+                            const isAi = item.role === 'ai';
+                            const Icon = isAi ? Sparkles : isMe ? User : Mic;
+                            const bubbleTone = isAi
+                                ? isLight
+                                    ? 'bg-blue-50 border-blue-100 text-slate-900'
+                                    : 'bg-blue-500/10 border-blue-400/20 text-blue-50'
+                                : isMe
+                                    ? isLight
+                                        ? 'bg-emerald-50 border-emerald-100 text-slate-900'
+                                        : 'bg-emerald-500/10 border-emerald-400/20 text-emerald-50'
+                                    : isLight
+                                        ? 'bg-bg-elevated border-border-subtle text-text-primary'
+                                        : 'bg-bg-secondary border-border-subtle text-text-primary';
+                            const badgeTone = isAi
+                                ? 'text-blue-500'
+                                : isMe
+                                    ? 'text-emerald-500'
+                                    : 'text-text-secondary';
+
+                            return (
+                                <div key={item.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`max-w-[82%] ${isAi ? 'w-full' : ''}`}>
+                                        <div className={`mb-1 flex items-center gap-1.5 text-[11px] font-semibold ${isMe ? 'justify-end' : 'justify-start'} ${badgeTone}`}>
+                                            <Icon size={12} />
+                                            <span>{item.label}</span>
+                                            <span className="font-normal text-text-tertiary">{formatTimelineTime(item.timestamp)}</span>
+                                        </div>
+                                        <div className={`rounded-lg border px-3.5 py-3 ${bubbleTone}`}>
+                                            {item.question && (
+                                                <div className={`mb-2 pb-2 border-b ${isLight ? 'border-black/8' : 'border-white/10'}`}>
+                                                    <p className="text-[10px] uppercase tracking-wide font-semibold opacity-60">Prompt</p>
+                                                    <p className="mt-1 text-[12px] leading-relaxed whitespace-pre-wrap">{item.question}</p>
+                                                </div>
+                                            )}
+                                            {item.text ? (
+                                                <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{item.text}</p>
+                                            ) : (
+                                                <p className="text-[13px] leading-relaxed italic opacity-70">No saved response text.</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+
+                        <div className="pt-1 pb-2">
+                            <div className="flex items-center gap-3">
+                                <div className={`h-px flex-1 ${isLight ? 'bg-border-muted' : 'bg-white/10'}`} />
+                                <div className={`shrink-0 rounded-full border px-3 py-1.5 flex items-center gap-2 ${isFinalizing
+                                    ? isLight ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-amber-500/10 text-amber-300 border-amber-400/20'
+                                    : isLight ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-emerald-500/10 text-emerald-300 border-emerald-400/20'
+                                }`}>
+                                    <StatusIcon
+                                        size={13}
+                                        className={isFinalizing ? 'animate-spin' : ''}
+                                    />
+                                    <span className="text-[11px] font-semibold">
+                                        {isFinalizing ? 'Finalizing interview' : 'Interview finished'}
+                                    </span>
+                                </div>
+                                <div className={`h-px flex-1 ${isLight ? 'bg-border-muted' : 'bg-white/10'}`} />
+                            </div>
+                        </div>
+                    </>
+                )}
+            </div>
+
+            <MeetingConversationPanel meeting={meeting} isLight={isLight} />
+        </div>
+    );
+};
+
 // Helper to format date groups
 const getGroupLabel = (dateStr: string) => {
     if (dateStr === "Today") return "Today"; // Backward compatibility
@@ -88,6 +664,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
     const [isCalendarConnected, setIsCalendarConnected] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [showNotification, setShowNotification] = useState(false);
+    const [readiness, setReadiness] = useState<SessionReadiness>(INITIAL_READINESS);
 
     // Global search state (for AI chat overlay)
     const [isGlobalChatOpen, setIsGlobalChatOpen] = useState(false);
@@ -95,7 +672,6 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
 
     const [showModesOnboarding, setShowModesOnboarding] = useState(false);
     const [showProfileOnboarding, setShowProfileOnboarding] = useState(false);
-    const [launchCount, setLaunchCount] = useState<number>(0);
 
     const fetchMeetings = () => {
         if (window.electronAPI && window.electronAPI.getRecentMeetings) {
@@ -109,6 +685,50 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
         }
     }
 
+    const refreshReadiness = async () => {
+        if (!window.electronAPI) return;
+
+        setReadiness(prev => ({ ...prev, loading: true }));
+
+        const [
+            llmResult,
+            credsResult,
+            audioResult,
+            permissionsResult,
+            calendarResult,
+        ] = await Promise.allSettled([
+            window.electronAPI.getCurrentLlmConfig?.(),
+            window.electronAPI.getStoredCredentials?.(),
+            window.electronAPI.getNativeAudioStatus?.(),
+            window.electronAPI.checkPermissions?.(),
+            window.electronAPI.getCalendarStatus?.(),
+        ]);
+
+        const llm = (llmResult.status === 'fulfilled' ? llmResult.value : null) as any;
+        const creds = (credsResult.status === 'fulfilled' ? credsResult.value : null) as any;
+        const audio = (audioResult.status === 'fulfilled' ? audioResult.value : null) as any;
+        const permissions = (permissionsResult.status === 'fulfilled' ? permissionsResult.value : null) as any;
+        const calendarStatus = (calendarResult.status === 'fulfilled' ? calendarResult.value : null) as any;
+        const sttProvider = creds?.sttProvider || 'none';
+        const sttReady = hasConfiguredStt(creds);
+        const calendarConnected = !!calendarStatus?.connected;
+
+        setIsCalendarConnected(calendarConnected);
+        setReadiness({
+            aiProvider: inferProviderLabel(llm?.provider, llm?.model),
+            aiModel: llm?.model || 'Choose a model',
+            aiReady: hasConfiguredAi(llm?.provider, llm?.model, creds),
+            sttProvider: sttProviderLabels[sttProvider] || sttProvider,
+            sttReady,
+            sttHint: sttProvider === 'none' ? 'Choose provider' : sttReady ? 'Configured' : 'Add credentials',
+            audioReady: audio?.connected !== false,
+            micPermission: (permissions?.microphone || 'unknown') as PermissionValue,
+            screenPermission: (permissions?.screen || 'unknown') as PermissionValue,
+            calendarEmail: calendarStatus?.email,
+            loading: false,
+        });
+    };
+
     const handleRefresh = async () => {
         setIsRefreshing(true);
         analytics.trackCommandExecuted('refresh_calendar');
@@ -118,6 +738,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
                 await window.electronAPI.calendarRefresh();
                 fetchEvents();
                 fetchMeetings();
+                refreshReadiness();
                 setTimeout(() => {
                     setShowNotification(false);
                 }, 3000);
@@ -138,37 +759,29 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
     useEffect(() => {
         let mounted = true;
         console.log("Launcher mounted");
-        // Track launch count for showing the "What's New" pill
-        const storedCount = localStorage.getItem('natively_launch_count_v2.7');
-        const currentCount = storedCount ? parseInt(storedCount, 10) : 0;
-        const newCount = currentCount + 1;
-        localStorage.setItem('natively_launch_count_v2.7', newCount.toString());
-        if (mounted) {
-            setLaunchCount(newCount);
-        }
         // Seed demo data if needed (safe to call always — runs ONCE on mount)
         if (window.electronAPI && window.electronAPI.seedDemo) {
             window.electronAPI.seedDemo().catch(err => console.error("Failed to seed demo:", err));
         }
 
-        // Onboarding Check
-        const hasSeenModesOnboarding = localStorage.getItem('natively_seen_modes_onboarding_v5');
-        if (!hasSeenModesOnboarding) {
-            setTimeout(() => {
-                if (mounted) setShowModesOnboarding(true);
-            }, 8000); // Increased delay so it doesn't overlap with other startup notifications
-        }
+        if (SHOW_PROMOTIONAL_SURFACES) {
+            const hasSeenModesOnboarding = localStorage.getItem('natively_seen_modes_onboarding_v5');
+            if (!hasSeenModesOnboarding) {
+                setTimeout(() => {
+                    if (mounted) setShowModesOnboarding(true);
+                }, 8000);
+            }
 
-        const hasSeenProfileOnboarding = localStorage.getItem('natively_seen_profile_onboarding_v1');
-        if (!hasSeenProfileOnboarding && hasSeenModesOnboarding) {
-            setTimeout(() => {
-                if (mounted) setShowProfileOnboarding(true);
-            }, 9000);
-        } else if (!hasSeenProfileOnboarding && !hasSeenModesOnboarding) {
-             // If both haven't been seen, show profile after modes
-             setTimeout(() => {
-                if (mounted) setShowProfileOnboarding(true);
-            }, 18000);
+            const hasSeenProfileOnboarding = localStorage.getItem('natively_seen_profile_onboarding_v1');
+            if (!hasSeenProfileOnboarding && hasSeenModesOnboarding) {
+                setTimeout(() => {
+                    if (mounted) setShowProfileOnboarding(true);
+                }, 9000);
+            } else if (!hasSeenProfileOnboarding && !hasSeenModesOnboarding) {
+                 setTimeout(() => {
+                    if (mounted) setShowProfileOnboarding(true);
+                }, 18000);
+            }
         }
 
         // Sync initial undetectable state
@@ -188,6 +801,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
 
         fetchMeetings();
         fetchEvents();
+        refreshReadiness();
 
         // Sync initial meeting active state — guarded so unmounted component isn't written to
         if (window.electronAPI?.getMeetingActive) {
@@ -201,6 +815,27 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
         if (window.electronAPI?.onMeetingStateChanged) {
             removeMeetingStateListener = window.electronAPI.onMeetingStateChanged(({ isActive }) => {
                 setIsMeetingActive(isActive);
+            });
+        }
+
+        let removeModelListener: (() => void) | undefined;
+        if (window.electronAPI?.onModelChanged) {
+            removeModelListener = window.electronAPI.onModelChanged(() => {
+                refreshReadiness();
+            });
+        }
+
+        let removeCredentialsListener: (() => void) | undefined;
+        if (window.electronAPI?.onCredentialsChanged) {
+            removeCredentialsListener = window.electronAPI.onCredentialsChanged(() => {
+                refreshReadiness();
+            });
+        }
+
+        let removeSttConfigListener: (() => void) | undefined;
+        if (window.electronAPI?.onSttConfigChanged) {
+            removeSttConfigListener = window.electronAPI.onSttConfigChanged(() => {
+                refreshReadiness();
             });
         }
 
@@ -218,6 +853,9 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
             if (removeMeetingsListener) removeMeetingsListener();
             if (removeUndetectableListener) removeUndetectableListener();
             if (removeMeetingStateListener) removeMeetingStateListener();
+            if (removeModelListener) removeModelListener();
+            if (removeCredentialsListener) removeCredentialsListener();
+            if (removeSttConfigListener) removeSttConfigListener();
             clearInterval(interval);
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -305,12 +943,13 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
         return () => window.removeEventListener('click', handleClickOutside);
     }, []);
 
-    // Notify parent if we are on the main launcher list view
+    // The three-column shell remains the main launcher view. Selecting a meeting
+    // only changes the middle pane.
     useEffect(() => {
         if (onPageChange) {
-            onPageChange(!selectedMeeting && !isGlobalChatOpen);
+            onPageChange(!isGlobalChatOpen);
         }
-    }, [selectedMeeting, isGlobalChatOpen, onPageChange]);
+    }, [isGlobalChatOpen, onPageChange]);
 
     const handleOpenMeeting = async (meeting: Meeting) => {
         setForwardMeeting(null); // Clear forward history on new navigation
@@ -372,6 +1011,65 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
         const mm = minutes.toString().padStart(2, '0');
         return `${mm}:00`;
     };
+
+    const permissionsReady = readiness.micPermission === 'granted' && readiness.screenPermission === 'granted';
+    const captureReady = readiness.audioReady && permissionsReady;
+    const readinessRows: Array<{
+        key: string;
+        label: string;
+        value: string;
+        status: ReadinessStatus;
+        icon: any;
+        tab: string;
+    }> = [
+        {
+            key: 'ai',
+            label: 'AI model',
+            value: readiness.aiReady
+                ? `${readiness.aiProvider} · ${readiness.aiModel}`
+                : `${readiness.aiProvider}: configure key`,
+            status: readiness.aiReady ? 'ready' : 'missing',
+            icon: Brain,
+            tab: 'ai-providers',
+        },
+        {
+            key: 'speech',
+            label: 'Speech',
+            value: readiness.sttReady
+                ? `${readiness.sttProvider} ready`
+                : `${readiness.sttProvider}: ${readiness.sttHint}`,
+            status: readiness.sttReady ? 'ready' : 'missing',
+            icon: Mic,
+            tab: 'audio',
+        },
+        {
+            key: 'capture',
+            label: 'Capture',
+            value: captureReady
+                ? 'Mic + screen ready'
+                : `Mic ${permissionLabel(readiness.micPermission)}, screen ${permissionLabel(readiness.screenPermission)}`,
+            status: captureReady ? 'ready' : 'missing',
+            icon: ShieldCheck,
+            tab: 'audio',
+        },
+        {
+            key: 'visibility',
+            label: 'Visibility',
+            value: isDetectable ? 'Detectable window' : 'Undetectable window',
+            status: isDetectable ? 'warning' : 'ready',
+            icon: Ghost,
+            tab: 'general',
+        },
+    ];
+    const missingReadinessCount = readinessRows.filter(row => row.status === 'missing').length;
+    const warningReadinessCount = readinessRows.filter(row => row.status === 'warning').length;
+    const readinessSummary = readiness.loading
+        ? 'Checking setup'
+        : missingReadinessCount > 0
+            ? `${missingReadinessCount} setup item${missingReadinessCount === 1 ? '' : 's'} need attention`
+            : warningReadinessCount > 0
+                ? 'Ready with notes'
+                : 'Ready for session';
 
     return (
         <div className="h-full w-full flex flex-col bg-bg-primary text-text-primary font-sans overflow-hidden selection:bg-accent-secondary/30">
@@ -451,7 +1149,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
                         </button>
                         
                         <AnimatePresence>
-                            {showProfileOnboarding && (
+                            {SHOW_PROMOTIONAL_SURFACES && showProfileOnboarding && (
                                 <motion.div
                                     initial={{ opacity: 0, y: 6, scale: 0.96, filter: "blur(4px)" }}
                                     animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
@@ -550,7 +1248,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
                         </button>
                         
                         <AnimatePresence>
-                            {showModesOnboarding && (
+                            {SHOW_PROMOTIONAL_SURFACES && showModesOnboarding && (
                                 <motion.div
                                     initial={{ opacity: 0, y: 6, scale: 0.96, filter: "blur(4px)" }}
                                     animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
@@ -652,484 +1350,87 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
                 {!isDetectable && (
                     <div className={`absolute inset-1 border-2 border-dashed rounded-2xl pointer-events-none z-[100] ${isLight ? 'border-black/15' : 'border-white/20'}`} />
                 )}
-                <AnimatePresence mode="wait">
-                    {selectedMeeting ? (
-                        <motion.div
-                            key="details"
-                            className="flex-1 overflow-hidden"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.15 }}
-                        >
-                            <MeetingDetails
-                                meeting={selectedMeeting}
-                                onBack={handleBack}
-                                onOpenSettings={onOpenSettings}
-                            />
-                        </motion.div>
-                    ) : (
-                        <motion.div
-                            key="launcher"
-                            className="flex-1 flex flex-col overflow-hidden"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.15 }}
-                        >
+                <motion.div
+                    key="launcher"
+                    className="flex-1 flex flex-col overflow-hidden"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                >
 
-                            {/* Main Area - Fixed Top, Scrollable Bottom */}
-                            {/* Top Section is now effectively static due to parent flex col */}
-
-                            {/* TOP SECTION: Grey Background (Scrolls with content) */}
-                            <section className={`${isLight ? 'bg-bg-secondary' : 'bg-bg-elevated'} px-8 pt-6 pb-8 border-b border-border-subtle shrink-0`}>
-                                <div className="max-w-4xl mx-auto space-y-6">
-                                    {/* 1.5. Hero Header (Title + Controls + CTA) */}
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <h1 className="text-3xl font-celeb-light font-medium text-text-primary tracking-wide drop-shadow-sm">My Natively</h1>
-
-                                            {/* Refresh Button */}
-                                            <button
-                                                onClick={handleRefresh}
-                                                disabled={isRefreshing}
-                                                className={`p-2 text-text-secondary hover:text-text-primary rounded-full transition-colors ${isRefreshing ? 'animate-spin text-blue-400' : ''} ${isLight ? 'hover:bg-black/8' : 'hover:bg-white/10'}`}
-                                                title="Refresh State"
-                                            >
-                                                <RefreshCw size={18} />
-                                            </button>
-
-                                            {/* Detectable Toggle Pill */}
-                                            <div className={`flex items-center gap-3 border rounded-full px-3 py-1.5 min-w-[140px] transition-colors ${isLight ? 'bg-bg-elevated border-border-muted shadow-sm' : 'bg-[#101011] border-border-muted'}`}>
-                                                {isDetectable ? (
-                                                    <Ghost
-                                                        size={14}
-                                                        strokeWidth={2}
-                                                        className="text-text-secondary transition-colors"
-                                                    />
-                                                ) : (
-                                                    <svg
-                                                        width="14"
-                                                        height="14"
-                                                        viewBox="0 0 24 24"
-                                                        fill="none"
-                                                        xmlns="http://www.w3.org/2000/svg"
-                                                        className="transition-colors"
-                                                    >
-                                                        <path
-                                                            d="M12 2C7.58172 2 4 5.58172 4 10V22L7 19L9.5 21.5L12 19L14.5 21.5L17 19L20 22V10C20 5.58172 16.4183 2 12 2Z"
-                                                            fill={isLight ? '#48484A' : 'white'}
-                                                        />
-                                                        <circle cx="9" cy="10" r="1.5" fill={isLight ? 'white' : 'black'} />
-                                                        <circle cx="15" cy="10" r="1.5" fill={isLight ? 'white' : 'black'} />
-                                                    </svg>
-                                                )}
-                                                <span className="text-xs font-medium flex-1 transition-colors text-text-secondary">
-                                                    {isDetectable ? "Detectable" : "Undetectable"}
-                                                 </span>
-                                                 <div
-                                                     className={`w-8 h-4 rounded-full relative transition-colors cursor-pointer ${!isDetectable ? 'bg-accent-primary' : 'bg-bg-toggle-switch'}`}
-                                                     onClick={toggleDetectable}
-                                                 >
-                                                     <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-all ${!isDetectable ? 'left-[18px]' : 'left-0.5'}`} />
-                                                 </div>
-                                             </div>
-
-                                             {/* What's New Pill */}
-                                             {launchCount < 10 && (
-                                                 <button
-                                                     onClick={() => onOpenSettings('about')}
-                                                     className={`flex items-center gap-1 border rounded-full px-3 py-1.5 transition-all duration-200 cursor-pointer active:scale-95 text-xs font-semibold shrink-0 select-none group ${
-                                                         isLight 
-                                                             ? 'bg-emerald-500/5 hover:bg-emerald-500/10 border-emerald-500/20 text-emerald-600' 
-                                                             : 'bg-emerald-400/10 hover:bg-emerald-400/20 border-emerald-500/20 text-emerald-400'
-                                                     }`}
-                                                 >
-                                                     <span>What's New in 2.7</span>
-                                                     <ArrowUpRight size={12} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                                                 </button>
-                                             )}
-                                         </div>
-                                         {/* Center: Ollama Pull Status Pill (flex-1 to center evenly) */}
-                                        <div className="flex-1 flex justify-center mx-4">
-                                            <AnimatePresence>
-                                                {ollamaPullStatus !== 'idle' && (
-                                                    <motion.div
-                                                        initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                                                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                                                        exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                                                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                                                        className={`flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-xl ${isLight ? 'bg-bg-elevated border border-border-muted shadow-[0_4px_16px_rgba(0,0,0,0.1)]' : 'bg-bg-elevated/80 border border-white/10 shadow-[0_4px_16px_rgba(0,0,0,0.3)]'}`}
-                                                    >
-                                                        {ollamaPullStatus === 'downloading' ? (
-                                                            <DownloadCloud size={14} className="text-blue-400 animate-pulse shrink-0" />
-                                                        ) : ollamaPullStatus === 'complete' ? (
-                                                            <CheckCircle size={14} className="text-emerald-400 shrink-0" />
-                                                        ) : (
-                                                            <AlertCircle size={14} className="text-red-400 shrink-0" />
-                                                        )}
-                                                        <div className="flex flex-col">
-                                                            <span className="text-[11px] font-medium text-text-secondary whitespace-nowrap">
-                                                                {ollamaPullStatus === 'downloading' ? `Setting up AI memory... ${ollamaPullPercent}%` : ollamaPullMessage}
-                                                            </span>
-                                                            {ollamaPullStatus === 'downloading' && (
-                                                                <div className="w-full h-[3px] bg-white/10 rounded-full mt-1 overflow-hidden">
-                                                                    <div
-                                                                        className="h-full bg-blue-500 rounded-full transition-all duration-300"
-                                                                        style={{ width: `${ollamaPullPercent}%` }}
-                                                                    />
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
+                            <div className={`h-full min-h-0 grid grid-cols-[260px_minmax(0,1fr)_300px] ${isLight ? 'bg-bg-primary' : 'bg-[#101011]'}`}>
+                                <aside className={`min-h-0 border-r border-border-subtle flex flex-col ${isLight ? 'bg-bg-secondary' : 'bg-bg-primary'}`}>
+                                    <div className="h-[54px] px-4 flex items-center justify-between border-b border-border-subtle">
+                                        <div>
+                                            <h2 className="text-[13px] font-semibold text-text-primary">Sessions</h2>
+                                            <p className="text-[11px] text-text-tertiary">{meetings.length} saved</p>
                                         </div>
-
-                                        {/* Unified CTA pill — same jelly shape, morphs between idle and active-meeting state */}
-                                        <motion.button
-                                            onClick={() => {
-                                                if (isMeetingActive) {
-                                                    // inactive=true: overlay appears on top but doesn't activate
-                                                    // the Natively app or steal OS focus — preserves stealth.
-                                                    // setWindowMode (not showWindow) is required because
-                                                    // logo-click set currentWindowMode='launcher', so showWindow()
-                                                    // would re-show the launcher rather than switch to overlay.
-                                                    window.electronAPI?.setWindowMode?.('overlay', true);
-                                                    analytics.trackCommandExecuted('resume_meeting_from_launcher');
-                                                } else {
-                                                    onStartMeeting();
-                                                    analytics.trackCommandExecuted('start_natively_cta');
-                                                }
-                                            }}
-                                            whileHover={{ scale: 1.01, filter: 'brightness(1.1)' }}
-                                            whileTap={{ scale: 0.99 }}
-                                            transition={{ duration: 0.18, ease: 'easeOut' }}
-                                            className="group relative overflow-hidden text-white px-6 py-3 rounded-full font-celeb font-medium tracking-normal flex items-center justify-center gap-3 backdrop-blur-xl shrink-0"
-                                            style={{
-                                                boxShadow: isMeetingActive
-                                                    ? 'inset 0 1px 1px rgba(255,255,255,0.7), inset 0 -1px 2px rgba(0,0,0,0.1), 0 2px 10px rgba(16,185,129,0.45), 0 0 0 1px rgba(255,255,255,0.15)'
-                                                    : 'inset 0 1px 1px rgba(255,255,255,0.7), inset 0 -1px 2px rgba(0,0,0,0.1), 0 2px 10px rgba(14,165,233,0.4), 0 0 0 1px rgba(255,255,255,0.15)',
-                                                transition: 'box-shadow 0.5s ease-out',
-                                            }}
+                                        <button
+                                            onClick={handleRefresh}
+                                            disabled={isRefreshing}
+                                            title="Refresh sessions"
+                                            className={`h-8 w-8 rounded-md flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors ${isLight ? 'hover:bg-black/8' : 'hover:bg-white/10'}`}
                                         >
-                                            {/* Blue gradient layer (idle) */}
-                                            <div
-                                                className="absolute inset-0 bg-gradient-to-b from-sky-400 via-sky-500 to-blue-600 transition-opacity duration-500 ease-out"
-                                                style={{ opacity: isMeetingActive ? 0 : 1 }}
-                                            />
-                                            {/* Green gradient layer (meeting active) */}
-                                            <div
-                                                className="absolute inset-0 bg-gradient-to-b from-emerald-400 via-emerald-500 to-green-600 transition-opacity duration-500 ease-out"
-                                                style={{ opacity: isMeetingActive ? 1 : 0 }}
-                                            />
-
-                                            {/* Top highlight band — shared between both states */}
-                                            <div className="absolute inset-x-3 top-0 h-[40%] bg-gradient-to-b from-white/40 to-transparent blur-[2px] rounded-b-lg opacity-80 pointer-events-none z-10" />
-                                            {/* Internal suspended-light hover glow */}
-                                            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none z-10" />
-
-                                            {/* Button content — crossfade between idle and meeting states */}
-                                            <div className="relative z-20 flex items-center gap-3">
-                                                <AnimatePresence mode="wait" initial={false}>
-                                                    {isMeetingActive ? (
-                                                        <motion.div
-                                                            key="meeting"
-                                                            initial={{ opacity: 0, y: 6 }}
-                                                            animate={{ opacity: 1, y: 0 }}
-                                                            exit={{ opacity: 0, y: -6 }}
-                                                            transition={{ duration: 0.22, ease: 'easeOut' }}
-                                                            className="flex items-center gap-3"
-                                                        >
-                                                            {/* Ping live-indicator dot */}
-                                                            <span className="relative flex h-[9px] w-[9px] shrink-0">
-                                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-60" />
-                                                                <span className="relative inline-flex rounded-full h-[9px] w-[9px] bg-white" />
-                                                            </span>
-                                                            <span className="drop-shadow-[0_1px_1px_rgba(0,0,0,0.1)] text-[20px] leading-none">Meeting ongoing</span>
-                                                        </motion.div>
-                                                    ) : (
-                                                        <motion.div
-                                                            key="start"
-                                                            initial={{ opacity: 0, y: 6 }}
-                                                            animate={{ opacity: 1, y: 0 }}
-                                                            exit={{ opacity: 0, y: -6 }}
-                                                            transition={{ duration: 0.22, ease: 'easeOut' }}
-                                                            className="flex items-center gap-3"
-                                                        >
-                                                            <img src={icon} alt="Logo" className="w-[18px] h-[18px] object-contain brightness-0 invert drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)] opacity-90" />
-                                                            <span className="drop-shadow-[0_1px_1px_rgba(0,0,0,0.1)] text-[20px] leading-none">Start Natively</span>
-                                                        </motion.div>
-                                                    )}
-                                                </AnimatePresence>
-                                            </div>
-                                        </motion.button>
+                                            <RefreshCw size={15} className={isRefreshing ? 'animate-spin text-blue-400' : ''} />
+                                        </button>
                                     </div>
-
-                                    {/* 2. Hero Section Cards */}
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 h-[198px]">
-                                        {/* Default intro panel. Calendar "Up Next" lives in Settings → Calendar, not here. */}
-                                        <div className="md:col-span-2 h-full">
-                                            {SHOW_PROMOTIONAL_SURFACES ? (
-                                                <FeatureSpotlight />
-                                            ) : (
-                                                <div className="relative h-full w-full overflow-hidden rounded-xl bg-bg-elevated shadow-[inset_0_1px_1px_rgba(255,255,255,0.08)]">
-                                                    <img
-                                                        src={mainui}
-                                                        alt=""
-                                                        className="absolute inset-0 w-full h-full object-cover opacity-85"
-                                                    />
-                                                    <div className="absolute inset-0 bg-black/30" />
-                                                    <div className="absolute inset-x-0 bottom-0 p-5">
-                                                        <div className="inline-flex items-center gap-2 rounded-full bg-black/35 border border-white/10 px-3 py-1.5 text-[12px] font-semibold text-white/90 backdrop-blur-md">
-                                                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]" />
-                                                            Ready
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-
-
-
-                                        {/* Right Secondary Card — violet-tinted, "Calendar Connected" + peeking next meeting */}
-                                        <div className="md:col-span-1 rounded-xl overflow-hidden bg-bg-elevated relative group flex flex-col shadow-[inset_0_1px_1px_rgba(255,255,255,0.08)]">
-                                            {/* Backdrop image with violet tint mask */}
-                                            <div className="absolute inset-0">
-                                                <img
-                                                    src={calender}
-                                                    alt=""
-                                                    className="w-full h-full object-cover scale-105 translate-y-[1px]"
-                                                />
-                                                {/* Violet tint mask — only when connected, washes the calendar image into the brand purple */}
-                                                {isCalendarConnected && (
-                                                    <>
-                                                        <div className="absolute inset-0 bg-[#3a2a99]/55 mix-blend-multiply" />
-                                                        <div className="absolute inset-0 bg-gradient-to-b from-violet-700/25 via-violet-800/20 to-indigo-950/35" />
-                                                        {/* Soft top-glow */}
-                                                        <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-[260px] h-[200px] bg-violet-300/20 blur-[80px] pointer-events-none" />
-                                                    </>
-                                                )}
-                                                {/* Subtle grain */}
-                                                <div
-                                                    className="absolute inset-0 opacity-[0.05] mix-blend-overlay pointer-events-none"
-                                                    style={{ backgroundImage: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.55'/></svg>\")" }}
-                                                />
-                                            </div>
-
-                                            {/* Content Layer */}
-                                            {isCalendarConnected ? (() => {
-                                                const eventCount = upcomingMeetings.length;
-                                                const summaryLabel = eventCount === 0
-                                                    ? 'No upcoming events'
-                                                    : `${eventCount} upcoming event${eventCount === 1 ? '' : 's'}`;
-
-                                                const formatTimeLabel = (startTime: string) => {
-                                                    const start = new Date(startTime);
-                                                    const now = new Date();
-                                                    const tomorrow = new Date(now.getTime() + 86400000);
-                                                    const isToday = start.toDateString() === now.toDateString();
-                                                    const isTomorrow = start.toDateString() === tomorrow.toDateString();
-                                                    const t = start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-                                                    return isToday ? `Today at ${t}`
-                                                        : isTomorrow ? `Tomorrow at ${t}`
-                                                        : `${start.toLocaleDateString([], { weekday: 'short' })} at ${t}`;
-                                                };
-
-                                                // Deterministic avatar palette from email/name
-                                                const avatarPalette = [
-                                                    'bg-rose-300/90 text-rose-900',
-                                                    'bg-amber-200/90 text-amber-900',
-                                                    'bg-emerald-200/90 text-emerald-900',
-                                                    'bg-sky-200/90 text-sky-900',
-                                                    'bg-violet-200/90 text-violet-900',
-                                                    'bg-teal-200/90 text-teal-900',
-                                                ];
-                                                const initialsFor = (a: { email: string; name?: string }) => {
-                                                    const src = (a.name || a.email).trim();
-                                                    const parts = src.split(/[\s._-]+/).filter(Boolean);
-                                                    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-                                                    return src.slice(0, 2).toUpperCase();
-                                                };
-                                                const colorFor = (key: string) => {
-                                                    let h = 0;
-                                                    for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) | 0;
-                                                    return avatarPalette[Math.abs(h) % avatarPalette.length];
-                                                };
-
-                                                const visibleAttendees = (nextMeeting?.attendees || []).slice(0, 3);
-                                                const remaining = Math.max(0, (nextMeeting?.attendees?.length || 0) - visibleAttendees.length);
-                                                const peekMeetings = visibleMeetings.slice(1); // up to 2 behind the front card
-
-                                                return (
-                                                    <div className="relative z-10 w-full flex flex-col h-full">
-                                                        {/* Heading block — top-centered */}
-                                                        <div className="px-4 pt-5 text-center">
-                                                            <h3 className="text-[20px] font-semibold text-white leading-[1.15] tracking-[-0.01em]">Calendar linked</h3>
-                                                            <p className="text-[13px] text-white/55 font-medium mt-0.5 tabular-nums">{summaryLabel}</p>
-                                                        </div>
-
-                                                        {/* Calendar Connected pill — translucent violet glass with check */}
-                                                        <div className="px-4 mt-3 flex justify-center">
-                                                            <div className="inline-flex items-center gap-2 rounded-full bg-violet-500/20 ring-1 ring-violet-300/25 backdrop-blur-md px-2 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_4px_18px_-6px_rgba(99,102,241,0.45)]">
-                                                                <span className="w-5 h-5 rounded-full bg-violet-500 ring-1 ring-violet-300/40 flex items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]">
-                                                                    <Check size={11} strokeWidth={3} className="text-white" />
-                                                                </span>
-                                                                <span className="text-[12px] font-semibold text-white/95 pr-1.5 tracking-[-0.005em]">Calendar Connected</span>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Real stacked peek of upcoming meetings — front card is full, 1–2 behind show just titles */}
-                                                        {nextMeeting && (
-                                                            <div className="mt-auto px-2 pb-0">
-                                                                <div className="relative">
-                                                                    {/* Real peek cards behind — show actual subsequent meetings */}
-                                                                    {peekMeetings[1] && (
-                                                                        <div
-                                                                            className="absolute -top-3 left-3 right-3 h-7 rounded-t-[14px] bg-white/[0.06] ring-1 ring-white/[0.06] backdrop-blur-sm overflow-hidden"
-                                                                            title={peekMeetings[1].title}
-                                                                        >
-                                                                            <div className="px-3 pt-1 text-[10.5px] font-medium text-white/55 line-clamp-1 tracking-[-0.005em]">
-                                                                                {peekMeetings[1].title}
-                                                                            </div>
-                                                                        </div>
-                                                                    )}
-                                                                    {peekMeetings[0] && (
-                                                                        <div
-                                                                            className="absolute -top-1.5 left-1.5 right-1.5 h-7 rounded-t-[14px] bg-white/[0.09] ring-1 ring-white/[0.08] backdrop-blur-sm overflow-hidden"
-                                                                            title={peekMeetings[0].title}
-                                                                        >
-                                                                            <div className="px-3 pt-1 text-[11px] font-medium text-white/70 line-clamp-1 tracking-[-0.005em]">
-                                                                                {peekMeetings[0].title}
-                                                                            </div>
-                                                                        </div>
-                                                                    )}
-
-                                                                    {/* Front card — display only, no click */}
-                                                                    <div
-                                                                        className="relative w-full text-left rounded-[14px] bg-white/[0.07] ring-1 ring-white/[0.1] backdrop-blur-md px-3.5 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_8px_24px_-12px_rgba(0,0,0,0.55)]"
-                                                                    >
-                                                                        <div className="flex items-start justify-between gap-2">
-                                                                            <h4 className="text-[15px] font-semibold text-white leading-tight tracking-[-0.01em] line-clamp-1">
-                                                                                {nextMeeting.title}
-                                                                            </h4>
-                                                                            {moreMeetingsCount > 0 && (
-                                                                                <span className="shrink-0 inline-flex items-center rounded-full bg-white/10 ring-1 ring-white/15 px-1.5 py-0.5 text-[10px] font-semibold text-white/80 tabular-nums">
-                                                                                    +{moreMeetingsCount} more
-                                                                                </span>
-                                                                            )}
-                                                                        </div>
-                                                                        <div className="mt-1.5 flex items-center justify-between gap-2">
-                                                                            <span className="text-[11.5px] text-cyan-200/85 font-medium tabular-nums">
-                                                                                {formatTimeLabel(nextMeeting.startTime)}
-                                                                            </span>
-                                                                            {visibleAttendees.length > 0 && (
-                                                                                <div className="flex -space-x-1.5">
-                                                                                    {visibleAttendees.map((a: { email: string; name?: string }) => (
-                                                                                        <span
-                                                                                            key={a.email}
-                                                                                            title={a.name || a.email}
-                                                                                            className={`inline-flex items-center justify-center w-[18px] h-[18px] rounded-full ring-[1.5px] ring-[#1f1740] text-[8.5px] font-bold ${colorFor(a.email)}`}
-                                                                                        >
-                                                                                            {initialsFor(a)}
-                                                                                        </span>
-                                                                                    ))}
-                                                                                    {remaining > 0 && (
-                                                                                        <span className="inline-flex items-center justify-center w-[18px] h-[18px] rounded-full ring-[1.5px] ring-[#1f1740] bg-white/15 text-[8.5px] font-bold text-white/85 tabular-nums">
-                                                                                            +{remaining}
-                                                                                        </span>
-                                                                                    )}
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })() : (
-                                                <div className="relative z-10 w-full flex flex-col items-center h-full pt-6 text-center">
-                                                    <h3 className="text-[19px] leading-tight mb-4 tracking-[-0.01em]">
-                                                        <span className="block font-semibold text-white">Link your calendar to</span>
-                                                        <span className="block font-medium text-white/60 text-[0.95em]">see upcoming events</span>
-                                                    </h3>
-
-                                                    <ConnectCalendarButton
-                                                        className="-translate-x-0.5"
-                                                        onConnect={() => setIsCalendarConnected(true)}
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            </section>
-
-                            {/* BOTTOM SECTION: Black Background (Scrollable content) */}
-                            <main className="flex-1 overflow-y-auto custom-scrollbar bg-bg-primary">
-                                <section className="px-8 py-8 min-h-full">
-                                    <div className="max-w-4xl mx-auto space-y-8">
-
-                                        {/* Iterating Date Groups */}
+                                    <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-2 py-3">
                                         {sortedGroups.map((label) => (
-                                            <section key={label}>
-                                                <h3 className="text-[13px] font-medium text-text-secondary mb-3 pl-1">{label}</h3>
+                                            <section key={label} className="mb-4">
+                                                <h3 className="px-2 mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">{label}</h3>
                                                 <div className="space-y-1">
                                                     {groupedMeetings[label].map((m) => (
                                                         <motion.div
                                                             key={m.id}
                                                             layoutId={`meeting-${m.id}`}
-                                                            className="group relative flex items-center justify-between px-3 py-2 rounded-lg bg-transparent hover:bg-bg-elevated transition-colors"
+                                                            className={`group relative px-2.5 py-2 rounded-md cursor-pointer transition-colors ${
+                                                                selectedMeeting?.id === m.id
+                                                                    ? isLight
+                                                                        ? 'bg-bg-elevated shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)]'
+                                                                        : 'bg-white/10 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]'
+                                                                    : isLight
+                                                                        ? 'hover:bg-bg-elevated'
+                                                                        : 'hover:bg-white/6'
+                                                            }`}
                                                             onClick={() => handleOpenMeeting(m)}
                                                         >
-                                                            <div className={`font-medium text-[14px] max-w-[60%] truncate ${m.title === 'Processing...' ? 'text-blue-400 italic animate-pulse' : 'text-text-primary'}`}>
-                                                                {m.title}
-                                                            </div>
-
-                                                            {/* Time & Duration Section */}
-                                                            <div className="flex items-center gap-4">
-                                                                {m.title === 'Processing...' ? (
-                                                                    <div className="flex items-center gap-2 transition-all duration-200 ease-out group-hover:opacity-0 group-hover:translate-x-2 delayed-hover-exit">
-                                                                        <RefreshCw size={12} className="animate-spin text-blue-500" />
-                                                                        <span className="text-xs text-blue-500 font-medium">Finalizing...</span>
-                                                                    </div>
-                                                                ) : (
-                                                                    <>
-                                                                        <span className="relative z-10 bg-bg-elevated text-text-secondary text-[9px] px-1.5 py-0.5 rounded-full font-medium min-w-[35px] text-center tracking-wide">
-                                                                            {formatDurationPill(m.duration)}
-                                                                        </span>
-
-                                                                        {/* Time Text (Should fade out on hover) */}
-                                                                        <span className="text-[13px] text-text-secondary font-medium min-w-[60px] text-right transition-all duration-200 ease-out group-hover:opacity-0 group-hover:translate-x-2 delayed-hover-exit">
-                                                                            {formatTime(m.date)}
-                                                                        </span>
-                                                                    </>
-                                                                )}
-                                                            </div>
-
-                                                            {/* Context Menu Trigger (Slides in on hover) */}
-                                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 translate-x-4 transition-all duration-300 ease-out group-hover:opacity-100 group-hover:translate-x-0">
+                                                            <div className="flex items-center justify-between gap-2">
+                                                                <p className={`min-w-0 flex-1 truncate text-[13px] font-medium ${m.title === 'Processing...' ? 'text-blue-400 italic animate-pulse' : 'text-text-primary'}`}>
+                                                                    {m.title}
+                                                                </p>
                                                                 <button
-                                                                    className="p-1.5 text-text-secondary hover:text-text-primary transition-colors"
+                                                                    className="opacity-0 group-hover:opacity-100 h-6 w-6 shrink-0 rounded-md flex items-center justify-center text-text-tertiary hover:text-text-primary hover:bg-bg-item-active transition-all"
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         setActiveMenuId(activeMenuId === m.id ? null : m.id);
                                                                     }}
                                                                 >
-                                                                    <MoreHorizontal size={16} />
+                                                                    <MoreHorizontal size={14} />
                                                                 </button>
                                                             </div>
-
-                                                            {/* Dropdown Menu */}
+                                                            <div className="mt-1 flex items-center gap-2 text-[11px] text-text-tertiary">
+                                                                {m.title === 'Processing...' ? (
+                                                                    <>
+                                                                        <RefreshCw size={11} className="animate-spin text-blue-500" />
+                                                                        <span>Finalizing</span>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <span>{formatTime(m.date)}</span>
+                                                                        <span className="h-1 w-1 rounded-full bg-text-tertiary/50" />
+                                                                        <span>{formatDurationPill(m.duration)}</span>
+                                                                    </>
+                                                                )}
+                                                            </div>
                                                             <AnimatePresence>
                                                                 {activeMenuId === m.id && (
                                                                     <motion.div
-                                                                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                                                        initial={{ opacity: 0, scale: 0.96, y: 8 }}
                                                                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                                                                        exit={{ opacity: 0, scale: 0.95, y: 5 }}
+                                                                        exit={{ opacity: 0, scale: 0.96, y: 4 }}
                                                                         transition={{ duration: 0.1 }}
-                                                                        className={`absolute right-0 top-full mt-1 w-[90px] backdrop-blur-xl rounded-lg shadow-2xl z-50 overflow-hidden border ${isLight ? 'bg-bg-elevated border-border-muted shadow-[0_8px_24px_rgba(0,0,0,0.12)]' : 'bg-[#1E1E1E]/80 border-white/10'}`}
+                                                                        className={`absolute right-2 top-8 w-[96px] backdrop-blur-xl rounded-lg shadow-2xl z-50 overflow-hidden border ${isLight ? 'bg-bg-elevated border-border-muted shadow-[0_8px_24px_rgba(0,0,0,0.12)]' : 'bg-[#1E1E1E]/90 border-white/10'}`}
                                                                         onClick={(e) => e.stopPropagation()}
                                                                         onMouseEnter={() => setMenuEntered(true)}
                                                                         onMouseLeave={() => {
@@ -1138,19 +1439,14 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
                                                                     >
                                                                         <div className="p-1 flex flex-col gap-0.5">
                                                                             <button
-                                                                                className={`w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-text-primary rounded-lg transition-colors text-left ${isLight ? 'hover:bg-bg-item-surface' : 'hover:bg-white/10'}`}
+                                                                                className={`w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-text-primary rounded-md transition-colors text-left ${isLight ? 'hover:bg-bg-item-surface' : 'hover:bg-white/10'}`}
                                                                                 onClick={async () => {
                                                                                     setActiveMenuId(null);
                                                                                     analytics.trackPdfExported();
-                                                                                    // Fetch full details if needed
                                                                                     if (window.electronAPI && window.electronAPI.getMeetingDetails) {
                                                                                         try {
                                                                                             const fullMeeting = await window.electronAPI.getMeetingDetails(m.id);
-                                                                                            if (fullMeeting) {
-                                                                                                generateMeetingPDF(fullMeeting);
-                                                                                            } else {
-                                                                                                generateMeetingPDF(m);
-                                                                                            }
+                                                                                            generateMeetingPDF(fullMeeting || m);
                                                                                         } catch (e) {
                                                                                             console.error("Failed to fetch details for PDF", e);
                                                                                             generateMeetingPDF(m);
@@ -1164,12 +1460,11 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
                                                                                 Export
                                                                             </button>
                                                                             <button
-                                                                                className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-lg transition-colors text-left"
+                                                                                className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-md transition-colors text-left"
                                                                                 onClick={async () => {
                                                                                     if (window.electronAPI && window.electronAPI.deleteMeeting) {
                                                                                         const success = await window.electronAPI.deleteMeeting(m.id);
                                                                                         if (success) {
-                                                                                            // Optimistic update or refetch
                                                                                             setMeetings(prev => prev.filter(meeting => meeting.id !== m.id));
                                                                                         }
                                                                                     }
@@ -1188,17 +1483,263 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
                                                 </div>
                                             </section>
                                         ))}
-
                                         {meetings.length === 0 && (
-                                            <div className="p-4 text-text-tertiary text-sm">No recent meetings.</div>
+                                            <div className="px-3 py-8 text-center text-[13px] text-text-tertiary">No recent meetings.</div>
                                         )}
-
                                     </div>
-                                </section>
-                            </main>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                                </aside>
+
+                                <main className="min-h-0 flex flex-col">
+                                    <div className="h-[54px] px-5 flex items-center justify-between border-b border-border-subtle">
+	                                        <div className="min-w-0">
+	                                            <h1 className="text-[15px] font-semibold text-text-primary truncate">
+                                                    {selectedMeeting ? selectedMeeting.title : 'Current session'}
+                                                </h1>
+	                                            <p className="text-[11px] text-text-tertiary truncate">
+                                                    {selectedMeeting
+                                                        ? `${new Date(selectedMeeting.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · ${formatDurationPill(selectedMeeting.duration)}`
+                                                        : readinessSummary}
+                                                </p>
+	                                        </div>
+	                                        <div className="flex items-center gap-2">
+                                                {selectedMeeting ? (
+                                                    <button
+                                                        onClick={handleBack}
+                                                        className={`h-8 px-2.5 rounded-md flex items-center gap-1.5 text-[12px] font-medium text-text-secondary hover:text-text-primary transition-colors ${isLight ? 'hover:bg-black/8' : 'hover:bg-white/10'}`}
+                                                    >
+                                                        Clear
+                                                    </button>
+                                                ) : (
+                                                    <>
+                                                        <button
+                                                            onClick={() => onOpenProfile?.()}
+                                                            className={`h-8 px-2.5 rounded-md flex items-center gap-1.5 text-[12px] font-medium text-text-secondary hover:text-text-primary transition-colors ${isLight ? 'hover:bg-black/8' : 'hover:bg-white/10'}`}
+                                                        >
+                                                            <UserSearch size={14} />
+                                                            Profile
+                                                        </button>
+                                                        <button
+                                                            onClick={() => onOpenModes?.()}
+                                                            className={`h-8 px-2.5 rounded-md flex items-center gap-1.5 text-[12px] font-medium text-text-secondary hover:text-text-primary transition-colors ${isLight ? 'hover:bg-black/8' : 'hover:bg-white/10'}`}
+                                                        >
+                                                            <LayoutGrid size={14} />
+                                                            Modes
+                                                        </button>
+                                                    </>
+                                                )}
+	                                        </div>
+	                                    </div>
+	                                    <div className={`flex-1 min-h-0 ${selectedMeeting ? 'overflow-hidden' : 'p-5 overflow-y-auto custom-scrollbar'}`}>
+                                        {selectedMeeting ? (
+                                            <TranscriptTimeline
+                                                key={selectedMeeting.id}
+                                                meeting={selectedMeeting}
+                                                isLight={isLight}
+                                            />
+                                        ) : (
+                                            <div className={`h-full min-h-[360px] rounded-lg border border-border-subtle ${isLight ? 'bg-bg-secondary' : 'bg-bg-primary'} flex flex-col`}>
+                                                <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
+                                                    <div className={`mb-5 h-12 w-12 rounded-xl flex items-center justify-center ${isMeetingActive ? 'bg-emerald-500/12 text-emerald-400' : 'bg-blue-500/12 text-blue-400'}`}>
+                                                        {isMeetingActive ? <Clock size={22} /> : <img src={icon} alt="" className="w-6 h-6 object-contain" />}
+                                                    </div>
+                                                    <h2 className="text-[24px] font-semibold tracking-tight text-text-primary">
+                                                        {isMeetingActive ? 'Meeting is live' : 'Ready to start'}
+                                                    </h2>
+                                                    <p className="mt-2 max-w-[430px] text-[13px] leading-relaxed text-text-secondary">
+                                                        {isMeetingActive
+                                                            ? 'Return to the overlay to follow the transcript, ask for answers, and capture screen context.'
+                                                            : 'Start a session when your audio, model, and permissions look right in the context panel.'}
+                                                    </p>
+                                                    <motion.button
+                                                        onClick={() => {
+                                                            if (isMeetingActive) {
+                                                                window.electronAPI?.setWindowMode?.('overlay', true);
+                                                                analytics.trackCommandExecuted('resume_meeting_from_launcher');
+                                                            } else {
+                                                                onStartMeeting();
+                                                                analytics.trackCommandExecuted('start_natively_cta');
+                                                            }
+                                                        }}
+                                                        whileHover={{ scale: 1.01 }}
+                                                        whileTap={{ scale: 0.99 }}
+                                                        className={`mt-7 h-12 px-6 rounded-lg inline-flex items-center gap-2 text-[14px] font-semibold text-white shadow-sm ${
+                                                            isMeetingActive
+                                                                ? 'bg-emerald-600 hover:bg-emerald-500'
+                                                                : 'bg-blue-600 hover:bg-blue-500'
+                                                        } transition-colors`}
+                                                    >
+                                                        {isMeetingActive ? (
+                                                            <>
+                                                                <span className="relative flex h-2 w-2">
+                                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-60" />
+                                                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+                                                                </span>
+                                                                Return to overlay
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <img src={icon} alt="" className="w-4 h-4 object-contain brightness-0 invert" />
+                                                                Start Natively
+                                                            </>
+                                                        )}
+                                                    </motion.button>
+                                                </div>
+
+                                                <div className="border-t border-border-subtle px-5 py-4 grid grid-cols-3 gap-3">
+                                                    <div className={`rounded-md border border-border-subtle px-3 py-2 ${isLight ? 'bg-bg-elevated' : 'bg-bg-secondary'}`}>
+                                                        <p className="text-[10px] uppercase tracking-wide font-semibold text-text-tertiary">AI</p>
+                                                        <p className="mt-1 text-[12px] font-medium text-text-primary truncate">{readiness.aiProvider} · {readiness.aiModel}</p>
+                                                    </div>
+                                                    <div className={`rounded-md border border-border-subtle px-3 py-2 ${isLight ? 'bg-bg-elevated' : 'bg-bg-secondary'}`}>
+                                                        <p className="text-[10px] uppercase tracking-wide font-semibold text-text-tertiary">Speech</p>
+                                                        <p className="mt-1 text-[12px] font-medium text-text-primary truncate">{readiness.sttProvider}</p>
+                                                    </div>
+                                                    <div className={`rounded-md border border-border-subtle px-3 py-2 ${isLight ? 'bg-bg-elevated' : 'bg-bg-secondary'}`}>
+                                                        <p className="text-[10px] uppercase tracking-wide font-semibold text-text-tertiary">Window</p>
+                                                        <p className="mt-1 text-[12px] font-medium text-text-primary truncate">{isDetectable ? 'Detectable' : 'Undetectable'}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </main>
+
+                                <aside className={`min-h-0 border-l border-border-subtle flex flex-col ${isLight ? 'bg-bg-secondary' : 'bg-bg-primary'}`}>
+                                    <div className="h-[54px] px-4 flex items-center justify-between border-b border-border-subtle">
+                                        <div>
+                                            <h2 className="text-[13px] font-semibold text-text-primary">Context</h2>
+                                            <p className="text-[11px] text-text-tertiary">Session inputs</p>
+                                        </div>
+                                        <button
+                                            onClick={refreshReadiness}
+                                            title="Refresh context"
+                                            className={`h-8 w-8 rounded-md flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors ${isLight ? 'hover:bg-black/8' : 'hover:bg-white/10'}`}
+                                        >
+                                            <RefreshCw size={15} className={readiness.loading ? 'animate-spin text-blue-400' : ''} />
+                                        </button>
+                                    </div>
+                                    <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4 space-y-4">
+                                        <section className={`rounded-lg border border-border-subtle ${isLight ? 'bg-bg-elevated' : 'bg-bg-secondary'} p-3`}>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <h3 className="text-[12px] font-semibold text-text-primary">Readiness</h3>
+                                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                                                    missingReadinessCount > 0
+                                                        ? 'bg-amber-500/12 text-amber-500'
+                                                        : 'bg-emerald-500/12 text-emerald-500'
+                                                }`}>
+                                                    {missingReadinessCount > 0 ? 'Needs setup' : 'Ready'}
+                                                </span>
+                                            </div>
+                                            <div className="space-y-2">
+                                                {readinessRows.map((item) => {
+                                                    const Icon = item.icon;
+                                                    const isReady = item.status === 'ready';
+                                                    const isWarning = item.status === 'warning';
+                                                    return (
+                                                        <div key={item.key} className="flex items-start gap-2.5 py-1.5">
+                                                            <div className={`mt-0.5 h-7 w-7 shrink-0 rounded-md flex items-center justify-center ${
+                                                                isReady
+                                                                    ? 'bg-emerald-500/10 text-emerald-500'
+                                                                    : isWarning
+                                                                        ? 'bg-sky-500/10 text-sky-500'
+                                                                        : 'bg-amber-500/10 text-amber-500'
+                                                            }`}>
+                                                                <Icon size={14} strokeWidth={2.2} />
+                                                            </div>
+                                                            <div className="min-w-0 flex-1">
+                                                                <div className="flex items-center justify-between gap-2">
+                                                                    <p className="text-[11px] font-semibold text-text-secondary">{item.label}</p>
+                                                                    <button
+                                                                        onClick={() => onOpenSettings(item.tab)}
+                                                                        title={`Open ${item.label} settings`}
+                                                                        className={`h-5 w-5 shrink-0 rounded-md flex items-center justify-center text-text-tertiary hover:text-text-primary ${isLight ? 'hover:bg-black/8' : 'hover:bg-white/10'}`}
+                                                                    >
+                                                                        <Settings size={11.5} strokeWidth={2.3} />
+                                                                    </button>
+                                                                </div>
+                                                                <p className="mt-0.5 text-[12px] text-text-primary truncate">{item.value}</p>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </section>
+
+                                        <section className={`rounded-lg border border-border-subtle ${isLight ? 'bg-bg-elevated' : 'bg-bg-secondary'} p-3`}>
+                                            <div className="flex items-center justify-between mb-3">
+                                                <h3 className="text-[12px] font-semibold text-text-primary">Calendar</h3>
+                                                {isCalendarConnected && (
+                                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-500 font-semibold">
+                                                        Linked
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {isCalendarConnected ? (
+                                                <div className="space-y-2">
+                                                    {visibleMeetings.length > 0 ? (
+                                                        visibleMeetings.map((event) => {
+                                                            const start = new Date(event.startTime);
+                                                            const time = start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                                                            return (
+                                                                <div key={event.id} className={`rounded-md px-2.5 py-2 ${isLight ? 'bg-bg-secondary' : 'bg-bg-primary'}`}>
+                                                                    <p className="text-[12px] font-medium text-text-primary truncate">{event.title}</p>
+                                                                    <p className="mt-0.5 text-[11px] text-text-tertiary">{time}</p>
+                                                                </div>
+                                                            );
+                                                        })
+                                                    ) : (
+                                                        <p className="text-[12px] text-text-tertiary">No upcoming events.</p>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-3">
+                                                    <p className="text-[12px] text-text-secondary leading-relaxed">Link Google Calendar to see upcoming meetings beside your session controls.</p>
+                                                    <ConnectCalendarButton
+                                                        className="w-full justify-center"
+                                                        onConnect={() => {
+                                                            setIsCalendarConnected(true);
+                                                            refreshReadiness();
+                                                        }}
+                                                    />
+                                                </div>
+                                            )}
+                                        </section>
+
+                                        <section className={`rounded-lg border border-border-subtle ${isLight ? 'bg-bg-elevated' : 'bg-bg-secondary'} p-3`}>
+                                            <h3 className="text-[12px] font-semibold text-text-primary mb-2">Quick actions</h3>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <button onClick={() => onOpenSettings('audio')} className={`h-8 rounded-md text-[12px] font-medium text-text-secondary hover:text-text-primary ${isLight ? 'bg-bg-secondary hover:bg-black/8' : 'bg-bg-primary hover:bg-white/8'}`}>Audio</button>
+                                                <button onClick={() => onOpenSettings('ai-providers')} className={`h-8 rounded-md text-[12px] font-medium text-text-secondary hover:text-text-primary ${isLight ? 'bg-bg-secondary hover:bg-black/8' : 'bg-bg-primary hover:bg-white/8'}`}>Models</button>
+                                                <button onClick={() => onOpenSettings('calendar')} className={`h-8 rounded-md text-[12px] font-medium text-text-secondary hover:text-text-primary ${isLight ? 'bg-bg-secondary hover:bg-black/8' : 'bg-bg-primary hover:bg-white/8'}`}>Calendar</button>
+                                                <button onClick={toggleDetectable} className={`h-8 rounded-md text-[12px] font-medium text-text-secondary hover:text-text-primary ${isLight ? 'bg-bg-secondary hover:bg-black/8' : 'bg-bg-primary hover:bg-white/8'}`}>{isDetectable ? 'Hide' : 'Show'}</button>
+                                            </div>
+                                        </section>
+
+                                        {ollamaPullStatus !== 'idle' && (
+                                            <section className={`rounded-lg border border-border-subtle ${isLight ? 'bg-bg-elevated' : 'bg-bg-secondary'} p-3`}>
+                                                <div className="flex items-center gap-2">
+                                                    {ollamaPullStatus === 'downloading' ? (
+                                                        <DownloadCloud size={14} className="text-blue-400 animate-pulse shrink-0" />
+                                                    ) : ollamaPullStatus === 'complete' ? (
+                                                        <CheckCircle size={14} className="text-emerald-400 shrink-0" />
+                                                    ) : (
+                                                        <AlertCircle size={14} className="text-red-400 shrink-0" />
+                                                    )}
+                                                    <span className="text-[12px] font-medium text-text-secondary truncate">
+                                                        {ollamaPullStatus === 'downloading' ? `Setting up AI memory... ${ollamaPullPercent}%` : ollamaPullMessage}
+                                                    </span>
+                                                </div>
+                                                {ollamaPullStatus === 'downloading' && (
+                                                    <div className="w-full h-[3px] bg-white/10 rounded-full mt-2 overflow-hidden">
+                                                        <div className="h-full bg-blue-500 rounded-full transition-all duration-300" style={{ width: `${ollamaPullPercent}%` }} />
+                                                    </div>
+                                                )}
+                                            </section>
+                                        )}
+                                    </div>
+                                </aside>
+                            </div>
+                </motion.div>
             </div>
 
 
