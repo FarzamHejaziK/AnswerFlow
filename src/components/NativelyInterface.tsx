@@ -53,7 +53,7 @@ import {
   finalizeStreamingByIntentMessages,
   prepareIntelligenceStreamPlaceholderMessages,
 } from '../lib/overlayMessagePersistence.mjs';
-import { parseWhatToAnswerFormat } from '../lib/whatToAnswerFormat.mjs';
+import { formatWhatToAnswerMessage, parseWhatToAnswerFormat } from '../lib/whatToAnswerFormat.mjs';
 import {
   resolveCgEventTapAvailable,
   shouldBlockFocus as shouldBlockStealthFocus,
@@ -213,9 +213,14 @@ const HighlightedCode = React.memo(
     prev.code === next.code && prev.lang === next.lang && prev.appearance === next.appearance,
 );
 
-// PERF: MessageRow renders one chat-message bubble. Module-scope + React.memo
-// so a parent re-render does NOT re-render every prior message — only the
-// streaming row whose `msg` reference actually changed gets reconciled.
+// SURFACE MAP: MessageRow renders typed/manual user messages and AI answer
+// rows. It does not render the rolling transcript strip, overlay shell
+// controls, audio warning, quick-action buttons, input bar, or model selector.
+// Those live in the "LIVE OVERLAY SHELL" render section below.
+//
+// PERF: Module-scope + React.memo so a parent re-render does NOT re-render
+// every prior message — only the streaming row whose `msg` reference actually
+// changed gets reconciled.
 //
 // The combination of (this memo) + (HighlightedCode memo) + (rAF token
 // coalescing) + (hoisted ReactMarkdown components) eliminates the streaming
@@ -306,9 +311,14 @@ const MessageRow = React.memo(
     renderMessageText,
   }: MessageRowProps) {
     const isCodeMsg = msg.role === 'system' && (msg.isCode || msg.text.includes('```'));
-    // bubbleMaxClass: user bubbles are tighter; system + code use the same width.
+    const isWhatToAnswer = msg.intent === 'what_to_answer';
+    // Keep AI answers full-width so long LLM responses are not visually cramped.
     const bubbleMaxClass =
-      msg.role === 'user' ? 'max-w-[72%] px-[13.6px] py-[10.2px]' : 'max-w-[85%] px-4 py-3';
+      isWhatToAnswer || isCodeMsg
+        ? 'w-full px-4 py-3'
+        : msg.role === 'user'
+          ? 'max-w-[72%] px-[13.6px] py-[10.2px]'
+          : 'max-w-[85%] px-4 py-3';
     return (
       <div className="w-full" {...(isCodeMsg ? { 'data-code-msg': 'true' } : {})}>
         <div
@@ -1889,7 +1899,7 @@ const NativelyInterface: React.FC<NativelyInterfaceProps> = ({
       window.electronAPI.onIntelligenceSuggestedAnswer((data) => {
         setIsProcessing(false);
         pinAnswerPanel();
-        finalizeStreamingByIntent('what_to_answer', data.answer);
+        finalizeStreamingByIntent('what_to_answer', formatWhatToAnswerMessage(data.answer, data.question));
       }),
     );
 
@@ -3121,7 +3131,11 @@ Provide only the answer, nothing else.`;
         // Split text by code blocks (Handle unclosed blocks at EOF)
         const parts = answerText.split(/(```[\s\S]*?(?:```|$))/g);
         const renderedAnswer = (
-          <div className="text-[14px] leading-relaxed overlay-text-primary">
+          <div
+            className={`text-[13px] leading-relaxed ${
+              isLightTheme ? 'text-slate-900' : 'text-blue-50'
+            }`}
+          >
             {parts.map((part, i) => {
               if (part.startsWith('```')) {
                 // Robust matching: handles unclosed blocks for streaming (```...$)
@@ -3177,49 +3191,26 @@ Provide only the answer, nothing else.`;
             })}
           </div>
         );
+        const responseCardTone = isLightTheme
+          ? 'bg-blue-50 border-blue-100 text-slate-900'
+          : 'bg-blue-500/10 border-blue-400/20 text-blue-50';
+        const promptDividerTone = isLightTheme ? 'border-blue-200/80' : 'border-blue-300/20';
+        const promptCaptionTone = isLightTheme ? 'text-blue-700/70' : 'text-blue-200/75';
 
         return (
-          <div
-            className={`rounded-lg p-3 my-1 border ${subtleSurfaceClass}`}
-            style={appearance.subtleStyle}
-          >
-            <div
-              className={`flex items-center gap-2 mb-3 font-semibold text-xs uppercase tracking-wide ${isLightTheme ? 'text-emerald-700' : 'text-emerald-300'}`}
-            >
-              <span>Say this</span>
-            </div>
+          <div className={`rounded-lg border px-3.5 py-3 my-1 max-h-none overflow-visible ${responseCardTone}`}>
             {structuredAnswer ? (
               <div className="space-y-3">
-                <div
-                  className={`rounded-md border px-3 py-2 ${
-                    isLightTheme
-                      ? 'bg-sky-50/80 border-sky-200/80 text-sky-950'
-                      : 'bg-sky-500/10 border-sky-400/20 text-sky-50'
-                  }`}
-                >
-                  <div
-                    className={`mb-1 text-[10px] font-semibold uppercase tracking-wide ${
-                      isLightTheme ? 'text-sky-700' : 'text-sky-300'
-                    }`}
-                  >
+                <div className={`pb-2 border-b ${promptDividerTone}`}>
+                  <div className={`text-[10px] font-semibold uppercase ${promptCaptionTone}`}>
                     Question
                   </div>
-                  <div className="text-[13px] leading-snug whitespace-pre-wrap">
+                  <div className="mt-1 text-[12px] leading-relaxed whitespace-pre-wrap">
                     {structuredAnswer.question}
                   </div>
                 </div>
-                <div
-                  className={`rounded-md border px-3 py-2 ${
-                    isLightTheme
-                      ? 'bg-emerald-50/70 border-emerald-200/80'
-                      : 'bg-emerald-500/10 border-emerald-400/20'
-                  }`}
-                >
-                  <div
-                    className={`mb-1 text-[10px] font-semibold uppercase tracking-wide ${
-                      isLightTheme ? 'text-emerald-700' : 'text-emerald-300'
-                    }`}
-                  >
+                <div>
+                  <div className={`mb-1 text-[10px] font-semibold uppercase ${promptCaptionTone}`}>
                     Answer
                   </div>
                   {renderedAnswer}
@@ -4061,8 +4052,7 @@ Provide only the answer, nothing else.`;
     sttInterviewerProvider,
     sttNotConfigured,
   );
-  const showAnswerPanel =
-    messages.length > 0 || isManualRecording || isProcessing || answerPanelPinned;
+  const showAiResponsePanel = messages.length > 0 || isManualRecording || isProcessing || answerPanelPinned;
   // Only surface the STT pill for genuine problems (config error, failed, or a
   // dropped-then-reconnecting channel). The neutral 'awaiting-audio' state
   // ("Listening for audio…") is intentionally suppressed — it added a pill on
@@ -4090,6 +4080,10 @@ Provide only the answer, nothing else.`;
   const hasStatusPill =
     !!activeModeLabel || shouldShowSttSummaryPill || showVisionPill || !!llmPrivacyLabel;
   const statusPillBaseClass = `flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-medium shadow-sm backdrop-blur-xl ${isLightTheme ? 'bg-white/55 border-black/10' : 'bg-black/20 border-white/10'}`;
+  const shouldShowRollingTranscript =
+    (showTranscript && rollingTranscript) ||
+    interviewerSttIndicatorStatus === 'failed' ||
+    sttUserStatus === 'failed';
 
   const copyDiagnostics = async () => {
     const version = import.meta.env.VITE_APP_VERSION || 'unknown';
@@ -4154,6 +4148,9 @@ Provide only the answer, nothing else.`;
               appearance={appearance}
               onLogoClick={() => window.electronAPI?.setWindowMode?.('launcher')}
             />
+            {/* LIVE OVERLAY SHELL: this is the visible page during an interview.
+                It owns the mode pill, audio warning, rolling transcript strip,
+                AI response panel, quick actions, input bar, and model selector. */}
             <motion.div
               ref={shellRef}
               className={`relative max-w-full backdrop-blur-2xl border rounded-[24px] overflow-hidden flex flex-col draggable-area overlay-shell-surface ${overlayPanelClass}`}
@@ -4463,9 +4460,7 @@ Provide only the answer, nothing else.`;
                   for hard failures. Reconnecting/awaiting-audio status is owned by
                   the top status pill, so the bar no longer mounts for those (which
                   also avoids an empty bar / duplicated status text). */}
-              {(showTranscript && rollingTranscript) ||
-              interviewerSttIndicatorStatus === 'failed' ||
-              sttUserStatus === 'failed' ? (
+              {shouldShowRollingTranscript ? (
                 <RollingTranscript
                   text={showTranscript ? rollingTranscript : ''}
                   isActive={isInterviewerSpeaking}
@@ -4484,13 +4479,13 @@ Provide only the answer, nothing else.`;
                 />
               ) : null}
 
-              {/* Chat History - Only show if there are messages OR active states */}
-              {showAnswerPanel && (
+              {/* AI RESPONSE PANEL: AI/manual answers only. Live transcription stays in RollingTranscript. */}
+              {showAiResponsePanel && (
                 <motion.div
                   ref={scrollContainerRef}
                   className="relative z-10 flex-1 overflow-y-auto p-4 space-y-3 no-drag isolate"
                   layout={false}
-                  style={{ scrollbarWidth: 'none', maxHeight: scrollMaxH }}
+                  style={{ scrollbarWidth: 'thin', maxHeight: scrollMaxH }}
                 >
                   {/* Every row spans the full inner width of the scroll
                                         container, which itself rides the shell's animated

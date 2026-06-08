@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseWhatToAnswerFormat } from '../whatToAnswerFormat.mjs';
+import { formatWhatToAnswerMessage, parseWhatToAnswerFormat } from '../whatToAnswerFormat.mjs';
 
 test('parseWhatToAnswerFormat splits Question and Answer labels', () => {
   const parsed = parseWhatToAnswerFormat(`Question: explaining how I handle ambiguity
@@ -28,4 +28,32 @@ I start by separating user impact from root cause, then I narrow the blast radiu
 
 test('parseWhatToAnswerFormat returns null for plain answers', () => {
   assert.equal(parseWhatToAnswerFormat('I would clarify the outcome first.'), null);
+});
+
+test('formatWhatToAnswerMessage wraps a plain answer with the IPC question', () => {
+  const formatted = formatWhatToAnswerMessage(
+    'I would clarify the outcome first.',
+    'How do you handle ambiguity?',
+  );
+
+  assert.deepEqual(parseWhatToAnswerFormat(formatted), {
+    question: 'How do you handle ambiguity?',
+    answer: 'I would clarify the outcome first.',
+  });
+});
+
+test('formatWhatToAnswerMessage keeps already structured answers unchanged', () => {
+  const answer = `Question: how I debug incidents
+
+Answer:
+I separate impact from cause.`;
+
+  assert.equal(formatWhatToAnswerMessage(answer, 'ignored question'), answer);
+});
+
+test('formatWhatToAnswerMessage does not show placeholder questions', () => {
+  assert.equal(
+    formatWhatToAnswerMessage('I would ask a clarifying question.', 'What to Answer'),
+    'I would ask a clarifying question.',
+  );
 });

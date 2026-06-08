@@ -4,3 +4,5 @@ export interface ParsedWhatToAnswerFormat {
 }
 
 export function parseWhatToAnswerFormat(text: string): ParsedWhatToAnswerFormat | null;
+
+export function formatWhatToAnswerMessage(answer: string, question?: string): string;

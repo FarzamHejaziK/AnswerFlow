@@ -205,6 +205,10 @@ ANSWER SHAPE: ${intentResult.answerShape}
                 tokenBudget: Math.max(1000, assemblerBudget),
                 systemPrompt: finalPromptOverride,
             });
+            console.log('[WhatToAnswerRaw] input', JSON.stringify({
+                systemPrompt: finalPromptOverride,
+                userMessage: packet.userMessage,
+            }));
 
             if (MEASURE) tPrompt = performance.now();
             if (MEASURE) tStream = performance.now();

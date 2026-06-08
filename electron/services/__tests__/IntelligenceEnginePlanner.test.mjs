@@ -104,6 +104,32 @@ test('handleSuggestionTrigger routes answerable questions to what-to-say executo
   assert.equal(session.getFullUsage()[0].answer, answer);
 });
 
+test('runWhatShouldISay uses latest interim interviewer text as question fallback', async () => {
+  const { engine, session } = await makeEngine();
+  const interimQuestion = 'Can you walk me through how you would debug this production issue?';
+  session.handleTranscript({
+    speaker: 'interviewer',
+    text: interimQuestion,
+    timestamp: Date.now(),
+    final: false,
+    confidence: 0.9,
+  });
+
+  const answer = 'I would start by separating customer impact from root cause.';
+  engine.whatToAnswerLLM = {
+    async *generateStream() {
+      yield answer;
+    },
+  };
+  const finals = [];
+  engine.on('suggested_answer', (value, question) => finals.push({ value, question }));
+
+  await engine.runWhatShouldISay(undefined, 0.8, undefined, { skipCooldown: true });
+
+  assert.deepEqual(finals, [{ value: answer, question: interimQuestion }]);
+  assert.equal(session.getFullUsage()[0].question, interimQuestion);
+});
+
 test('handleSuggestionTrigger routes incomplete technical restatements to clarify executor', async () => {
   const { engine } = await makeEngine();
   let clarifyCalls = 0;

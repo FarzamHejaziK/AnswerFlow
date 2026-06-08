@@ -12,3 +12,22 @@ export function parseWhatToAnswerFormat(text) {
 
   return { question, answer };
 }
+
+const PLACEHOLDER_QUESTIONS = new Set([
+  'what to answer',
+  'inferred',
+  'code hint',
+  'brainstorming approaches',
+]);
+
+export function formatWhatToAnswerMessage(answer, question) {
+  const cleanAnswer = typeof answer === 'string' ? answer.trim() : '';
+  if (!cleanAnswer || parseWhatToAnswerFormat(cleanAnswer)) return cleanAnswer;
+
+  const cleanQuestion = typeof question === 'string' ? question.trim() : '';
+  if (!cleanQuestion || PLACEHOLDER_QUESTIONS.has(cleanQuestion.toLowerCase())) {
+    return cleanAnswer;
+  }
+
+  return `Question: ${cleanQuestion}\n\nAnswer:\n${cleanAnswer}`;
+}

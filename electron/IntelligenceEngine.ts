@@ -15,9 +15,16 @@ import { DynamicActionEngine } from './services/dynamic-actions/DynamicActionEng
 import { DynamicAction } from './services/dynamic-actions/DynamicAction';
 import { ScreenContext } from './services/screen/ScreenContextService';
 import { buildPreparedTranscriptContext as assemblePreparedTranscriptContext } from './utils/preparedTranscriptContext';
+import { logWhatToAnswerFormatDiagnostics } from './llm/WhatToAnswerFormatDiagnostics';
 
 // Mode types
 export type IntelligenceMode = 'idle' | 'assist' | 'what_to_say' | 'follow_up' | 'recap' | 'clarify' | 'manual' | 'follow_up_questions' | 'code_hint' | 'brainstorm';
+
+const WHAT_TO_ANSWER_PLACEHOLDER_QUESTIONS = new Set([
+    'what to answer',
+    'inferred',
+    'inferred from context',
+]);
 
 // Refinement intent detection (refined to avoid false positives)
 function detectRefinementIntent(userText: string): { isRefinement: boolean; intent: string } {
@@ -197,6 +204,20 @@ export class IntelligenceEngine extends EventEmitter {
         // Containment: fraction of setA (speculative/partial) covered by setB (final)
         const containment = setA.size > 0 ? intersection / setA.size : 0;
         return Math.max(jaccard, containment * 0.9); // weight containment slightly below pure Jaccard
+    }
+
+    private static resolveWhatToAnswerQuestion(
+        explicitQuestion?: string,
+        lastInterviewerTurn?: string | null,
+        lastInterimText?: string | null,
+    ): string {
+        for (const candidate of [explicitQuestion, lastInterviewerTurn, lastInterimText]) {
+            const cleaned = typeof candidate === 'string' ? candidate.trim() : '';
+            if (cleaned && !WHAT_TO_ANSWER_PLACEHOLDER_QUESTIONS.has(cleaned.toLowerCase())) {
+                return cleaned;
+            }
+        }
+        return 'What to Answer';
     }
 
     private static hasQuestionSignal(text: string): boolean {
@@ -560,8 +581,22 @@ export class IntelligenceEngine extends EventEmitter {
                     return answer || "Could you repeat that? I want to make sure I address your question properly.";
                 }
                 if (answer) {
+                    const fallbackQuestion = IntelligenceEngine.resolveWhatToAnswerQuestion(
+                        question,
+                        this.session.getLastInterviewerTurn(),
+                        this.session.getLastInterimInterviewer()?.text,
+                    );
+                    console.log('[WhatToAnswerRaw] output', JSON.stringify({
+                        path: 'answer_llm_fallback',
+                        question: fallbackQuestion,
+                        answer,
+                    }));
+                    logWhatToAnswerFormatDiagnostics(answer, fallbackQuestion, {
+                        path: 'answer_llm_fallback',
+                        confidence,
+                    });
                     this.session.addAssistantMessage(answer);
-                    this.emit('suggested_answer', answer, question || 'inferred', confidence);
+                    this.emit('suggested_answer', answer, fallbackQuestion, confidence);
                 }
                 this.setMode('idle');
                 return answer || "Could you repeat that? I want to make sure I address your question properly.";
@@ -682,17 +717,34 @@ export class IntelligenceEngine extends EventEmitter {
                 return fullAnswer;
             }
 
+            const finalQuestion = IntelligenceEngine.resolveWhatToAnswerQuestion(
+                question,
+                lastInterviewerTurn,
+                lastInterim?.text,
+            );
+            console.log('[WhatToAnswerRaw] output', JSON.stringify({
+                path: 'what_to_answer',
+                intent: intentResult.intent,
+                question: finalQuestion,
+                answer: fullAnswer,
+            }));
+            logWhatToAnswerFormatDiagnostics(fullAnswer, finalQuestion, {
+                path: 'what_to_answer',
+                intent: intentResult.intent,
+                confidence,
+            });
+
             this.emit('suggested_answer_token', fullAnswer, question || 'inferred', confidence);
             this.session.addAssistantMessage(fullAnswer);
 
             this.session.pushUsage({
                 type: 'assist',
                 timestamp: Date.now(),
-                question: question || 'What to Answer',
+                question: finalQuestion,
                 answer: fullAnswer
             });
 
-            this.emit('suggested_answer', fullAnswer, question || 'What to Answer', confidence);
+            this.emit('suggested_answer', fullAnswer, finalQuestion, confidence);
 
             this.setMode('idle');
             return fullAnswer;
