@@ -100,6 +100,52 @@ test('runWhatShouldISay forwards dynamic action promptInstruction to WhatToAnswe
   assert.equal(calls[0].promptInstruction, 'DYNAMIC_ACTION_PROMPT_INSTRUCTION_SENTINEL');
 });
 
+test('runWhatShouldISay forwards saved interview preparation context to WhatToAnswerLLM', async () => {
+  const { engine, session } = await makeEngine();
+  const calls = [];
+
+  session.setMeetingMetadata({
+    source: 'manual',
+    interviewContext: {
+      workspaceStateId: 'workspace_test',
+      contextMarkdown: '## Interview Prep Conversation\nUser: Use my fraud platform resume story.',
+      selectedDocumentIds: ['doc_resume'],
+    },
+  });
+
+  session.addTranscript({
+    speaker: 'interviewer',
+    text: 'Tell me about a project you are proud of.',
+    timestamp: Date.now(),
+    final: true,
+  });
+
+  engine.whatToAnswerLLM = {
+    async *generateStream(...args) {
+      calls.push({
+        cleanedTranscript: args[0],
+        promptInstruction: args[5],
+        activeSkill: args[6],
+        abortSignal: args[7],
+        interviewPreparationContext: args[8],
+      });
+      yield 'I would talk about the fraud platform project.';
+    }
+  };
+
+  const answer = await engine.runWhatShouldISay(undefined, 0.8, undefined, {
+    skipCooldown: true,
+  });
+
+  assert.equal(answer, 'I would talk about the fraud platform project.');
+  assert.equal(calls.length, 1);
+  assert.match(calls[0].cleanedTranscript, /proud of/);
+  assert.match(calls[0].interviewPreparationContext, /fraud platform resume story/);
+  assert.equal(calls[0].promptInstruction, undefined);
+  assert.equal(calls[0].activeSkill, undefined);
+  assert.ok(calls[0].abortSignal instanceof AbortSignal);
+});
+
 test('runWhatShouldISay works without screenContext', async () => {
   const { engine, session } = await makeEngine();
   let receivedScreenContext = 'unset';

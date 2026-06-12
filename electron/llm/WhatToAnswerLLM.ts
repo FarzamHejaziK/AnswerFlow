@@ -55,6 +55,7 @@ export class WhatToAnswerLLM {
         // intent and mixing custom-mode reference docs in just dilutes it.
         activeSkill?: { id: string; name: string; promptBlock: string },
         abortSignal?: AbortSignal,
+        interviewPreparationContext?: string,
     ): AsyncGenerator<string> {
         const MEASURE = process.env.MEASURE_LATENCY === 'true';
         let tStart = 0, tIntent = 0, tTemporal = 0, tMode = 0, tTrunc = 0, tPrompt = 0, tStream = 0;
@@ -157,6 +158,7 @@ ANSWER SHAPE: ${intentResult.answerShape}
                 + estimateTokens(intentContext || '')
                 + estimateTokens(modeContextBlock)
                 + estimateTokens(customNotesContext)
+                + estimateTokens(interviewPreparationContext || '')
                 + estimateTokens(screenContext?.ocrText || '')
                 + estimateTokens((temporalContext?.previousResponses || []).join('\n'));
             const reservedForFit =
@@ -202,6 +204,7 @@ ANSWER SHAPE: ${intentResult.answerShape}
                 intentContext,
                 retrievedModeContext: modeContextBlock || undefined,
                 customContext: customNotesContext || undefined,
+                interviewPreparationContext: interviewPreparationContext || undefined,
                 tokenBudget: Math.max(1000, assemblerBudget),
                 systemPrompt: finalPromptOverride,
             });
@@ -223,6 +226,7 @@ ANSWER SHAPE: ${intentResult.answerShape}
             const packetScopes: ProviderDataScope[] = [];
             if (modeContextBlock) packetScopes.push('reference_files');
             if (customNotesContext) packetScopes.push('profile_history');
+            if (interviewPreparationContext) packetScopes.push('profile_history');
             if (temporalContext?.hasRecentResponses && temporalContext.previousResponses.length > 0) packetScopes.push('profile_history');
             for await (const token of this.llmHelper.streamChat(packet.userMessage, imagePaths, undefined, finalPromptOverride, true, true, packetScopes, abortSignal)) {
                 if (MEASURE) {

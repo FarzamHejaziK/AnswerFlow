@@ -1888,6 +1888,11 @@ a,
   outline-offset: 2px;
 }
 
+.session-chat-composer textarea:focus,
+.session-chat-composer textarea:focus-visible {
+  outline: none;
+}
+
 /* Utilities for sidebar layout */
 .app-sidebar {
   background: rgba(0, 0, 0, 0.2);

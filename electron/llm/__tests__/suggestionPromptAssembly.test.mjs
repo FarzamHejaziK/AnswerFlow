@@ -195,6 +195,56 @@ test('WhatToAnswerLLM sends dynamic action prompt instruction as user content', 
   assert.doesNotMatch(systemPromptOverride, /DYNAMIC_ACTION_PROMPT_INSTRUCTION_SENTINEL/);
 });
 
+test('WhatToAnswerLLM sends interview preparation context as user content', async () => {
+  const { WhatToAnswerLLM } = require(distWhatToAnswerPath);
+  const calls = [];
+
+  const llmHelper = {
+    getCapabilities: () => ({ outputBudgetTokens: 2000 }),
+    getPromptTier: () => 'full',
+    fitContextForCurrentModel: text => text,
+    async *streamChat(...args) {
+      calls.push(args);
+      yield 'ok';
+    },
+  };
+  const modesManager = {
+    getActiveModeSystemPromptSuffix: () => '',
+    buildRetrievedActiveModeContextBlock: () => '',
+    buildActiveModeContextBlock: () => '',
+  };
+
+  const answerer = new WhatToAnswerLLM(llmHelper, modesManager);
+  const chunks = [];
+  for await (const chunk of answerer.generateStream(
+    'CURRENT_TRANSCRIPT_SENTINEL',
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    'PREP_CONTEXT_SENTINEL: use the fraud platform story from the selected resume'
+  )) {
+    chunks.push(chunk);
+  }
+
+  assert.deepEqual(chunks, ['ok']);
+  assert.equal(calls.length, 1);
+
+  const [message, _imagePaths, context, systemPromptOverride, ignoreKnowledgeMode, skipModeInjection, packetScopes] = calls[0];
+  assert.equal(context, undefined);
+  assert.equal(ignoreKnowledgeMode, true);
+  assert.equal(skipModeInjection, true);
+  assert.match(message, /<interview_preparation_context trust_level="user_provided_context">/);
+  assert.match(message, /PREP_CONTEXT_SENTINEL: use the fraud platform story/);
+  assert.match(message, /CURRENT_TRANSCRIPT_SENTINEL/);
+  assert.ok(message.indexOf('PREP_CONTEXT_SENTINEL') < message.indexOf('CURRENT_TRANSCRIPT_SENTINEL'));
+  assert.doesNotMatch(systemPromptOverride, /PREP_CONTEXT_SENTINEL/);
+  assert.ok(packetScopes.includes('profile_history'));
+});
+
 test('WhatToAnswerLLM can answer from imported Markdown custom instruction context', async () => {
   const { WhatToAnswerLLM } = require(distWhatToAnswerPath);
   const calls = [];

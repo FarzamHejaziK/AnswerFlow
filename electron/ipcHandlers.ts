@@ -9,6 +9,8 @@ import { AudioDevices } from './audio/AudioDevices';
 import { DatabaseManager } from './db/DatabaseManager'; // Import Database Manager
 import { AppState } from './main';
 import { CodexCliService } from './services/CodexCliService';
+import { InterviewContextDocsManager } from './services/InterviewContextDocsManager';
+import { InterviewWorkspaceStateManager } from './services/InterviewWorkspaceStateManager';
 import { PhoneMirrorService } from './services/PhoneMirrorService';
 import { SettingsManager } from './services/SettingsManager';
 import { SkillsManager } from './services/SkillsManager';
@@ -523,7 +525,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       message: string,
       imagePaths?: string[],
       context?: string,
-      options?: { skipSystemPrompt?: boolean; ignoreKnowledgeMode?: boolean },
+      options?: { skipSystemPrompt?: boolean; ignoreKnowledgeMode?: boolean; systemPrompt?: string; recordInSession?: boolean },
     ) => {
       let myController: AbortController | null = null;
       try {
@@ -540,6 +542,7 @@ export function initializeIpcHandlers(appState: AppState): void {
         _chatStreamsBySender.set(senderId, { streamId: myStreamId, controller: myController });
 
         const intelligenceManager = appState.getIntelligenceManager();
+        const recordInSession = options?.recordInSession !== false;
 
         // Identity probe short-circuit — bypasses the LLM entirely so small models can't
         // reframe the canned reply or misfire it on coding asks (the original bug).
@@ -551,14 +554,16 @@ export function initializeIpcHandlers(appState: AppState): void {
               ? "I'm Natively, an AI assistant."
               : null;
           if (identityHit) {
-            intelligenceManager.addTranscript(
-              { text: message, speaker: 'user', timestamp: Date.now(), final: true },
-              true,
-            );
-            try {
-              PhoneMirrorService.getInstance().publishUserMessage(String(myStreamId), message);
-            } catch (_) {
-              /* noop */
+            if (recordInSession) {
+              intelligenceManager.addTranscript(
+                { text: message, speaker: 'user', timestamp: Date.now(), final: true },
+                true,
+              );
+              try {
+                PhoneMirrorService.getInstance().publishUserMessage(String(myStreamId), message);
+              } catch (_) {
+                /* noop */
+              }
             }
             // Guard against a newer chat stream having taken over while we were computing
             // the canned reply — matches the protection the LLM path uses around its token
@@ -571,18 +576,20 @@ export function initializeIpcHandlers(appState: AppState): void {
             }
             event.sender.send('gemini-stream-token', identityHit);
             event.sender.send('gemini-stream-done');
-            try {
-              PhoneMirrorService.getInstance().publishToken(String(myStreamId), identityHit);
-            } catch (_) {
-              /* noop */
+            if (recordInSession) {
+              try {
+                PhoneMirrorService.getInstance().publishToken(String(myStreamId), identityHit);
+              } catch (_) {
+                /* noop */
+              }
+              try {
+                PhoneMirrorService.getInstance().publishDone(String(myStreamId), identityHit);
+              } catch (_) {
+                /* noop */
+              }
+              intelligenceManager.addAssistantMessage(identityHit);
+              intelligenceManager.logUsage('chat', message, identityHit);
             }
-            try {
-              PhoneMirrorService.getInstance().publishDone(String(myStreamId), identityHit);
-            } catch (_) {
-              /* noop */
-            }
-            intelligenceManager.addAssistantMessage(identityHit);
-            intelligenceManager.logUsage('chat', message, identityHit);
             return null;
           }
         }
@@ -601,21 +608,25 @@ export function initializeIpcHandlers(appState: AppState): void {
         }
 
         // Now add USER message to IntelligenceManager (after context snapshot)
-        intelligenceManager.addTranscript(
-          {
-            text: message,
-            speaker: 'user',
-            timestamp: Date.now(),
-            final: true,
-          },
-          true,
-        );
+        if (recordInSession) {
+          intelligenceManager.addTranscript(
+            {
+              text: message,
+              speaker: 'user',
+              timestamp: Date.now(),
+              final: true,
+            },
+            true,
+          );
+        }
 
         // Mirror to phone (no-op if PhoneMirrorService isn't running).
-        try {
-          PhoneMirrorService.getInstance().publishUserMessage(String(myStreamId), message);
-        } catch (_) {
-          /* noop */
+        if (recordInSession) {
+          try {
+            PhoneMirrorService.getInstance().publishUserMessage(String(myStreamId), message);
+          } catch (_) {
+            /* noop */
+          }
         }
 
         let fullResponse = '';
@@ -631,9 +642,11 @@ export function initializeIpcHandlers(appState: AppState): void {
         // framing in HARD_SYSTEM_PROMPT/ASSIST_MODE_PROMPT that was causing coding
         // questions to be answered with "At Aetherbot AI, I was responsible for..."
         // (resume hijack via CONTEXT_INTELLIGENCE_LAYER's "you ARE the user").
-        const systemPromptOverride: string | undefined = options?.skipSystemPrompt
-          ? ''
-          : CHAT_MODE_PROMPT;
+        const systemPromptOverride: string | undefined = options?.systemPrompt !== undefined
+          ? options.systemPrompt
+          : options?.skipSystemPrompt
+            ? ''
+            : CHAT_MODE_PROMPT;
 
         try {
           // USE streamChat which handles routing. Pass the abort signal as
@@ -661,10 +674,12 @@ export function initializeIpcHandlers(appState: AppState): void {
               return null;
             }
             event.sender.send('gemini-stream-token', token);
-            try {
-              PhoneMirrorService.getInstance().publishToken(String(myStreamId), token);
-            } catch (_) {
-              /* noop */
+            if (recordInSession) {
+              try {
+                PhoneMirrorService.getInstance().publishToken(String(myStreamId), token);
+              } catch (_) {
+                /* noop */
+              }
             }
             fullResponse += token;
           }
@@ -672,14 +687,16 @@ export function initializeIpcHandlers(appState: AppState): void {
           // Final check: only send done if we are still the active stream
           if (_chatStreamsBySender.get(senderId)?.streamId === myStreamId) {
             event.sender.send('gemini-stream-done');
-            try {
-              PhoneMirrorService.getInstance().publishDone(String(myStreamId), fullResponse);
-            } catch (_) {
-              /* noop */
+            if (recordInSession) {
+              try {
+                PhoneMirrorService.getInstance().publishDone(String(myStreamId), fullResponse);
+              } catch (_) {
+                /* noop */
+              }
             }
 
             // Update IntelligenceManager with ASSISTANT message after completion
-            if (fullResponse.trim().length > 0) {
+            if (recordInSession && fullResponse.trim().length > 0) {
               intelligenceManager.addAssistantMessage(fullResponse);
               // Log Usage for streaming chat
               intelligenceManager.logUsage('chat', message, fullResponse);
@@ -2941,6 +2958,70 @@ export function initializeIpcHandlers(appState: AppState): void {
   // Meeting Lifecycle Handlers
   // ==========================================
 
+  safeHandle('interview-docs:list', async () => {
+    return InterviewContextDocsManager.getInstance().listDocuments();
+  });
+
+  safeHandle('interview-docs:delete', async (_, id: string) => {
+    const success = InterviewContextDocsManager.getInstance().deleteDocument(id);
+    return { success };
+  });
+
+  safeHandle('interview-docs:update-metadata', async (_, id: string, metadata: any) => {
+    try {
+      const document = InterviewContextDocsManager.getInstance().updateDocumentMetadata(id, {
+        contextKind: metadata?.contextKind,
+        contextDescription: metadata?.contextDescription,
+      });
+      return document ? { success: true, document } : { success: false, error: 'Document not found.' };
+    } catch (error: any) {
+      return { success: false, error: error?.message || 'Could not update document details.' };
+    }
+  });
+
+  safeHandle('interview-docs:upload', async () => {
+    try {
+      const result: any = await dialog.showOpenDialog({
+        properties: ['openFile'],
+        filters: [
+          { name: 'Interview Documents', extensions: ['md', 'markdown', 'txt', 'pdf', 'docx'] },
+          { name: 'All Files', extensions: ['*'] },
+        ],
+      });
+
+      if (result.canceled || !result.filePaths.length) {
+        return { success: false, cancelled: true };
+      }
+
+      const document = await InterviewContextDocsManager.getInstance().addDocumentFromFile(result.filePaths[0]);
+      return { success: true, document };
+    } catch (error: any) {
+      console.error('[IPC] interview-docs:upload error:', error?.message ?? error);
+      return {
+        success: false,
+        error: error?.message || 'Could not read the selected document.',
+      };
+    }
+  });
+
+  safeHandle('interview-workspace:get-by-id', async (_, id: string) => {
+    return InterviewWorkspaceStateManager.getInstance().getWorkspace(id);
+  });
+
+  safeHandle('interview-workspace:get-by-meeting', async (_, meetingId: string) => {
+    return InterviewWorkspaceStateManager.getInstance().getWorkspaceForMeeting(meetingId);
+  });
+
+  safeHandle('interview-workspace:save', async (_, state: any) => {
+    try {
+      const saved = InterviewWorkspaceStateManager.getInstance().saveWorkspace(state);
+      return { success: true, state: saved };
+    } catch (error: any) {
+      console.error('[IPC] interview-workspace:save error:', error?.message ?? error);
+      return { success: false, error: error?.message || 'Could not save interview workspace.' };
+    }
+  });
+
   safeHandle('start-meeting', async (event, metadata?: any) => {
     try {
       await appState.startMeeting(metadata);
@@ -2972,7 +3053,13 @@ export function initializeIpcHandlers(appState: AppState): void {
   });
 
   safeHandle('update-meeting-title', async (_, { id, title }: { id: string; title: string }) => {
-    return DatabaseManager.getInstance().updateMeetingTitle(id, title);
+    const success = DatabaseManager.getInstance().updateMeetingTitle(id, title);
+    if (success) {
+      BrowserWindow.getAllWindows().forEach((win) => {
+        if (!win.isDestroyed()) win.webContents.send('meetings-updated');
+      });
+    }
+    return success;
   });
 
   safeHandle('update-meeting-summary', async (_, { id, updates }: { id: string; updates: any }) => {
@@ -4545,10 +4632,11 @@ export function initializeIpcHandlers(appState: AppState): void {
     if (process.platform === 'darwin') {
       const mic = systemPreferences.getMediaAccessStatus('microphone');
       const screen = systemPreferences.getMediaAccessStatus('screen');
-      return { microphone: mic, screen, platform: 'darwin' };
+      const accessibility = systemPreferences.isTrustedAccessibilityClient(false) ? 'granted' : 'denied';
+      return { microphone: mic, screen, accessibility, platform: 'darwin' };
     }
     // Windows/Linux: no TCC — permissions handled by OS at install/first-use time
-    return { microphone: 'granted', screen: 'granted', platform: process.platform };
+    return { microphone: 'granted', screen: 'granted', accessibility: 'granted', platform: process.platform };
   });
 
   safeHandle('permissions:request-mic', async () => {

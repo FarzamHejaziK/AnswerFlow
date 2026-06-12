@@ -5,6 +5,8 @@ import { getCodexCliModelDisplayName, STANDARD_CLOUD_MODELS, prettifyModelId } f
 interface ModelSelectorProps {
     currentModel: string;
     onSelectModel: (model: string) => void;
+    placement?: 'up' | 'down';
+    className?: string;
 }
 
 interface CustomProvider {
@@ -13,7 +15,7 @@ interface CustomProvider {
     curlCommand: string;
 }
 
-export const ModelSelector: React.FC<ModelSelectorProps> = ({ currentModel, onSelectModel }) => {
+export const ModelSelector: React.FC<ModelSelectorProps> = ({ currentModel, onSelectModel, placement = 'up', className = '' }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<'cloud' | 'custom' | 'local'>('cloud');
     const [ollamaModels, setOllamaModels] = useState<string[]>([]);
@@ -111,14 +113,14 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({ currentModel, onSe
         <div className="relative" ref={dropdownRef}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-bg-input hover:bg-bg-elevated border border-border-subtle rounded-lg transition-colors text-xs font-medium text-text-primary max-w-[150px]"
+                className={`flex items-center gap-2 px-3 py-1.5 bg-bg-input hover:bg-bg-elevated border border-border-subtle rounded-lg transition-colors text-xs font-medium text-text-primary max-w-[150px] ${className}`}
             >
                 <span className="truncate">{getModelDisplayName(currentModel)}</span>
                 <ChevronDown size={14} className={`shrink-0 text-text-secondary transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {isOpen && (
-                <div className="absolute bottom-full left-0 mb-2 w-64 bg-bg-item-surface border border-border-subtle rounded-xl shadow-xl z-50 overflow-hidden animated fadeIn">
+                <div className={`absolute left-0 w-64 bg-bg-item-surface border border-border-subtle rounded-xl shadow-xl z-50 overflow-hidden animated fadeIn ${placement === 'down' ? 'top-full mt-2' : 'bottom-full mb-2'}`}>
                     {/* Tabs */}
                     <div className="flex border-b border-border-subtle bg-bg-input/50">
                         <button

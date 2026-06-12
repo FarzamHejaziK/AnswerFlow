@@ -49,6 +49,28 @@ export class WindowHelper {
     this.appState = appState;
   }
 
+  private attachWindowDiagnostics(label: string, win: BrowserWindow): void {
+    win.on('unresponsive', () => {
+      console.error(`[WindowHelper] ${label} window became unresponsive`);
+    });
+
+    win.webContents.on('render-process-gone', (_event, details) => {
+      console.error(
+        `[WindowHelper] ${label} render-process-gone reason=${details.reason} exitCode=${details.exitCode}`,
+      );
+    });
+
+    win.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
+      console.error(`[WindowHelper] ${label} did-fail-load: ${errorCode} ${errorDescription}`);
+    });
+
+    win.webContents.on('console-message', (_event, level, message, line, sourceId) => {
+      if (level < 2) return;
+      const source = sourceId ? `${sourceId}:${line}` : `line ${line}`;
+      console.error(`[WindowHelper] ${label} renderer console[${level}] ${source}: ${message}`);
+    });
+  }
+
   private getDisplayWorkArea(bounds?: Electron.Rectangle): Electron.Rectangle {
     if (bounds) {
       return screen.getDisplayMatching(bounds).workArea;
@@ -267,6 +289,7 @@ export class WindowHelper {
 
     try {
       this.launcherWindow = new BrowserWindow(launcherSettings);
+      this.attachWindowDiagnostics('launcher', this.launcherWindow);
       console.log('[WindowHelper] BrowserWindow created successfully');
     } catch (err) {
       console.error('[WindowHelper] Failed to create BrowserWindow:', err);
@@ -281,10 +304,6 @@ export class WindowHelper {
       .catch((e) => {
         console.error('[WindowHelper] Failed to load URL:', e);
       });
-
-    this.launcherWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-      console.error(`[WindowHelper] did-fail-load: ${errorCode} ${errorDescription}`);
-    });
 
     // if (isDev) {
     //   this.launcherWindow.webContents.openDevTools({ mode: 'detach' }); // DEBUG: Open DevTools
@@ -335,6 +354,7 @@ export class WindowHelper {
     };
 
     this.overlayWindow = new BrowserWindow(overlaySettings);
+    this.attachWindowDiagnostics('overlay', this.overlayWindow);
     this.overlayWindow.setContentProtection(this.contentProtection);
 
     // Register the overlay as the sole recipient of CGEventTap captured-key

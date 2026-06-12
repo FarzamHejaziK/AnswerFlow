@@ -132,9 +132,13 @@ export const useShortcuts = () => {
 
     // Load from Main Process on mount
     useEffect(() => {
+        const api = window.electronAPI;
+
         const fetchKeybinds = async () => {
+            if (!api?.getKeybinds) return;
+
             try {
-                const keybinds = await window.electronAPI.getKeybinds();
+                const keybinds = await api.getKeybinds();
                 mapBackendToFrontend(keybinds);
             } catch (error) {
                 console.error('Failed to fetch keybinds:', error);
@@ -144,11 +148,11 @@ export const useShortcuts = () => {
         fetchKeybinds();
 
         // Listen for updates
-        const unsubscribe = window.electronAPI.onKeybindsUpdate((keybinds) => {
+        const unsubscribe = api?.onKeybindsUpdate?.((keybinds) => {
             mapBackendToFrontend(keybinds);
         });
 
-        return unsubscribe;
+        return unsubscribe || (() => {});
     }, [mapBackendToFrontend]);
 
     // Function to update a specific shortcut
@@ -192,7 +196,7 @@ export const useShortcuts = () => {
             default: break;
         }
 
-        if (backendId) {
+        if (backendId && window.electronAPI?.setKeybind) {
             try {
                 await window.electronAPI.setKeybind(backendId, accelerator);
             } catch (error) {
@@ -203,6 +207,11 @@ export const useShortcuts = () => {
 
     // Function to reset all shortcuts to defaults
     const resetShortcuts = useCallback(async () => {
+        if (!window.electronAPI?.resetKeybinds) {
+            setShortcuts(buildDefaultShortcuts());
+            return;
+        }
+
         try {
             const defaults = await window.electronAPI.resetKeybinds();
             mapBackendToFrontend(defaults);
