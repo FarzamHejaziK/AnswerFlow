@@ -6,6 +6,7 @@ import { SessionTracker, TranscriptSegment } from './SessionTracker';
 import { LLMHelper } from './LLMHelper';
 import { DatabaseManager, Meeting } from './db/DatabaseManager';
 import { GROQ_TITLE_PROMPT, GROQ_SUMMARY_JSON_PROMPT } from './llm';
+import { InterviewWorkspaceStateManager } from './services/InterviewWorkspaceStateManager';
 import { buildPostCallEnhancements } from './services/post-call/PostCallWorkflow';
 import { telemetryService } from './services/telemetry/TelemetryService';
 import type { ProviderDataScopePolicy } from './llm/ProviderRouter';
@@ -104,6 +105,18 @@ export class MeetingPersistence {
         const seconds = ((durationMs % 60000) / 1000).toFixed(0);
         const durationStr = `${minutes}:${Number(seconds) < 10 ? '0' : ''}${seconds}`;
 
+        const workspaceStateId = metadataSnapshot?.interviewContext?.workspaceStateId;
+        if (workspaceStateId) {
+            try {
+                InterviewWorkspaceStateManager.getInstance().attachMeeting(workspaceStateId, meetingId, {
+                    contextMarkdown: metadataSnapshot?.interviewContext?.contextMarkdown,
+                    selectedDocumentIds: metadataSnapshot?.interviewContext?.selectedDocumentIds,
+                });
+            } catch (workspaceErr: any) {
+                console.warn('[MeetingPersistence] Failed to attach workspace state to meeting:', workspaceErr?.message);
+            }
+        }
+
         const placeholder: Meeting = {
             id: meetingId,
             title: "Processing...",
@@ -139,12 +152,22 @@ export class MeetingPersistence {
         data: { transcript: TranscriptSegment[], usage: any[], startTime: number, durationMs: number, context: string },
         meetingId: string,
         // BUG-04 fix: accept metadata snapshot so calendar info is not lost after session.reset()
-        metadata?: { title?: string; calendarEventId?: string; source?: 'manual' | 'calendar' } | null,
+        metadata?: {
+            title?: string;
+            calendarEventId?: string;
+            source?: 'manual' | 'calendar';
+            interviewContext?: {
+                workspaceStateId?: string;
+                contextMarkdown?: string;
+                selectedDocumentIds?: string[];
+                messageCount?: number;
+            };
+        } | null,
         // BUG-MODE-BLEEDING fix: accept mode snapshot so async summary uses the mode that was
         // active when meeting stopped, not whatever mode is active when async processing runs.
         modeSnapshot?: { id: string; name: string; templateType: string } | null
     ): Promise<void> {
-        let title = "Untitled Session";
+        let title = "Untitled Interview";
         let summaryData: { overview?: string; actionItems: string[], keyPoints: string[], sections?: Array<{ title: string; bullets: string[] }> } = { actionItems: [], keyPoints: [] };
         // Phase 6 — post_call_summary lifecycle telemetry. Wrapped in try/catch
         // around track calls so a telemetry sink fault never breaks persistence.

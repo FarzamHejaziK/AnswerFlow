@@ -50,6 +50,12 @@ export class SessionTracker {
         title?: string;
         calendarEventId?: string;
         source?: 'manual' | 'calendar';
+        interviewContext?: {
+            workspaceStateId?: string;
+            contextMarkdown?: string;
+            selectedDocumentIds?: string[];
+            messageCount?: number;
+        };
     } | null = null;
 
     // Full Session Tracking (Persisted)
@@ -93,6 +99,16 @@ export class SessionTracker {
 
     public getMeetingMetadata() {
         return this.currentMeetingMetadata;
+    }
+
+    public getInterviewPreparationContextMarkdown(): string {
+        const raw = this.currentMeetingMetadata?.interviewContext?.contextMarkdown;
+        const prepared = typeof raw === 'string' ? raw.trim() : '';
+        if (!prepared) return '';
+
+        return prepared.length > 30000
+            ? `${prepared.slice(0, 30000)}\n\n[...interview preparation context truncated...]`
+            : prepared;
     }
 
     public clearMeetingMetadata(): void {
@@ -404,14 +420,14 @@ export class SessionTracker {
      * Get formatted context string for LLM prompts
      */
     getFormattedContext(lastSeconds: number = 120): string {
-        return this.formatContextItems(this.getContext(lastSeconds));
+        return this.withInterviewPreparationContext(this.formatContextItems(this.getContext(lastSeconds)));
     }
 
     /**
      * Formatted context including rolling interim interviewer speech.
      */
     getFormattedContextWithInterim(lastSeconds: number = 120): string {
-        return this.formatContextItems(this.getContextWithInterim(lastSeconds));
+        return this.withInterviewPreparationContext(this.formatContextItems(this.getContextWithInterim(lastSeconds)));
     }
 
     private formatContextItems(items: ContextItem[]): string {
@@ -450,10 +466,18 @@ export class SessionTracker {
         // Prepend epoch summaries for full session context preservation
         if (this.transcriptEpochSummaries.length > 0) {
             const epochContext = this.transcriptEpochSummaries.join('\n---\n');
-            return `[SESSION HISTORY - EARLIER DISCUSSION]\n${epochContext}\n\n[RECENT TRANSCRIPT]\n${recentTranscript}`;
+            return this.withInterviewPreparationContext(`[SESSION HISTORY - EARLIER DISCUSSION]\n${epochContext}\n\n[RECENT TRANSCRIPT]\n${recentTranscript}`);
         }
 
-        return recentTranscript;
+        return this.withInterviewPreparationContext(recentTranscript);
+    }
+
+    private withInterviewPreparationContext(context: string): string {
+        const prepared = this.getInterviewPreparationContextMarkdown();
+        if (!prepared) return context;
+
+        const block = `<interview_preparation_context>\n${prepared}\n</interview_preparation_context>`;
+        return context?.trim() ? `${block}\n\n${context}` : block;
     }
 
     // ============================================

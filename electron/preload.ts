@@ -319,11 +319,28 @@ interface ElectronAPI {
   resetIntelligence: () => Promise<{ success: boolean; error?: string }>;
 
   // Meeting Lifecycle
+  interviewDocsList: () => Promise<Array<{
+    id: string;
+    name: string;
+    fileType: 'md' | 'txt' | 'pdf' | 'docx';
+    markdown: string;
+    contextKind?: 'resume' | 'project' | 'other';
+    contextDescription?: string;
+    sizeBytes: number;
+    createdAt: string;
+    updatedAt: string;
+  }>>;
+  interviewDocsUpload: () => Promise<{ success: boolean; document?: any; cancelled?: boolean; error?: string }>;
+  interviewDocsUpdateMetadata: (id: string, metadata: { contextKind: 'resume' | 'project' | 'other'; contextDescription?: string }) => Promise<{ success: boolean; document?: any; error?: string }>;
+  interviewDocsDelete: (id: string) => Promise<{ success: boolean; error?: string }>;
+  interviewWorkspaceGetById: (id: string) => Promise<any | null>;
+  interviewWorkspaceGetByMeeting: (meetingId: string) => Promise<any | null>;
+  interviewWorkspaceSave: (state: any) => Promise<{ success: boolean; state?: any; error?: string }>;
   startMeeting: (metadata?: any) => Promise<{ success: boolean; error?: string }>;
   endMeeting: () => Promise<{ success: boolean; error?: string }>;
   finalizeMicSTT: () => Promise<void>;
   getRecentMeetings: () => Promise<
-    Array<{ id: string; title: string; date: string; duration: string; summary: string }>
+    Array<{ id: string; title: string; date: string; duration: string; summary: string; isProcessed?: boolean }>
   >;
   getMeetingDetails: (id: string) => Promise<any>;
   updateMeetingTitle: (id: string, title: string) => Promise<boolean>;
@@ -478,7 +495,7 @@ interface ElectronAPI {
     message: string,
     imagePaths?: string[],
     context?: string,
-    options?: { skipSystemPrompt?: boolean; ignoreKnowledgeMode?: boolean },
+    options?: { skipSystemPrompt?: boolean; ignoreKnowledgeMode?: boolean; systemPrompt?: string; recordInSession?: boolean },
   ) => Promise<void>;
   onGeminiStreamToken: (callback: (token: string) => void) => () => void;
   onGeminiStreamDone: (callback: () => void) => () => void;
@@ -1357,6 +1374,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   // Meeting Lifecycle
+  interviewDocsList: () => ipcRenderer.invoke('interview-docs:list'),
+  interviewDocsUpload: () => ipcRenderer.invoke('interview-docs:upload'),
+  interviewDocsUpdateMetadata: (id: string, metadata: { contextKind: 'resume' | 'project' | 'other'; contextDescription?: string }) => ipcRenderer.invoke('interview-docs:update-metadata', id, metadata),
+  interviewDocsDelete: (id: string) => ipcRenderer.invoke('interview-docs:delete', id),
+  interviewWorkspaceGetById: (id: string) => ipcRenderer.invoke('interview-workspace:get-by-id', id),
+  interviewWorkspaceGetByMeeting: (meetingId: string) => ipcRenderer.invoke('interview-workspace:get-by-meeting', meetingId),
+  interviewWorkspaceSave: (state: any) => ipcRenderer.invoke('interview-workspace:save', state),
   startMeeting: (metadata?: any) => ipcRenderer.invoke('start-meeting', metadata),
   endMeeting: () => ipcRenderer.invoke('end-meeting'),
   finalizeMicSTT: () => ipcRenderer.invoke('finalize-mic-stt'),
@@ -1533,7 +1557,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     message: string,
     imagePaths?: string[],
     context?: string,
-    options?: { skipSystemPrompt?: boolean; ignoreKnowledgeMode?: boolean },
+    options?: { skipSystemPrompt?: boolean; ignoreKnowledgeMode?: boolean; systemPrompt?: string; recordInSession?: boolean },
   ) => ipcRenderer.invoke('gemini-chat-stream', message, imagePaths, context, options),
 
   onGeminiStreamToken: (callback: (token: string) => void) => {

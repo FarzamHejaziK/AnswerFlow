@@ -609,6 +609,10 @@ export class IntelligenceEngine extends EventEmitter {
             );
 
             const screenContext = options?.screenContext;
+            const interviewPreparationContext =
+                typeof this.session.getInterviewPreparationContextMarkdown === 'function'
+                    ? this.session.getInterviewPreparationContextMarkdown()
+                    : '';
             console.log('[IntelligenceEngine] Temporal RAG', {
                 previousResponses: temporalContext.previousResponses.length,
                 tone: temporalContext.toneSignals[0]?.type || 'neutral',
@@ -616,6 +620,7 @@ export class IntelligenceEngine extends EventEmitter {
                 imageCount: imagePaths?.length || 0,
                 screenOcrAvailable: Boolean(screenContext?.ocrText),
                 screenOcrTextLength: screenContext?.ocrText?.length || 0,
+                interviewPreparationContextLength: interviewPreparationContext.length,
             });
 
             const generationId = ++this.currentGenerationId;
@@ -633,6 +638,7 @@ export class IntelligenceEngine extends EventEmitter {
                 options?.promptInstruction,
                 options?.activeSkill,
                 streamAbortController.signal,
+                interviewPreparationContext,
             );
             let streamAborted = false;
 
