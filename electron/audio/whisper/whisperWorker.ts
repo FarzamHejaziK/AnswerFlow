@@ -143,7 +143,8 @@ parentPort.on('message', async (msg: any) => {
       const { pipeline, env } = await loadTransformers();
 
       env.cacheDir = msg.cacheDir;
-      env.allowRemoteModels = true;
+      env.localModelPath = msg.cacheDir;
+      env.allowRemoteModels = msg.allowRemoteModels !== false;
 
       // Apply hardware-specific execution providers (CoreML, DirectML, CUDA, CPU)
       const providers: string[] = msg.executionProviders ?? ['cpu'];
@@ -158,7 +159,7 @@ parentPort.on('message', async (msg: any) => {
         ? dtype
         : 'mixed:' + Object.entries(dtype).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${k}=${v}`).join(',');
 
-      console.log(`[WhisperWorker] Loading ${msg.modelId} | providers=${providers.join(',')} | dtype=${dtypeDesc}`);
+      console.log(`[WhisperWorker] Loading ${msg.modelId} | providers=${providers.join(',')} | dtype=${dtypeDesc} | remote=${env.allowRemoteModels}`);
 
       // HF Transformers fires progress_callback per *file* (encoder, decoder,
       // tokenizer, config…). The raw `data.progress` is per-file 0..100, which

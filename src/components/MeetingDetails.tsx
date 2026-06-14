@@ -303,7 +303,7 @@ ${meeting.detailedSummary.keyPoints?.map(item => `- ${item}`).join('\n') || 'Non
                                             ol: ({ node, ...props }) => <ol className="list-decimal ml-4 mb-2 space-y-1" {...props} />,
                                             li: ({ node, ...props }) => <li className="text-sm text-text-secondary" {...props} />,
                                             strong: ({ node, ...props }) => <strong className="font-semibold text-text-primary" {...props} />,
-                                            a: ({ node, ...props }) => <a className="text-blue-500 hover:underline" {...props} />,
+                                            a: ({ node, ...props }) => <a className="text-accent-primary hover:underline" {...props} />,
                                         }}
                                     >
                                         {meeting.detailedSummary?.overview || ''}
@@ -332,7 +332,7 @@ ${meeting.detailedSummary.keyPoints?.map(item => `- ${item}`).join('\n') || 'Non
                                         <ul className="space-y-3">
                                             {meeting.detailedSummary.actionItems.map((item, i) => (
                                                 <li key={actionItemKeys[i] ?? i} className="flex items-start gap-3 group">
-                                                    <div className="mt-2 w-1.5 h-1.5 rounded-full bg-text-secondary group-hover:bg-blue-500 transition-colors shrink-0" />
+                                                    <div className="mt-2 w-1.5 h-1.5 rounded-full bg-text-secondary group-hover:bg-accent-primary transition-colors shrink-0" />
                                                     <div className="flex-1">
                                                         <EditableTextBlock
                                                             initialValue={item}
@@ -447,7 +447,7 @@ ${meeting.detailedSummary.keyPoints?.map(item => `- ${item}`).join('\n') || 'Non
                                                 const tone = insight.severity === 'warning'
                                                     ? 'border-amber-400/40 bg-amber-500/5'
                                                     : insight.severity === 'opportunity'
-                                                        ? 'border-blue-400/40 bg-blue-500/5'
+                                                        ? 'border-[var(--accent-border)] bg-accent-secondary'
                                                         : 'border-text-tertiary/30 bg-transparent';
                                                 return (
                                                     <li key={insight.id} className={`p-3 rounded-[10px] border ${tone}`}>
@@ -572,7 +572,7 @@ ${meeting.detailedSummary.keyPoints?.map(item => `- ${item}`).join('\n') || 'Non
                                                                 ol: ({ node, ...props }) => <ol className="list-decimal ml-4 mb-2 space-y-1" {...props} />,
                                                                 li: ({ node, ...props }) => <li className="text-[15px] text-text-secondary font-normal" {...props} />,
                                                                 strong: ({ node, ...props }) => <span className="font-normal text-text-secondary" {...props} />,
-                                                                a: ({ node, ...props }: any) => <a className="text-blue-500 hover:underline" {...props} />,
+                                                                a: ({ node, ...props }: any) => <a className="text-accent-primary hover:underline" {...props} />,
                                                                 pre: ({ children }: any) => <div className="not-prose mb-4">{children}</div>,
                                                                 code: ({ node, inline, className, children, ...props }: any) => {
                                                                     const match = /language-(\w+)/.exec(className || '');

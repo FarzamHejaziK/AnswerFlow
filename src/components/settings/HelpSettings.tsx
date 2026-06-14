@@ -4,7 +4,7 @@ import {
     Command, Monitor, Mic, Settings, Zap, Key, User, Play, Image, ArrowUp, FileText, Sparkles, Search, ChevronUp, Copy,
     FileJson, MessageSquare, Briefcase, Eye, EyeOff, Ghost, ChevronDown, ChevronRight, HelpCircle, Upload, CheckCircle2,
     RefreshCw, Trash2, Check, ExternalLink, Volume2, Globe, Brain, Cpu, Calendar, Star, CreditCard, X, Pencil, Lightbulb,
-    SlidersHorizontal, PointerOff, ArrowRight, LayoutGrid, Smartphone, Wifi, Lock, DollarSign, Building2
+    SlidersHorizontal, PointerOff, ArrowRight, LayoutGrid, Smartphone, Wifi, Lock
 } from 'lucide-react';
 import { SiOpenai, SiGoogle } from 'react-icons/si';
 import { useShortcuts } from '../../hooks/useShortcuts';
@@ -26,7 +26,7 @@ const MOCK_BUTTONS = [
 ] as const;
 
 const colorMap: Record<string, string> = {
-    blue: 'bg-blue-500/10 text-blue-500 border-blue-500/25',
+    blue: 'bg-accent-secondary text-accent-primary border-border-subtle',
     indigo: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/25',
     amber: 'bg-amber-500/10 text-amber-500 border-amber-500/25',
     teal: 'bg-teal-500/10 text-teal-500 border-teal-500/25',
@@ -98,7 +98,7 @@ const MockAppInterface = () => {
                             </div>
                         </div>
                         <div className="flex justify-end">
-                            <div className="max-w-[72.25%] px-[13.6px] py-[10.2px] text-[14px] leading-relaxed whitespace-pre-wrap bg-blue-500/10 border border-blue-500/20 text-blue-500 rounded-[20px] rounded-tr-[4px] shadow-sm font-medium">
+                            <div className="max-w-[72.25%] px-[13.6px] py-[10.2px] text-[14px] leading-relaxed whitespace-pre-wrap bg-accent-secondary border border-border-muted text-accent-primary rounded-[20px] rounded-tr-[4px] shadow-sm font-medium">
                                 <span className="font-semibold text-emerald-500 block mb-1 text-[12px]">🎯 Answer</span>
                                 A good approach would be to use a hash map to cache intermediate results and reduce time complexity to O(N).
                             </div>
@@ -332,7 +332,7 @@ const MockSearchPillAnim = () => {
                         <Search size={14} className="text-text-tertiary" />
                     </div>
                     <div className="w-full bg-transparent pl-9 pr-4 py-2.5 text-[13px] text-text-primary outline-none flex items-center h-[38px]">
-                        <span className="opacity-90">System</span><motion.span animate={{ opacity: [1, 0, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="w-[1.5px] h-3.5 bg-blue-500 ml-[2px] inline-block" />
+                        <span className="opacity-90">System</span><motion.span animate={{ opacity: [1, 0, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="w-[1.5px] h-3.5 bg-accent-primary ml-[2px] inline-block" />
                     </div>
                 </div>
 
@@ -416,7 +416,7 @@ const MockPermissionsAnim = () => {
         <div className="flex justify-center flex-col items-center gap-4 py-8 bg-bg-card rounded-xl border border-border-subtle relative overflow-hidden h-[240px]">
             <div className="w-[300px] bg-bg-elevated border border-border-subtle rounded-xl shadow-lg p-4 z-10">
                 <div className="flex items-center gap-3 mb-4 border-b border-border-subtle pb-3">
-                    <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-full bg-accent-secondary text-accent-primary flex items-center justify-center">
                         <Monitor className="w-4 h-4" />
                     </div>
                     <div className="font-semibold text-sm text-text-primary">Screen Recording</div>
@@ -429,7 +429,7 @@ const MockPermissionsAnim = () => {
 
                     <motion.div
                         initial={false}
-                        animate={{ backgroundColor: toggled ? '#3b82f6' : 'var(--bg-toggle-switch)' }}
+                        animate={{ backgroundColor: toggled ? 'var(--accent-primary)' : 'var(--bg-toggle-switch)' }}
                         className="w-10 h-6 rounded-full relative shadow-inner"
                     >
                         <motion.div
@@ -566,7 +566,7 @@ const MockFastModeAnim = () => {
 
 const getBadgeStyle = (color?: string) => {
     switch (color) {
-        case 'blue': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
+        case 'blue': return 'bg-accent-secondary text-accent-primary border-border-subtle';
         case 'orange': return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
         case 'purple': return 'bg-purple-500/10 text-purple-500 border-purple-500/20';
         case 'teal': return 'bg-teal-500/10 text-teal-500 border-teal-500/20';
@@ -580,7 +580,7 @@ const getBadgeStyle = (color?: string) => {
 const getIconStyle = (color?: string, isSelectedItem: boolean = false) => {
     if (isSelectedItem) return 'bg-accent-primary text-white shadow-sm';
     switch (color) {
-        case 'blue': return 'bg-blue-500/10 text-blue-600';
+        case 'blue': return 'bg-accent-secondary text-accent-primary';
         case 'orange': return 'bg-orange-500/10 text-orange-600';
         case 'purple': return 'bg-purple-500/10 text-purple-600';
         case 'teal': return 'bg-teal-500/10 text-teal-600';
@@ -591,107 +591,26 @@ const getIconStyle = (color?: string, isSelectedItem: boolean = false) => {
     }
 };
 
-const MockProviderSelectionAnim = () => {
-    const isLight = useResolvedTheme() === 'light';
-    const [isOpen, setIsOpen] = useState(false);
-    useEffect(() => {
-        const i = setInterval(() => setIsOpen(o => !o), 4000);
-        return () => clearInterval(i);
-    }, []);
-
-    const options = [
-        { id: 'natively', label: 'Natively API', badge: '', recommended: true, desc: 'Ultra-fast low latency transcription', color: 'indigo', icon: <img src={nativelyIcon} className={`w-[14px] h-[14px] object-contain opacity-80 ${isLight ? '' : 'filter brightness-0 invert'}`} alt="Natively" /> },
-        { id: 'deepgram', label: 'Deepgram Nova-3', badge: 'Saved', recommended: false, desc: 'High-accuracy REST transcription', color: 'purple', icon: <Mic size={14} /> },
-        { id: 'google', label: 'Google Cloud', badge: 'Saved', recommended: false, desc: 'gRPC streaming via Service Account', color: 'blue', icon: <Mic size={14} /> },
-        { id: 'groq', label: 'Groq Whisper', badge: '', recommended: false, desc: 'Fast LPU whisper transcription', color: 'orange', icon: <Mic size={14} /> },
-        { id: 'azure', label: 'Azure Speech', badge: '', recommended: false, desc: 'Enterprise tier transcription', color: 'teal', icon: <Mic size={14} /> },
-        { id: 'soniox', label: 'Soniox', badge: '', recommended: false, desc: 'Medical-grade transcription', color: 'cyan', icon: <Mic size={14} /> },
-        { id: 'ibm', label: 'IBM Watson', badge: '', recommended: false, desc: 'Watson Speech-to-Text', color: 'indigo', icon: <Mic size={14} /> },
-    ];
-    const selected = options[0];
-
-    return (
-        <div className="flex justify-center flex-col items-center py-6 bg-bg-card rounded-xl border border-border-subtle relative overflow-hidden h-[300px]">
-            <div className="w-[340px] flex flex-col gap-2 relative z-10 font-sans">
-                <label className="text-xs font-medium text-text-secondary">Speech Provider</label>
-                <div className="relative">
-                    <button className={`w-full group bg-bg-input border border-border-subtle shadow-sm rounded-xl p-2.5 pr-3.5 flex items-center justify-between transition-all duration-200 outline-none ${isOpen ? 'ring-2 ring-accent-primary/20 border-accent-primary/50' : 'hover:shadow-md'}`}>
-                        <div className="flex items-center gap-3 overflow-hidden">
-                            <div className={`w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0 transition-all duration-300 transform ${getIconStyle(selected.color, false)}`}>
-                                {selected.icon}
-                            </div>
-                            <div className="min-w-0 flex-1 text-left">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[13px] font-semibold text-text-primary truncate leading-tight">{selected.label}</span>
-                                    {selected.badge && <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide ml-2 ${getBadgeStyle('green')}`}>{selected.badge}</span>}
-                                    {selected.recommended && <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide ml-2 ${getBadgeStyle(selected.color)}`}>Recommended</span>}
-                                </div>
-                                <span className="text-[11px] text-text-tertiary truncate block leading-tight mt-0.5">{selected.desc}</span>
-                            </div>
-                        </div>
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-text-tertiary transition-transform duration-300 group-hover:bg-bg-input ${isOpen ? 'rotate-180 bg-bg-input text-text-primary' : ''}`}>
-                            <ChevronDown size={14} strokeWidth={2.5} />
-                        </div>
-                    </button>
-
-                    <AnimatePresence>
-                        {isOpen && (
-                            <motion.div
-                                initial={{ opacity: 0, y: 4, scale: 0.98 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                exit={{ opacity: 0, y: 4, scale: 0.98 }}
-                                transition={{ duration: 0.15, ease: "easeOut" }}
-                                className={"absolute top-full left-0 w-full mt-2 backdrop-blur-xl rounded-xl shadow-2xl overflow-hidden z-20 bg-bg-elevated border border-border-subtle"}
-                            >
-                                <div className="max-h-[170px] overflow-hidden relative" style={{ WebkitMaskImage: 'linear-gradient(to bottom, black 85%, transparent 100%)' }}>
-                                    <motion.div
-                                        className="p-1.5 space-y-0.5"
-                                        animate={{ y: [0, 0, -110, -110, 0, 0] }}
-                                        transition={{ duration: 3.5, ease: "easeInOut", repeat: Infinity }}
-                                    >
-                                        {options.map((option) => {
-                                            const isSelected = selected.id === option.id;
-                                            return (
-                                                <div key={option.id} className={`w-full rounded-[10px] p-2 flex items-center gap-3 transition-all duration-200 group relative cursor-pointer ${isSelected ? 'bg-bg-item-active shadow-inner' : 'hover:bg-bg-item-hover'}`}>
-                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 ${isSelected ? 'scale-100' : 'scale-95 group-hover:scale-100'} ${getIconStyle(option.color, false)}`}>
-                                                        {option.icon}
-                                                    </div>
-                                                    <div className="flex-1 min-w-0 text-left">
-                                                        <div className="flex items-center justify-between mb-0.5">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className={"text-[13px] font-medium transition-colors text-text-primary"}>{option.label}</span>
-                                                                {option.badge && <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide ${getBadgeStyle('green')}`}>{option.badge}</span>}
-                                                                {option.recommended && <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide ${getBadgeStyle(option.color)}`}>Recommended</span>}
-                                                            </div>
-                                                            {isSelected && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}><Check size={14} className="text-accent-primary" strokeWidth={3} /></motion.div>}
-                                                        </div>
-                                                        <span className={"text-[11px] block truncate transition-colors text-text-secondary"}>{option.desc}</span>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </motion.div>
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+const MockProviderSelectionAnim = () => (
+    <div className="flex justify-center flex-col items-center py-6 bg-bg-card rounded-xl border border-border-subtle relative overflow-hidden h-[220px]">
+        <div className="w-[340px] rounded-xl border border-green-500/20 bg-green-500/10 p-4 font-sans">
+            <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0 bg-green-500/10 text-green-400">
+                    <Cpu size={18} />
+                </div>
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                        <span className="text-[14px] font-semibold text-text-primary truncate leading-tight">Moonshine Base</span>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide ${getBadgeStyle('green')}`}>Packaged</span>
+                    </div>
+                    <span className="text-[12px] text-text-secondary block leading-relaxed mt-1">
+                        Local transcription is built in. Configure only your microphone and meeting audio devices.
+                    </span>
                 </div>
             </div>
-
-            {/* Animated Cursor */}
-            <motion.div
-                className="absolute w-5 h-5 z-30 drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]"
-                animate={{
-                    x: isOpen ? 100 : 150,
-                    y: isOpen ? 80 : 30
-                }}
-                transition={{ duration: 1.2, ease: 'easeInOut' }}
-            >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="black" strokeWidth="1.5"><path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.42c.45 0 .67-.54.35-.85L6.35 3.35a.5.5 0 0 0-.85.35Z" /></svg>
-            </motion.div>
         </div>
-    );
-};
+    </div>
+);
 
 const MockApiKeyFlowAnim = () => {
     const [stage, setStage] = useState(0); // 0: enter key, 1: saving, 2: test, 3: connected, 4: trash
@@ -718,7 +637,7 @@ const MockApiKeyFlowAnim = () => {
                 <div className="flex items-center justify-between mt-2">
                     <div className="flex items-center gap-3">
                         <div className="text-xs bg-bg-input px-3 py-1.5 rounded-md flex items-center gap-2 border border-border-subtle shadow-sm">
-                            {stage === 2 ? <RefreshCw size={12} className="text-blue-500 animate-spin" /> : stage > 2 ? <Check size={12} className="text-green-500" /> : <Play size={12} className="text-text-tertiary" />}
+                            {stage === 2 ? <RefreshCw size={12} className="text-accent-primary animate-spin" /> : stage > 2 ? <Check size={12} className="text-green-500" /> : <Play size={12} className="text-text-tertiary" />}
                             <span className={stage > 2 ? "text-green-500" : "text-text-primary"}>
                                 {stage === 2 ? 'Testing...' : stage > 2 ? 'Connected' : 'Test API Key'}
                             </span>
@@ -817,7 +736,7 @@ const SetupGuide = () => {
         },
         {
             title: 'Set Up Audio',
-            desc: 'Open Settings → Audio and select Natively API, or paste a Deepgram or Google key.',
+            desc: 'Open Settings → Audio and choose the microphone plus the output device where your meeting audio plays.',
         },
         {
             title: 'Connect an AI Model',
@@ -825,7 +744,7 @@ const SetupGuide = () => {
         },
         {
             title: 'Personalize (Optional)',
-            desc: 'Drop your resume + JD in Profile Intelligence, link your Google Calendar, or pick a Mode tailored to your session.',
+            desc: 'Open Settings → Custom Instructions to add instructions, attach one local document, and set the AI persona.',
         },
         {
             title: "You're all set.",
@@ -888,9 +807,21 @@ const SetupGuide = () => {
         </div>
     );
 };
-export const HelpSettings: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate }) => {
+export const HelpSettings: React.FC = () => {
     const { shortcuts } = useShortcuts();
     const isLight = useResolvedTheme() === 'light';
+    const [floatingHelpRestored, setFloatingHelpRestored] = useState(false);
+
+    const restoreFloatingHelp = () => {
+        try {
+            localStorage.removeItem('natively_help_assistant_dismissed_v1');
+        } catch {
+            /* localStorage can fail in constrained environments */
+        }
+        window.dispatchEvent(new Event('natively-help-assistant-show'));
+        setFloatingHelpRestored(true);
+        window.setTimeout(() => setFloatingHelpRestored(false), 1600);
+    };
 
     // Kbd class applying theme variables natively
     const kbdClass = `px-1.5 py-0.5 rounded text-[10px] font-mono border inline-block bg-bg-item-surface border-border-subtle text-text-secondary shadow-sm`;
@@ -905,31 +836,17 @@ export const HelpSettings: React.FC<{ onNavigate?: (tab: string) => void }> = ({
                 <p className={`text-sm text-text-secondary mt-3 max-w-2xl`}>
                     Learn how to deeply configure Natively. Everything from providing the right API scopes to executing conversational interviews seamlessly is covered below.
                 </p>
+                <button
+                    type="button"
+                    onClick={restoreFloatingHelp}
+                    className={`mt-4 inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${isLight ? 'border-border-muted bg-bg-elevated text-text-primary hover:bg-bg-item-hover' : 'border-white/10 bg-white/6 text-text-primary hover:bg-white/10'}`}
+                >
+                    <HelpCircle size={14} />
+                    {floatingHelpRestored ? 'Floating help restored' : 'Show floating Help button'}
+                </button>
             </div>
 
             <div className="flex-1 space-y-2">
-
-                {onNavigate && (
-                    <div
-                        onClick={() => onNavigate('natively-api')}
-                        className="mb-8 group cursor-pointer bg-bg-card hover:bg-bg-item-surface border border-border-subtle hover:border-white transition-all rounded-2xl flex items-center justify-between p-4 px-5 shadow-sm hover:shadow-md"
-                    >
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 flex-1">
-                            <div className="w-10 h-10 shrink-0 rounded-xl bg-bg-item-surface border border-border-subtle flex items-center justify-center group-hover:bg-bg-elevated transition-colors">
-                                <Zap className="w-5 h-5 text-text-primary group-hover:text-white transition-colors" fill="currentColor" />
-                            </div>
-                            <div className="flex-1">
-                                <h4 className="text-[14px] font-bold text-text-primary mb-0.5">Want to skip the manual setup?</h4>
-                                <p className="text-[13px] text-text-secondary">
-                                    Use the <span className="font-semibold text-text-primary">Natively API</span> for an out-of-the-box experience. One-click zero-configuration usage.
-                                </p>
-                            </div>
-                        </div>
-                        <div className="hidden sm:flex self-center ml-4 px-3 py-1.5 rounded-lg bg-text-primary text-bg-main text-[11px] font-bold items-center gap-1.5 opacity-90 group-hover:opacity-100 transition-opacity whitespace-nowrap shrink-0">
-                            Enable Now <ArrowRight size={12} />
-                        </div>
-                    </div>
-                )}
 
                 <SetupGuide />
 
@@ -951,7 +868,7 @@ export const HelpSettings: React.FC<{ onNavigate?: (tab: string) => void }> = ({
 
                             <div className={`p-4 rounded-xl border bg-bg-item-surface border-border-subtle space-y-2`}>
                                 <h5 className={`font-semibold text-[13px] text-text-primary flex items-center gap-2`}>
-                                    <Mic size={14} className="text-blue-500" /> Microphone & Speaker Loopback Selection
+                                    <Mic size={14} className="text-accent-primary" /> Microphone & Speaker Loopback Selection
                                 </h5>
                                 <p className="text-[11px] opacity-90 leading-relaxed text-text-secondary">
                                     Natively can capture both what you say and what you hear globally. At the top of the Audio Settings, use the Dropdowns to explicitly select your hardware Input (e.g. your physical microphone) and Output capture (what the speakers play). By default, Natively utilizes the <strong>System Default</strong>, so audio routing will automatically follow your OS preferences.
@@ -1011,7 +928,7 @@ export const HelpSettings: React.FC<{ onNavigate?: (tab: string) => void }> = ({
                             <div className="flex flex-col gap-3 mt-6">
                                 <div className={`p-4 rounded-xl border bg-bg-item-surface border-border-subtle`}>
                                     <h4 className={`font-semibold text-sm mb-2 text-text-primary flex items-center gap-2`}>
-                                        <Mic className="w-4 h-4 text-blue-500" /> Microphone
+                                        <Mic className="w-4 h-4 text-accent-primary" /> Microphone
                                     </h4>
                                     <p className="text-xs opacity-90 mb-2">Required to capture what you say during meetings. Windows prompts the first time you start a meeting.</p>
                                     <p className="text-[11px] text-text-tertiary">Settings &gt; Privacy &gt; Microphone</p>
@@ -1021,19 +938,29 @@ export const HelpSettings: React.FC<{ onNavigate?: (tab: string) => void }> = ({
                     </div>
                 </AccordionSection>
 
-                <AccordionSection title="2. Audio STT Providers Setup (Microphone)" icon={<Mic className="w-4 h-4" />}>
+                <AccordionSection title="2. Audio Setup (Microphone and Meeting Audio)" icon={<Mic className="w-4 h-4" />}>
                     <div className="space-y-6">
-                        <p>Natively supports over 8 different Audio engines to transcribe what you hear and say. From the Audio tab in settings, use the overarching dropdown to switch the active engine.</p>
+                        <p>Natively uses the packaged local Moonshine Base model for transcription. In the Audio tab, configure the microphone and the output device where your meeting audio is playing.</p>
 
                         <MockProviderSelectionAnim />
 
                         <div className="space-y-4 pt-2">
-                            <h4 className="font-bold text-lg text-text-primary border-b border-border-subtle pb-2">API Keys & Testing</h4>
-                            <p className="text-xs text-text-secondary">We strongly recommend testing connections before jumping into a live meeting. The system shows successful pings or explicit errors if credits/permissions fail.</p>
+                            <h4 className="font-bold text-lg text-text-primary border-b border-border-subtle pb-2">Audio Checks</h4>
+                            <p className="text-xs text-text-secondary">Before a live interview, confirm the microphone and meeting output meters move when each side speaks.</p>
 
-                            <MockApiKeyFlowAnim />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div className="p-3 rounded-xl border bg-bg-item-surface border-border-subtle">
+                                    <h5 className="font-semibold text-sm text-text-primary mb-1">Microphone</h5>
+                                    <p className="text-xs text-text-secondary">Select the input device you will speak into and verify the input meter moves.</p>
+                                </div>
+                                <div className="p-3 rounded-xl border bg-bg-item-surface border-border-subtle">
+                                    <h5 className="font-semibold text-sm text-text-primary mb-1">Meeting Audio</h5>
+                                    <p className="text-xs text-text-secondary">Select the same output device used by Zoom, Teams, Meet, or the browser tab.</p>
+                                </div>
+                            </div>
                         </div>
 
+                        {false && (
                         <div className="space-y-3 pt-4">
                             <h4 className="font-bold text-lg text-text-primary border-b border-border-subtle pb-2">Specific Provider Setup</h4>
 
@@ -1119,6 +1046,7 @@ export const HelpSettings: React.FC<{ onNavigate?: (tab: string) => void }> = ({
                                 </p>
                             </div>
                         </div>
+                        )}
 
                     </div>
                 </AccordionSection>
@@ -1164,7 +1092,7 @@ export const HelpSettings: React.FC<{ onNavigate?: (tab: string) => void }> = ({
                                 <div className="p-3 rounded-xl border bg-bg-item-surface border-border-subtle hover:border-border-muted transition-colors">
                                     <h5 className="font-semibold text-sm text-text-primary flex justify-between items-center mb-1">
                                         <span className="flex items-center gap-2">
-                                            <SiGoogle className="w-3.5 h-3.5 text-blue-500" /> Google Gemini
+                                            <SiGoogle className="w-3.5 h-3.5 text-accent-primary" /> Google Gemini
                                         </span>
                                         <button onClick={() => { (window as any).electronAPI?.openExternal('https://aistudio.google.com/app/apikey') }} className="text-accent-primary hover:underline text-[10px] flex items-center gap-1"><ExternalLink size={10} /> Get Key</button>
                                     </h5>
@@ -1218,7 +1146,7 @@ export const HelpSettings: React.FC<{ onNavigate?: (tab: string) => void }> = ({
                                 </p>
                                 <div className="bg-bg-input p-3 rounded-lg border border-border-subtle space-y-2">
                                     <div className="text-[11px] font-mono text-text-secondary">
-                                        <div className="text-purple-400">curl</div> <span className="text-blue-400">https://openrouter.ai/api/v1/chat/completions</span> \
+                                        <div className="text-purple-400">curl</div> <span className="text-accent-primary">https://openrouter.ai/api/v1/chat/completions</span> \
                                         <br />  -H <span className="text-green-400">"Authorization: Bearer YOUR_KEY"</span> \
                                         <br /> ...
                                     </div>
@@ -1270,7 +1198,7 @@ export const HelpSettings: React.FC<{ onNavigate?: (tab: string) => void }> = ({
                                   : k
                                 );
                                 const t = {
-                                    blue: { bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/20', glow: 'group-hover:shadow-[0_0_0_1px_rgba(59,130,246,0.2),0_4px_12px_rgba(59,130,246,0.07)]' },
+                                    blue: { bg: 'bg-accent-secondary', text: 'text-accent-primary', border: 'border-border-muted', glow: 'group-hover:shadow-[0_0_0_1px_rgba(249,115,22,0.16),0_4px_12px_rgba(249,115,22,0.06)]' },
                                     violet: { bg: 'bg-violet-500/10', text: 'text-violet-400', border: 'border-violet-500/20', glow: 'group-hover:shadow-[0_0_0_1px_rgba(139,92,246,0.2),0_4px_12px_rgba(139,92,246,0.07)]' },
                                     teal: { bg: 'bg-teal-500/10', text: 'text-teal-400', border: 'border-teal-500/20', glow: 'group-hover:shadow-[0_0_0_1px_rgba(20,184,166,0.2),0_4px_12px_rgba(20,184,166,0.07)]' },
                                     emerald: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20', glow: 'group-hover:shadow-[0_0_0_1px_rgba(16,185,129,0.2),0_4px_12px_rgba(16,185,129,0.07)]' },
@@ -1331,7 +1259,7 @@ export const HelpSettings: React.FC<{ onNavigate?: (tab: string) => void }> = ({
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                             <div className="p-4 bg-bg-item-surface border border-border-subtle rounded-xl shadow-sm hover:border-border-muted transition-colors group">
                                 <h4 className="text-[14px] font-bold text-text-primary flex items-center gap-2 mb-2">
-                                    <FileText className="w-4 h-4 text-blue-500 group-hover:scale-110 transition-transform" /> Summary Execution
+                                    <FileText className="w-4 h-4 text-accent-primary group-hover:scale-110 transition-transform" /> Summary Execution
                                 </h4>
                                 <p className="text-[12px] text-text-secondary leading-relaxed">
                                     Natively fires a local background job as soon as the meeting finishes to compress the entire raw audio transcript into clean, formatted markdown representing structural overviews and explicit action items.
@@ -1485,104 +1413,74 @@ export const HelpSettings: React.FC<{ onNavigate?: (tab: string) => void }> = ({
 
 
 
-                <AccordionSection title="7. Pro Intelligence" icon={<Star className="w-4 h-4" />}>
+                <AccordionSection title="7. Custom Instructions" icon={<Star className="w-4 h-4" />}>
                     <div className="space-y-6">
-                        {/* Profile */}
                         <div>
                             <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl mb-4">
                                 <h4 className="text-[13px] font-semibold text-amber-500 flex items-center gap-2 mb-1">
-                                    <User size={14} /> Profile Intelligence System
+                                    <User size={14} /> Custom Instructions
                                 </h4>
                                 <p className="text-[11px] text-text-secondary leading-relaxed mb-0">
-                                    Instead of telling the AI who you are during every prompt, Profile Intelligence parses your background and universally injects it into all queries so it responds securely customized to your job role.
+                                    Use Custom Instructions to give the assistant durable context. You can type instructions directly, attach one local file, and set the AI Persona from one settings tab.
                                 </p>
                             </div>
 
                             <div className="grid md:grid-cols-2 gap-3">
                                 <div className="p-4 rounded-xl border bg-bg-item-surface border-border-subtle">
                                     <h4 className="font-semibold text-sm mb-2 text-text-primary flex items-center gap-2">
-                                        <Globe className="w-4 h-4 text-blue-500" /> Core Benefits
+                                        <Globe className="w-4 h-4 text-accent-primary" /> What It Controls
                                     </h4>
                                     <ul className="text-[11px] text-text-secondary space-y-1 list-disc pl-4">
-                                        <li><strong>Zero Context Prep:</strong> Model inherits your coding stack, experience, etc.</li>
-                                        <li><strong>Resume Parsing:</strong> Upload your PDF Resume for local extraction.</li>
-                                        <li><strong>Global Toggle:</strong> Enable <span className="text-amber-500 font-semibold">Profile Mode</span> via the Star button.</li>
+                                        <li><strong>Custom Instructions:</strong> durable context that the assistant should remember.</li>
+                                        <li><strong>Attached File:</strong> one MD, TXT, PDF, or DOCX file ingested locally into Markdown.</li>
+                                        <li><strong>AI Persona:</strong> the assistant's role, tone, and answer style.</li>
                                     </ul>
                                 </div>
 
-                                <div className="p-4 rounded-xl border bg-accent-primary/5 border-border-subtle">
+                                <div className="p-4 rounded-xl border bg-accent-secondary border-border-subtle">
                                     <h4 className="font-semibold text-sm mb-2 text-text-primary flex items-center gap-2">
-                                        <CreditCard className="w-4 h-4 text-accent-primary" /> Pro Requirement
+                                        <CreditCard className="w-4 h-4 text-accent-primary" /> How to Use
                                     </h4>
-                                    <p className="text-[11px] text-text-secondary mb-2">
-                                        This is a Natively Pro feature.
-                                    </p>
                                     <ol className="text-[11px] text-text-secondary space-y-1 list-decimal pl-4 mb-0">
-                                        <li>Get a License at <button onClick={() => { (window as any).electronAPI?.openExternal('https://natively.software/') }} className="text-accent-primary hover:underline font-semibold">natively.software</button></li>
-                                        <li>Drop your Resume PDF in the UI to activate injection.</li>
+                                        <li>Open <strong>Settings → Custom Instructions</strong>.</li>
+                                        <li>Write your instructions or choose a local file.</li>
+                                        <li>Set the AI Persona for voice and behavior.</li>
+                                        <li>Everything auto-saves.</li>
                                     </ol>
                                 </div>
                             </div>
                         </div>
 
                         <div className="border-t border-border-subtle pt-5 mt-2">
-                            <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-xl mb-4">
-                                <h4 className="text-[13px] font-semibold text-purple-400 flex items-center gap-2 mb-1">
-                                    <Briefcase size={14} /> Job Description Targeting
-                                </h4>
-                                <p className="text-[11px] text-text-secondary leading-relaxed mb-0">
-                                    Drop a target <strong>JD PDF</strong> alongside your resume. Natively extracts the role title, level, company, and required technologies, then biases every prompt to align your responses with that exact spec — perfect for staying on-message during a final loop.
-                                </p>
-                            </div>
-
-                            <div className="grid md:grid-cols-2 gap-3 mb-5">
-                                <div className="p-4 rounded-xl border bg-bg-item-surface border-border-subtle">
-                                    <h4 className="font-semibold text-sm mb-2 text-text-primary flex items-center gap-2">
-                                        <Building2 className="w-4 h-4 text-purple-400" /> Company Intelligence
-                                    </h4>
-                                    <p className="text-[11px] text-text-secondary leading-relaxed">
-                                        After uploading a JD, hit <strong>Research Now</strong> to compile a live dossier on the company — recent news, product surface area, culture signals — cached and injected into every reply so you sound briefed without prep.
-                                    </p>
-                                </div>
-                                <div className="p-4 rounded-xl border bg-bg-item-surface border-border-subtle">
-                                    <h4 className="font-semibold text-sm mb-2 text-text-primary flex items-center gap-2">
-                                        <DollarSign className="w-4 h-4 text-emerald-500" /> Negotiation Script
-                                    </h4>
-                                    <p className="text-[11px] text-text-secondary leading-relaxed">
-                                        Generate a <strong>tailored salary script</strong> calibrated against the active JD's level and your background. Live coaching shows up inline during compensation conversations.
-                                    </p>
-                                </div>
-                            </div>
-
                             <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl mb-4">
                                 <h4 className="text-[13px] font-semibold text-emerald-500 flex items-center gap-2 mb-1">
-                                    <FileText size={14} /> Custom Context Notes
+                                    <FileText size={14} /> Attached Instruction File
                                 </h4>
                                 <p className="text-[11px] text-text-secondary leading-relaxed mb-0">
-                                    In addition to your Resume and JD, type any free-form context into the <strong>Custom Context</strong> textarea — sales stats, product details, LeetCode solutions, personal preferences. Injected as a <code className="bg-bg-elevated px-1 rounded text-[10px]">&lt;user_context&gt;</code> block into every AI call, across all modes and providers.
+                                    The file picker supports MD, TXT, PDF, and DOCX. Files are ingested locally into Markdown and saved inside Custom Instructions. Choosing another file replaces the existing attached file.
                                 </p>
                             </div>
                             <div className="grid md:grid-cols-2 gap-3">
                                 <div className="p-4 rounded-xl border bg-bg-item-surface border-border-subtle">
                                     <h4 className="font-semibold text-sm mb-2 text-text-primary flex items-center gap-2">
-                                        <Upload className="w-4 h-4 text-emerald-500" /> How to Use
+                                        <Upload className="w-4 h-4 text-emerald-500" /> File Behavior
                                     </h4>
                                     <ul className="text-[11px] text-text-secondary space-y-1 list-disc pl-4">
-                                        <li>Open <strong>Settings → Profile Intelligence</strong></li>
-                                        <li>Scroll to the <strong>Custom Context</strong> textarea</li>
-                                        <li>Type anything — auto-saved after 800 ms</li>
-                                        <li>Up to 4,000 characters with a live counter</li>
+                                        <li>Only one Custom Instructions file is attached at a time.</li>
+                                        <li>Use <strong>Change file</strong> to replace the current file.</li>
+                                        <li>Use the remove button to keep typed instructions but clear the file.</li>
+                                        <li>The ingested Markdown is saved with your instructions.</li>
                                     </ul>
                                 </div>
                                 <div className="p-4 rounded-xl border bg-bg-item-surface border-border-subtle">
                                     <h4 className="font-semibold text-sm mb-2 text-text-primary flex items-center gap-2">
-                                        <Sparkles className="w-4 h-4 text-amber-500" /> What to Put Here
+                                        <Sparkles className="w-4 h-4 text-amber-500" /> AI Persona
                                     </h4>
                                     <ul className="text-[11px] text-text-secondary space-y-1 list-disc pl-4">
-                                        <li>Your company's product details or pricing</li>
-                                        <li>Candidate pipeline notes for recruiting</li>
-                                        <li>LeetCode / DSA patterns you prefer</li>
-                                        <li>Personal formatting or style preferences</li>
+                                        <li>Tell the assistant what role to play.</li>
+                                        <li>Describe the tone, answer length, or directness you prefer.</li>
+                                        <li>Use it for interview-coach behavior separate from factual context.</li>
+                                        <li>Persona is saved independently from Custom Instructions.</li>
                                     </ul>
                                 </div>
                             </div>
@@ -1590,84 +1488,12 @@ export const HelpSettings: React.FC<{ onNavigate?: (tab: string) => void }> = ({
                     </div>
                 </AccordionSection>
 
-                <AccordionSection title="8. Modes Manager" icon={<LayoutGrid className="w-4 h-4" />}>
-                    <div className="space-y-6">
-                        <p className="text-[13px]">Modes let you assign a specialized AI persona to your session. Each mode has a tailored system prompt, a personal context area, reference files, and smart note template sections — so Natively behaves differently depending on whether you're in a sales call, a coding interview, or a team standup.</p>
-
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                            {([
-                                { name: 'Interview', desc: 'STAR-format answers, behavioral stories, step-by-step coding hints.' },
-                                { name: 'Sales', desc: 'Objection handling, discovery questions, product pitch frameworks.' },
-                                { name: 'Recruiting', desc: 'Candidate assessment, JD cross-referencing, structured evaluation.' },
-                                { name: 'Team Meet', desc: 'Action items, announcements, blockers, decisions — auto-extracted.' },
-                                { name: 'Lecture', desc: 'Concept breakdowns, intuition-first explanations, formula notes.' },
-                                { name: 'Technical', desc: 'DSA / system design reasoning, edge cases, complexity analysis.' },
-                            ] as Array<{ name: string; desc: string }>).map(({ name, desc }) => (
-                                <div key={name} className="p-3 rounded-xl border bg-bg-item-surface border-border-subtle">
-                                    <h5 className="font-semibold text-sm text-text-primary mb-1">{name}</h5>
-                                    <p className="text-[11px] text-text-secondary leading-relaxed">{desc}</p>
-                                </div>
-                            ))}
-                        </div>
-
-                        <div className="space-y-3 pt-2 border-t border-border-subtle">
-                            <h4 className="font-bold text-sm text-text-primary pt-4">How to Use Modes</h4>
-                            <div className="grid md:grid-cols-2 gap-3">
-                                <div className="p-4 rounded-xl border bg-bg-item-surface border-border-subtle">
-                                    <h4 className="font-semibold text-sm mb-2 text-text-primary">Opening the Manager</h4>
-                                    <ul className="text-[11px] text-text-secondary space-y-1 list-disc pl-4">
-                                        <li>Click the <strong>grid icon</strong> in the Launcher header</li>
-                                        <li>Or click the grid icon in the main interface toolbar</li>
-                                        <li>Requires a Natively Pro license</li>
-                                    </ul>
-                                </div>
-                                <div className="p-4 rounded-xl border bg-bg-item-surface border-border-subtle">
-                                    <h4 className="font-semibold text-sm mb-2 text-text-primary">Activating a Mode</h4>
-                                    <ul className="text-[11px] text-text-secondary space-y-1 list-disc pl-4">
-                                        <li>Select any mode in the left sidebar</li>
-                                        <li>Click <strong>Set active</strong> to apply it</li>
-                                        <li>The toolbar icon shows the active mode name live</li>
-                                        <li>Click <strong>Deactivate</strong> to return to General</li>
-                                    </ul>
-                                </div>
-                                <div className="p-4 rounded-xl border bg-bg-item-surface border-border-subtle">
-                                    <h4 className="font-semibold text-sm mb-2 text-text-primary">Reference Files</h4>
-                                    <ul className="text-[11px] text-text-secondary space-y-1 list-disc pl-4">
-                                        <li>Upload PDF, DOCX, or TXT files per mode</li>
-                                        <li>File contents are injected as real-time context</li>
-                                        <li>Great for: resumes, product sheets, job descriptions</li>
-                                        <li>Per-file cap: 12 k chars · total cap: 40 k chars</li>
-                                    </ul>
-                                </div>
-                                <div className="p-4 rounded-xl border bg-bg-item-surface border-border-subtle">
-                                    <h4 className="font-semibold text-sm mb-2 text-text-primary">Custom Modes & Templates</h4>
-                                    <ul className="text-[11px] text-text-secondary space-y-1 list-disc pl-4">
-                                        <li>Click <strong>+ New Mode</strong> for a blank slate</li>
-                                        <li>Browse the <strong>Templates Gallery</strong> for ready-made personas</li>
-                                        <li>Edit the <strong>Real-time Prompt</strong> with the inline Save action</li>
-                                        <li>Define <strong>Note Section Templates</strong> per mode for capture format</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
-                            <h4 className="text-[13px] font-semibold text-indigo-400 flex items-center gap-2 mb-1">
-                                <Star size={14} /> Pro Feature
-                            </h4>
-                            <p className="text-[11px] text-text-secondary leading-relaxed mb-0">
-                                Modes are locked behind Natively Pro. Free and trial users see only the General mode. Activate a license via <strong>Settings → Natively API</strong> to unlock all seven modes.
-                            </p>
-                        </div>
-                    </div>
-                </AccordionSection>
-
-                <AccordionSection title="9. Miscellaneous" icon={<Settings className="w-4 h-4" />}>
+                <AccordionSection title="8. Miscellaneous" icon={<Settings className="w-4 h-4" />}>
                     <div className="space-y-6">
                         {/* Calendar */}
                         <div>
-                            <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl mb-4">
-                                <h4 className="text-[13px] font-semibold text-blue-500 flex items-center gap-2 mb-1">
+                            <div className="p-3 bg-accent-secondary border border-border-muted rounded-xl mb-4">
+                                <h4 className="text-[13px] font-semibold text-accent-primary flex items-center gap-2 mb-1">
                                     <Calendar size={14} /> What is Calendar Intelligence?
                                 </h4>
                                 <p className="text-[11px] text-text-secondary leading-relaxed mb-0">
@@ -1692,7 +1518,7 @@ export const HelpSettings: React.FC<{ onNavigate?: (tab: string) => void }> = ({
                                 </div>
                                 <div className="p-4 rounded-xl border bg-bg-item-surface border-border-subtle">
                                     <h4 className="font-semibold text-sm mb-2 text-text-primary flex items-center gap-2">
-                                        <LayoutGrid className="w-4 h-4 text-blue-500" /> Launcher Peek Stack
+                                        <LayoutGrid className="w-4 h-4 text-accent-primary" /> Launcher Peek Stack
                                     </h4>
                                     <p className="text-[11px] text-text-secondary">
                                         The Launcher's Calendar card now displays your <strong>next real meeting</strong> with a stacked-card visual hinting at what comes after it — no need to switch tabs to see what's queued.

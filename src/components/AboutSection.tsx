@@ -58,7 +58,7 @@ export const AboutSection: React.FC<AboutSectionProps> = () => {
         <div className="space-y-6 animated fadeIn pb-10">
             {/* Header */}
             <div>
-                <h3 className="text-lg font-bold text-text-primary mb-1">About Natively</h3>
+                <h3 className="text-lg font-bold text-text-primary mb-1">About AnswerFlow</h3>
                 <p className="text-sm text-text-secondary">Designed to be invisible, intelligent, and trusted.</p>
             </div>
 
@@ -84,7 +84,7 @@ export const AboutSection: React.FC<AboutSectionProps> = () => {
                     {/* 2. DeepSeek AI Integrated */}
                     <div className="p-3 border-b border-border-subtle bg-bg-card/50">
                         <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 shrink-0">
+                            <div className="w-10 h-10 rounded-lg bg-accent-secondary flex items-center justify-center text-accent-primary shrink-0">
                                 <Cpu size={20} />
                             </div>
                             <div>
@@ -120,7 +120,7 @@ export const AboutSection: React.FC<AboutSectionProps> = () => {
                             <div>
                                 <h5 className="text-sm font-bold text-text-primary mb-1">Optimized Modes Manager</h5>
                                 <p className="text-xs text-text-secondary leading-relaxed">
-                                    The Profile Intelligence matrix and Modes Manager have been optimized like crazy for responsive, ultra-low latency context processing.
+                                    Custom Instructions and interview context processing have been optimized for responsive, low-latency assistance.
                                 </p>
                             </div>
                         </div>
@@ -145,11 +145,11 @@ export const AboutSection: React.FC<AboutSectionProps> = () => {
 
             {/* Architecture Section */}
             <div>
-                <h4 className="text-xs font-bold text-text-tertiary uppercase tracking-wider mb-2 px-1">How Natively Works</h4>
+                <h4 className="text-xs font-bold text-text-tertiary uppercase tracking-wider mb-2 px-1">How AnswerFlow Works</h4>
                 <div className="bg-bg-item-surface rounded-xl border border-border-subtle overflow-hidden">
                     <div className="p-3 border-b border-border-subtle bg-bg-card/50">
                         <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 shrink-0">
+                            <div className="w-10 h-10 rounded-lg bg-accent-secondary flex items-center justify-center text-accent-primary shrink-0">
                                 <Cpu size={20} />
                             </div>
                             <div>
@@ -169,7 +169,7 @@ export const AboutSection: React.FC<AboutSectionProps> = () => {
                             <div>
                                 <h5 className="text-sm font-bold text-text-primary mb-1">Local RAG & Memory</h5>
                                 <p className="text-xs text-text-secondary leading-relaxed">
-                                    A purely local vector memory system allows Natively to recall details from past meetings. Embeddings and retrieval happen on-device via SQLite for maximum privacy.
+                                    A purely local vector memory system allows AnswerFlow to recall details from past meetings. Embeddings and retrieval happen on-device via SQLite for maximum privacy.
                                 </p>
                             </div>
                         </div>
@@ -195,7 +195,7 @@ export const AboutSection: React.FC<AboutSectionProps> = () => {
                         <div>
                             <h5 className="text-sm font-medium text-text-primary">No Recording</h5>
                             <p className="text-xs text-text-secondary mt-1 leading-relaxed">
-                                Natively listens only when active. It does not record video, take arbitrary screenshots without command, or perform background surveillance.
+                                AnswerFlow listens only when active. It does not record video, take arbitrary screenshots without command, or perform background surveillance.
                             </p>
                         </div>
                     </div>
@@ -261,7 +261,7 @@ export const AboutSection: React.FC<AboutSectionProps> = () => {
                                     <p className="text-xs text-text-secondary leading-relaxed max-w-lg">
                                         I build software that stays out of the way.
                                         <br />
-                                        <span className="font-bold text-text-primary">Natively</span> is made to feel fast, quiet, and respectful of your privacy.
+                                        <span className="font-bold text-text-primary">AnswerFlow</span> is made to feel fast, quiet, and respectful of your privacy.
                                     </p>
                                 </div>
                             </div>
@@ -314,7 +314,7 @@ export const AboutSection: React.FC<AboutSectionProps> = () => {
                             </div>
                             <div>
                                 <h5 className="text-sm font-bold text-text-primary">Star on GitHub</h5>
-                                <p className="text-xs text-text-secondary mt-0.5">Love Natively? Support us by starring the repo.</p>
+                                <p className="text-xs text-text-secondary mt-0.5">Love AnswerFlow? Support us by starring the repo.</p>
                             </div>
                         </a>
 
@@ -336,7 +336,7 @@ export const AboutSection: React.FC<AboutSectionProps> = () => {
                     {/* 3. Get in Touch */}
                     <div className="bg-bg-item-surface rounded-xl border border-border-subtle p-5 flex flex-col md:flex-row items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500 shadow-sm shadow-blue-500/5">
+                            <div className="w-10 h-10 rounded-full bg-accent-secondary flex items-center justify-center text-accent-primary shadow-sm shadow-[0_6px_18px_rgba(249,115,22,0.08)]">
                                 <Mail size={18} className="opacity-80" />
                             </div>
                             <div>
@@ -362,7 +362,7 @@ export const AboutSection: React.FC<AboutSectionProps> = () => {
                             </div>
                             <div>
                                 <h5 className="text-sm font-bold text-text-primary">Support Development</h5>
-                                <p className="text-xs text-text-secondary mt-0.5">Natively is independent open-source software.</p>
+                                <p className="text-xs text-text-secondary mt-0.5">AnswerFlow is independent open-source software.</p>
                             </div>
                         </div>
                         <a

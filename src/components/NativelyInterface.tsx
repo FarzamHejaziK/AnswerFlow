@@ -6,7 +6,6 @@ import {
   Copy,
   HelpCircle,
   Image,
-  LayoutGrid,
   Lightbulb,
   MessageSquare,
   Mic,
@@ -330,8 +329,8 @@ const MessageRow = React.memo(
               ${
                 msg.role === 'user'
                   ? isLightTheme
-                    ? 'bg-blue-500/10 backdrop-blur-md border border-blue-500/20 text-blue-900 rounded-[20px] rounded-tr-[4px] shadow-sm font-medium'
-                    : 'bg-blue-600/20 backdrop-blur-md border border-blue-500/30 text-blue-100 rounded-[20px] rounded-tr-[4px] shadow-sm font-medium'
+                    ? 'bg-accent-secondary backdrop-blur-md border border-border-muted text-text-primary rounded-[20px] rounded-tr-[4px] shadow-sm font-medium'
+                    : 'bg-accent-secondary backdrop-blur-md border border-border-muted text-text-primary rounded-[20px] rounded-tr-[4px] shadow-sm font-medium'
                   : ''
               }
               ${
@@ -569,8 +568,6 @@ const NativelyInterface: React.FC<NativelyInterfaceProps> = ({
     return stored ? stored === 'true' : true;
   });
 
-  // Active mode name (shown as a badge near the Modes button)
-  const [activeModeLabel, setActiveModeLabel] = useState<string | null>(null);
   const [llmProviderLabel, setLlmProviderLabel] = useState<string>('unknown');
   const [llmPrivacyLabel, setLlmPrivacyLabel] = useState<string | null>(null);
   const [screenContextStatus, setScreenContextStatus] = useState<
@@ -585,21 +582,6 @@ const NativelyInterface: React.FC<NativelyInterfaceProps> = ({
   const [latestVisionFailureReason, setLatestVisionFailureReason] = useState<string | undefined>(
     undefined,
   );
-
-  useEffect(() => {
-    // Load initial active mode name
-    window.electronAPI
-      ?.modesGetActive?.()
-      .then((mode: { name: string } | null) => setActiveModeLabel(mode?.name ?? null))
-      .catch(() => {});
-    // Live-update whenever mode is activated/deactivated
-    const unsub = window.electronAPI?.onModeChanged?.(
-      (data: { id: string | null; name: string | null }) => {
-        setActiveModeLabel(data.name);
-      },
-    );
-    return () => unsub?.();
-  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -762,7 +744,7 @@ const NativelyInterface: React.FC<NativelyInterfaceProps> = ({
         ),
         a: ({ node, ...props }: any) => (
           <a
-            className={`hover:underline ${isLightTheme ? 'text-blue-600 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300'}`}
+            className={`hover:underline ${isLightTheme ? 'text-accent-primary hover:text-accent-primary' : 'text-accent-primary hover:text-accent-primary'}`}
             target="_blank"
             rel="noopener noreferrer"
             {...props}
@@ -3133,7 +3115,7 @@ Provide only the answer, nothing else.`;
         const renderedAnswer = (
           <div
             className={`text-[13px] leading-relaxed ${
-              isLightTheme ? 'text-slate-900' : 'text-blue-50'
+              isLightTheme ? 'text-slate-900' : 'text-text-primary'
             }`}
           >
             {parts.map((part, i) => {
@@ -3192,10 +3174,10 @@ Provide only the answer, nothing else.`;
           </div>
         );
         const responseCardTone = isLightTheme
-          ? 'bg-blue-50 border-blue-100 text-slate-900'
-          : 'bg-blue-500/10 border-blue-400/20 text-blue-50';
-        const promptDividerTone = isLightTheme ? 'border-blue-200/80' : 'border-blue-300/20';
-        const promptCaptionTone = isLightTheme ? 'text-blue-700/70' : 'text-blue-200/75';
+          ? 'bg-accent-secondary border-border-muted text-slate-900'
+          : 'bg-accent-secondary border-border-muted text-text-primary';
+        const promptDividerTone = isLightTheme ? 'border-border-muted' : 'border-border-muted';
+        const promptCaptionTone = isLightTheme ? 'text-text-secondary' : 'text-text-secondary';
 
         return (
           <div className={`rounded-lg border px-3.5 py-3 my-1 max-h-none overflow-visible ${responseCardTone}`}>
@@ -4077,8 +4059,7 @@ Provide only the answer, nothing else.`;
   // Gate the whole status-pill row on having at least one pill. Otherwise the
   // empty row still reserved pt-3+pb-1, leaving a visible gap above the rolling
   // transcript on launch (no mode yet, STT pill suppressed, no vision/llm).
-  const hasStatusPill =
-    !!activeModeLabel || shouldShowSttSummaryPill || showVisionPill || !!llmPrivacyLabel;
+  const hasStatusPill = shouldShowSttSummaryPill || showVisionPill || !!llmPrivacyLabel;
   const statusPillBaseClass = `flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-medium shadow-sm backdrop-blur-xl ${isLightTheme ? 'bg-white/55 border-black/10' : 'bg-black/20 border-white/10'}`;
   const shouldShowRollingTranscript =
     (showTranscript && rollingTranscript) ||
@@ -4167,15 +4148,6 @@ Provide only the answer, nothing else.`;
 
               {hasStatusPill && (
               <div className="relative no-drag flex flex-wrap items-center justify-center gap-1.5 px-4 pt-3 pb-1">
-                {activeModeLabel && (
-                  <div
-                    className={`${statusPillBaseClass} overlay-text-primary`}
-                    title={`Active mode: ${activeModeLabel}`}
-                  >
-                    <LayoutGrid className="h-3 w-3 opacity-70" />
-                    <span>Mode: {activeModeLabel}</span>
-                  </div>
-                )}
                 {shouldShowSttSummaryPill && (
                   <div
                     className={`${statusPillBaseClass} ${getStatusToneClass(sttSummary.tone)}`}
@@ -4298,12 +4270,7 @@ Provide only the answer, nothing else.`;
                   <div className="flex items-center gap-2 shrink-0">
                     {/*
                       UX3: deep-link to the correct macOS System Settings pane
-                      based on the failure channel. Pre-fix the mic-zero-fill /
-                      mic-denied path opened Natively's internal Settings,
-                      which then required the user to read the message, alt-tab
-                      to System Settings, navigate to Privacy & Security, find
-                      Microphone, and toggle Natively. Now one click takes them
-                      directly to the right pane. Falls back to internal
+                      based on the failure channel. Falls back to internal
                       Settings on Windows or when channel is unknown.
                     */}
                     {(() => {
@@ -4946,7 +4913,7 @@ Provide only the answer, nothing else.`;
                                     interaction-base interaction-press
                                     ${
                                       inputValue.trim()
-                                        ? 'bg-[#007AFF] text-white shadow-lg shadow-blue-500/20 hover:bg-[#0071E3]'
+                                        ? 'bg-accent-primary text-white shadow-lg shadow-[0_8px_24px_rgba(249,115,22,0.14)] hover:opacity-90'
                                         : 'overlay-icon-surface overlay-text-muted cursor-not-allowed'
                                     }
                                 `}

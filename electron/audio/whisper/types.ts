@@ -47,6 +47,7 @@ export interface WorkerInitMessage {
   type: 'init';
   modelId: string;
   cacheDir: string;
+  allowRemoteModels?: boolean;
   executionProviders?: string[];
   // Per-module dtype map (see inferenceConfig.ts). String applies to all
   // ONNX files; Record keys are ONNX basenames without `.onnx`.

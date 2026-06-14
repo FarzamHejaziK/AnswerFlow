@@ -75,18 +75,26 @@ function makeTempFile(content, ext = '.txt') {
 }
 
 // ---------------------------------------------------------------------------
-// Dynamic imports (after build)
+// Dynamic imports (after build). Premium is a private gitlink in the public
+// checkout, so these tests skip when the compiled premium artifacts are absent.
 // ---------------------------------------------------------------------------
-const { KnowledgeDatabaseManager } = await import(
-    pathToFileURL(path.resolve(__dirname, '../../../dist-electron/premium/electron/knowledge/KnowledgeDatabaseManager.js')).href
-);
-const orchestratorMod = await import(
-    pathToFileURL(path.resolve(__dirname, '../../../dist-electron/premium/electron/knowledge/KnowledgeOrchestrator.js')).href
-);
-const { KnowledgeOrchestrator } = orchestratorMod;
-const { DocType } = await import(
-    pathToFileURL(path.resolve(__dirname, '../../../dist-electron/premium/electron/knowledge/types.js')).href
-);
+const knowledgeDatabasePath = path.resolve(__dirname, '../../../dist-electron/premium/electron/knowledge/KnowledgeDatabaseManager.js');
+const knowledgeOrchestratorPath = path.resolve(__dirname, '../../../dist-electron/premium/electron/knowledge/KnowledgeOrchestrator.js');
+const knowledgeTypesPath = path.resolve(__dirname, '../../../dist-electron/premium/electron/knowledge/types.js');
+const premiumKnowledgeAvailable =
+    fs.existsSync(knowledgeDatabasePath) &&
+    fs.existsSync(knowledgeOrchestratorPath) &&
+    fs.existsSync(knowledgeTypesPath);
+
+let KnowledgeDatabaseManager;
+let KnowledgeOrchestrator;
+let DocType;
+
+if (premiumKnowledgeAvailable) {
+    ({ KnowledgeDatabaseManager } = await import(pathToFileURL(knowledgeDatabasePath).href));
+    ({ KnowledgeOrchestrator } = await import(pathToFileURL(knowledgeOrchestratorPath).href));
+    ({ DocType } = await import(pathToFileURL(knowledgeTypesPath).href));
+}
 
 const MOCK_GENERATE_CONTENT = async (contents) => {
     const prompt = contents[0]?.text || '';
@@ -118,7 +126,7 @@ const MOCK_GENERATE_CONTENT = async (contents) => {
 
 const MOCK_EMBED_FN = async () => Array(128).fill(0).map((_, i) => (i % 7) * 0.01);
 
-describe('FINDING-004: KnowledgeOrchestrator ingest pipeline', () => {
+describe('FINDING-004: KnowledgeOrchestrator ingest pipeline', { skip: !premiumKnowledgeAvailable }, () => {
     let db;
     let orchestrator;
     let tmpResumeFile;

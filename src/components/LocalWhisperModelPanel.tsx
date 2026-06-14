@@ -55,7 +55,7 @@ function PremiumSelect({ label, value, options, onChange, placeholder }: any) {
             {label && <label className="block text-xs font-medium text-text-secondary mb-1.5 uppercase tracking-wide">{label}</label>}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className={`w-full group bg-bg-input border border-border-subtle hover:border-border-muted shadow-sm rounded-xl px-3.5 py-2.5 flex items-center justify-between transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] outline-none focus:ring-2 focus:ring-accent-primary/20 ${isOpen ? 'ring-2 ring-accent-primary/20 border-accent-primary/50' : ''}`}
+                className={`w-full group bg-bg-input border border-border-subtle hover:border-border-muted shadow-sm rounded-xl px-3.5 py-2.5 flex items-center justify-between transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] outline-none focus:ring-2 focus:ring-[var(--accent-ring)] ${isOpen ? 'ring-2 ring-[var(--accent-ring)] border-[var(--accent-border)]' : ''}`}
             >
                 <span className="text-sm text-text-primary font-medium truncate pr-4">{selectedLabel}</span>
                 <ChevronDown size={14} className={`text-text-tertiary transition-transform duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:text-text-secondary ${isOpen ? 'rotate-180' : ''}`} />
@@ -320,7 +320,7 @@ export function LocalWhisperModelPanel() {
                                     <div className="flex items-center gap-2 mb-1.5">
                                         <span className="text-sm font-medium text-text-primary truncate tracking-tight">{model.name}</span>
                                         {isRecommended && (
-                                            <span className="px-1.5 py-0.5 rounded-[4px] bg-accent-primary/10 text-accent-primary text-[9px] font-bold uppercase tracking-wider">Recommended</span>
+                                            <span className="px-1.5 py-0.5 rounded-[4px] bg-accent-secondary text-accent-primary text-[9px] font-bold uppercase tracking-wider">Recommended</span>
                                         )}
                                         {model.requiresAppleSilicon && (
                                             <span className="px-1.5 py-0.5 rounded-[4px] bg-purple-500/10 text-purple-500 text-[9px] font-bold uppercase tracking-wider">Apple Silicon</span>
@@ -361,7 +361,7 @@ export function LocalWhisperModelPanel() {
                                     {!isAvailable && !isDownloading && (
                                         <button
                                             onClick={() => handleDownload(model.id)}
-                                            className="group/btn relative h-[34px] px-4 flex items-center gap-1.5 rounded-[10px] bg-accent-primary/10 hover:bg-accent-primary/20 text-accent-primary text-[13px] font-semibold transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.96] shadow-sm"
+                                            className="group/btn relative h-[34px] px-4 flex items-center gap-1.5 rounded-[10px] bg-accent-secondary hover:bg-accent-secondary text-accent-primary text-[13px] font-semibold transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.96] shadow-sm"
                                         >
                                             <Download size={14} className="transition-transform duration-300 group-hover/btn:-translate-y-[2px]" /> 
                                             <span>Install</span>

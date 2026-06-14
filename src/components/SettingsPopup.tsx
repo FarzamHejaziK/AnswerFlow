@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
-import { MessageSquare, Camera, Zap, User } from 'lucide-react';
+import { MessageSquare, Camera, Zap } from 'lucide-react';
 import { useShortcuts } from '../hooks/useShortcuts';
 import { useResolvedTheme } from '../hooks/useResolvedTheme';
 import { getModifierSymbol } from '../utils/platformUtils';
@@ -11,10 +11,6 @@ const SettingsPopup = () => {
     const [useGroqFastText, setUseGroqFastText] = useState(() => {
         return localStorage.getItem('natively_groq_fast_text') === 'true';
     });
-    const [profileMode, setProfileMode] = useState(false);
-    const [hasProfile, setHasProfile] = useState(false);
-    const [isPremium, setIsPremium] = useState(false);
-
     const isFirstRender = React.useRef(true);
 
     const [hasStoredKey, setHasStoredKey] = useState<Record<string, boolean>>({});
@@ -31,7 +27,6 @@ const SettingsPopup = () => {
                     openai: !!creds.hasOpenaiKey,
                     claude: !!creds.hasClaudeKey,
                     deepseek: !!creds.hasDeepseekKey,
-                    natively: !!creds.hasNativelyKey
                 });
             }
         } catch (e) {
@@ -44,23 +39,6 @@ const SettingsPopup = () => {
         loadCredentials();
         const handleFocus = () => loadCredentials();
         window.addEventListener('focus', handleFocus);
-
-        // Load profile status
-        const loadProfile = async () => {
-            try {
-                // @ts-ignore
-                const status = await window.electronAPI?.profileGetStatus?.();
-                if (status) {
-                    setHasProfile(status.hasProfile);
-                    setProfileMode(status.profileMode);
-                }
-                // Check premium status
-                const premium = await window.electronAPI?.licenseCheckPremium?.();
-                setIsPremium(!!premium);
-            } catch (e) { console.warn('[SettingsPopup] Failed to load profile/premium status:', e); }
-
-        };
-        loadProfile();
 
         return () => window.removeEventListener('focus', handleFocus);
     }, []);
@@ -224,8 +202,8 @@ const SettingsPopup = () => {
                 </div>
 
 
-                {/* Groq (Fast Text) Toggle — enabled with Groq key OR Natively API key */}
-                <div className={`flex items-center justify-between px-2.5 py-1.5 rounded-md transition-colors duration-200 group ${!(hasStoredKey.groq || hasStoredKey.natively) ? 'opacity-50 grayscale cursor-not-allowed' : `${itemHoverClass} ${glassRowClass} cursor-default`}`} title={!(hasStoredKey.groq || hasStoredKey.natively) ? "Requires Groq or Natively API key" : ""}>
+                {/* Groq (Fast Text) Toggle */}
+                <div className={`flex items-center justify-between px-2.5 py-1.5 rounded-md transition-colors duration-200 group ${!hasStoredKey.groq ? 'opacity-50 grayscale cursor-not-allowed' : `${itemHoverClass} ${glassRowClass} cursor-default`}`} title={!hasStoredKey.groq ? "Requires Groq key" : ""}>
                     <div className="flex items-center gap-2.5">
                         <Zap
                             className={`w-4 h-4 transition-colors ${useGroqFastText ? 'text-orange-500' : iconInactiveClass}`}
@@ -235,11 +213,11 @@ const SettingsPopup = () => {
                     </div>
                     <button
                         onClick={() => {
-                            if (!(hasStoredKey.groq || hasStoredKey.natively)) return;
+                            if (!hasStoredKey.groq) return;
                             setUseGroqFastText(!useGroqFastText);
                         }}
                         className={`w-[30px] h-[18px] rounded-full p-[1.5px] transition-all duration-300 ease-spring active:scale-[0.92] ${useGroqFastText ? 'bg-orange-500 shadow-[0_2px_10px_rgba(249,115,22,0.3)]' : defaultToggleTrackClass}`}
-                        disabled={!(hasStoredKey.groq || hasStoredKey.natively)}
+                        disabled={!hasStoredKey.groq}
                     >
                         <div className={`w-[15px] h-[15px] rounded-full transition-transform duration-300 ease-spring ${toggleKnobClass} ${useGroqFastText ? 'translate-x-[12px]' : 'translate-x-0'}`} />
                     </button>
@@ -302,34 +280,6 @@ const SettingsPopup = () => {
                         <div className={`w-[15px] h-[15px] rounded-full transition-transform duration-300 ease-spring ${toggleKnobClass} ${actionButtonMode === 'brainstorm' ? 'translate-x-[12px]' : 'translate-x-0'}`} />
                     </button>
                 </div>
-
-                {/* Profile Mode Toggle */}
-                {hasProfile && (
-                    <div className={`flex items-center justify-between px-2.5 py-1.5 rounded-md transition-colors duration-200 group ${!isPremium ? 'opacity-50 grayscale cursor-not-allowed' : `${itemHoverClass} ${glassRowClass} cursor-default`}`} title={!isPremium ? 'Requires Pro license to be active' : ''}>
-                        <div className="flex items-center gap-2.5">
-                            <User
-                                className={`w-3.5 h-3.5 transition-colors ${profileMode && isPremium ? 'text-accent-primary' : iconInactiveClass}`}
-                                fill={profileMode && isPremium ? "currentColor" : "none"}
-                            />
-                            <span className={`text-[12px] font-medium transition-colors ${profileMode && isPremium ? (isLightTheme ? 'text-slate-950' : 'text-white') : labelInactiveClass}`}>Profile Mode</span>
-                        </div>
-                        <button
-                            onClick={async () => {
-                                if (!isPremium) return;
-                                const newState = !profileMode;
-                                setProfileMode(newState);
-                                try {
-                                    // @ts-ignore
-                                    await window.electronAPI?.profileSetMode?.(newState);
-                                } catch (e) { console.error(e); }
-                            }}
-                            className={`w-[30px] h-[18px] rounded-full p-[1.5px] transition-all duration-300 ease-spring active:scale-[0.92] ${profileMode && isPremium ? 'bg-accent-primary shadow-[0_2px_10px_rgba(var(--color-accent-primary),0.3)]' : defaultToggleTrackClass}`}
-                            disabled={!isPremium}
-                        >
-                            <div className={`w-[15px] h-[15px] rounded-full transition-transform duration-300 ease-spring ${toggleKnobClass} ${profileMode && isPremium ? 'translate-x-[12px]' : 'translate-x-0'}`} />
-                        </button>
-                    </div>
-                )}
 
                 <div className={`h-px my-0.5 mx-1.5 ${dividerClass}`} />
 

@@ -111,7 +111,7 @@ const AssistantMessage: React.FC<{ content: string; isStreaming?: boolean }> = (
                         rehypePlugins={[rehypeKatex]}
                         components={{
                             p: ({ node, ...props }: any) => <p className="mb-2 last:mb-0 whitespace-pre-wrap" {...props} />,
-                            a: ({ node, ...props }: any) => <a className="text-blue-500 hover:underline" {...props} />,
+                            a: ({ node, ...props }: any) => <a className="text-accent-primary hover:underline" {...props} />,
                             pre: ({ children }: any) => <div className="not-prose mb-4">{children}</div>,
                             code: ({ node, inline, className, children, ...props }: any) => {
                                 const match = /language-(\w+)/.exec(className || '');

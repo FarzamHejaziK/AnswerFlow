@@ -54,17 +54,20 @@ export function buildWorkerInitMessage(modelId: string): {
     type: 'init';
     modelId: string;
     cacheDir: string;
+    allowRemoteModels: boolean;
     executionProviders: string[];
     dtype: string | Record<string, string>;
 } {
     // Late require — modelManager imports electron, which isn't available
     // when this module is first loaded in some contexts (test harnesses).
     const { getModelsDir } = require('./modelManager');
+    const { app } = require('electron');
     const { executionProviders, dtype } = resolveInferenceConfig();
     return {
         type: 'init',
         modelId,
         cacheDir: getModelsDir(),
+        allowRemoteModels: !app.isPackaged,
         executionProviders,
         dtype,
     };

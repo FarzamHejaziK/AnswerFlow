@@ -14,7 +14,6 @@ import { NativelyQuotaBanner } from "./components/NativelyQuotaBanner"
 import { FreeTrialBanner }      from "./components/trial/FreeTrialBanner"
 import { FreeTrialModal }       from "./components/trial/FreeTrialModal"
 import { TrialPromoToaster }    from "./components/trial/TrialPromoToaster"
-import { PermissionsToaster }   from "./components/onboarding/PermissionsToaster"
 import { AlertCircle } from "lucide-react"
 import { clampOverlayOpacity, OVERLAY_OPACITY_DEFAULT, getDefaultOverlayOpacity } from "./lib/overlayAppearance"
 import { getMeetingInterfaceTheme, type MeetingInterfaceTheme } from './lib/meetingInterfaceTheme'
@@ -32,8 +31,6 @@ import {
 } from './premium'
 import { analytics } from "./lib/analytics/analytics.service"
 import { ErrorBoundary } from "./components/ErrorBoundary"
-import ModesSettings from "./components/settings/ModesSettings"
-import { ProfileIntelligenceSettings } from "./components/ProfileIntelligenceSettings"
 
 const queryClient = new QueryClient()
 
@@ -91,35 +88,16 @@ const App: React.FC = () => {
   }, [isLauncherWindow, isOverlayWindow, isDefault]);
 
   // State
-  // One-shot first-run startup sequence. Once the user dismisses it (or any
-  // future code flips the flag), it never appears again on subsequent launches.
-  const [showStartup, setShowStartup] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem('natively_seen_startup_v1') !== 'true';
-    } catch {
-      return true;
-    }
-  });
+  const [showStartup, setShowStartup] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settingsInitialTab, setSettingsInitialTab] = useState<string>('general');
-  const [isModesOpen, setIsModesOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const openSettingsExclusive = useCallback((tab: string = 'general') => {
-    setIsModesOpen(false);
-    setIsProfileOpen(false);
     setSettingsInitialTab(tab);
     setIsSettingsOpen(true);
   }, []);
   const openProfileExclusive = useCallback(() => {
-    setIsModesOpen(false);
-    setIsSettingsOpen(false);
-    setIsProfileOpen(true);
-  }, []);
-  const openModesExclusive = useCallback(() => {
-    setIsProfileOpen(false);
-    setIsSettingsOpen(false);
-    setIsModesOpen(true);
-  }, []);
+    openSettingsExclusive('custom-instructions');
+  }, [openSettingsExclusive]);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [isPremiumActive, setIsPremiumActive] = useState(false);
   const [hasLoadedLicense, setHasLoadedLicense] = useState(false);
@@ -157,8 +135,7 @@ const App: React.FC = () => {
   // API check
   const [hasNativelyApi, setHasNativelyApi] = useState<boolean>(false);
 
-  // ── Onboarding / promo toasters ───────────────────────────
-  const [showPermissionsToaster, setShowPermissionsToaster] = useState(false);
+  // ── Promo toasters ───────────────────────────────────────
   const [showTrialPromo,         setShowTrialPromo]         = useState(false);
 
   // ── Free Trial global state ────────────────────────────────
@@ -168,7 +145,7 @@ const App: React.FC = () => {
   } | null>(null);
   const [showTrialExpiredModal, setShowTrialExpiredModal] = useState(false);
 
-  const isAppReady = !isSettingsWindow && !isOverlayWindow && !isModelSelectorWindow && !showStartup && !isSettingsOpen && isLauncherMainView && !isProfileOpen;
+  const isAppReady = !isSettingsWindow && !isOverlayWindow && !isModelSelectorWindow && !showStartup && !isSettingsOpen && isLauncherMainView;
   const canShowPromotionalSurfaces = SHOW_PROMOTIONAL_SURFACES && isAppReady;
   const { activeAd, dismissAd, previewAd } = useAdCampaigns(
     planDetails,
@@ -282,19 +259,12 @@ const App: React.FC = () => {
       setShowTrialExpiredModal(false);
     });
 
-    // ── Onboarding toasters ──────────────────────────────────
-    if (isLauncherWindow || isDefault) {
-      const permsShown = localStorage.getItem('natively_perms_shown_v1');
-      if (!permsShown) {
-        // First ever launch — show permissions toaster
-        setShowPermissionsToaster(true);
-      } else {
-        // Subsequent launches — show trial promo only when promotional surfaces are enabled
-        if (SHOW_PROMOTIONAL_SURFACES) setShowTrialPromo(true);
-      }
+    // ── Promo toasters ───────────────────────────────────────
+    if ((isLauncherWindow || isDefault) && SHOW_PROMOTIONAL_SURFACES) {
+      setShowTrialPromo(true);
     }
 
-    // Listen for open-settings-tab events from other windows (e.g. overlay Modes button)
+    // Listen for open-settings-tab events from other windows.
     const removeOpenSettingsTab = window.electronAPI?.onOpenSettingsTab?.((tab: string) => {
       openSettingsExclusive(tab);
     });
@@ -545,7 +515,7 @@ const App: React.FC = () => {
   // Renders if window=launcher OR no param
   return (
     <ErrorBoundary context="Launcher">
-    <div className="h-full min-h-0 w-full relative bg-[#000000]">
+    <div className="h-full min-h-0 w-full relative bg-bg-primary">
       <AnimatePresence>
         {showStartup ? (
           <motion.div
@@ -576,8 +546,6 @@ const App: React.FC = () => {
                   <Launcher
                     onStartMeeting={handleStartMeeting}
                     onOpenSettings={(tab = 'general') => openSettingsExclusive(tab)}
-                    onOpenProfile={() => openProfileExclusive()}
-                    onOpenModes={() => openModesExclusive()}
                     onPageChange={setIsLauncherMainView}
                     ollamaPullStatus={ollamaPullStatus}
                     ollamaPullPercent={ollamaPullPercent}
@@ -591,74 +559,6 @@ const App: React.FC = () => {
                   }}
                   initialTab={settingsInitialTab}
                 />
-                <AnimatePresence>
-                  {isModesOpen && (
-                    <motion.div
-                      key="modes-panel"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.15 }}
-                      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-                      onClick={(e) => { if (e.target === e.currentTarget) setIsModesOpen(false); }}
-                    >
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.92, y: 18, filter: 'blur(12px)' }}
-                        animate={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
-                        exit={{ opacity: 0, scale: 0.96, y: 8, filter: 'blur(8px)' }}
-                        transition={{
-                          opacity: { duration: 0.32, ease: [0.23, 1, 0.32, 1] },
-                          filter: { duration: 0.34, ease: [0.23, 1, 0.32, 1] },
-                          scale: { type: 'spring', stiffness: 320, damping: 34, mass: 0.9 },
-                          y: { type: 'spring', stiffness: 320, damping: 34, mass: 0.9 },
-                        }}
-                        style={{
-                          willChange: 'transform, opacity, filter',
-                          transformOrigin: 'center',
-                          boxShadow: '0 30px 80px -20px rgba(0,0,0,0.65), 0 16px 40px -12px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06)',
-                        }}
-                        className="w-[820px] h-[600px] max-w-[95vw] max-h-[90vh] rounded-2xl overflow-hidden border border-white/10 bg-[#141414]"
-                      >
-                        <ModesSettings onClose={() => setIsModesOpen(false)} isPremium={isPremiumActive} isLoaded={hasLoadedLicense} isTrialActive={!!activeTrial} onOpenNativelyAPI={() => openSettingsExclusive('natively-api')} />
-                      </motion.div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                <AnimatePresence>
-                  {isProfileOpen && (
-                    <motion.div
-                      key="profile-panel"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.15 }}
-                      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-                      onClick={(e) => { if (e.target === e.currentTarget) setIsProfileOpen(false); }}
-                    >
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.92, y: 18, filter: 'blur(12px)' }}
-                        animate={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
-                        exit={{ opacity: 0, scale: 0.96, y: 8, filter: 'blur(8px)' }}
-                        transition={{
-                          opacity: { duration: 0.32, ease: [0.23, 1, 0.32, 1] },
-                          filter: { duration: 0.34, ease: [0.23, 1, 0.32, 1] },
-                          scale: { type: 'spring', stiffness: 320, damping: 34, mass: 0.9 },
-                          y: { type: 'spring', stiffness: 320, damping: 34, mass: 0.9 },
-                        }}
-                        style={{
-                          willChange: 'transform, opacity, filter',
-                          transformOrigin: 'center',
-                          boxShadow: '0 30px 80px -20px rgba(0,0,0,0.65), 0 16px 40px -12px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06)',
-                        }}
-                        className="w-[820px] h-[600px] max-w-[95vw] max-h-[90vh] rounded-2xl overflow-hidden border border-white/10 bg-[#141414]"
-                      >
-                        <ProfileIntelligenceSettings
-                          onClose={() => setIsProfileOpen(false)}
-                        />
-                      </motion.div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
                 <ToastViewport />
               </ToastProvider>
             </QueryClientProvider>
@@ -718,16 +618,6 @@ const App: React.FC = () => {
           onUpgrade={() => openSettingsExclusive('api')}
         />
       )}
-
-      {/* Permissions toaster — first ever launch */}
-      <PermissionsToaster
-        isOpen={showPermissionsToaster}
-        onDismiss={() => {
-          localStorage.setItem('natively_perms_shown_v1', '1');
-          setShowPermissionsToaster(false);
-          // After permissions, allow trial promo on next launch
-        }}
-      />
 
       {/* Trial promo toaster — 5s after restart when promotional surfaces are enabled */}
       {SHOW_PROMOTIONAL_SURFACES && (
@@ -830,7 +720,7 @@ const App: React.FC = () => {
             // If user activated during post-trial modal, close it — they have a plan now
             setShowTrialExpiredModal(false);
             setActiveTrial(null);
-            // After activation, open settings to Profile Intelligence
+            // After activation, open settings to Custom Instructions
             setTimeout(() => {
               openProfileExclusive();
             }, 300);

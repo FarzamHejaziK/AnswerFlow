@@ -101,7 +101,7 @@ export class OpenAIStreamingSTT extends EventEmitter {
     private keepAliveTimer: NodeJS.Timeout | null = null;
     private connectionTimeoutTimer: NodeJS.Timeout | null = null;
     private sessionSetupTimer: NodeJS.Timeout | null = null;
-    private isSessionReady = false;     // set on inbound session.created
+    private isSessionReady = false;     // set on inbound transcription_session.created
 
     // Audio batching state
     private pcmAccumulator: Int16Array[] = [];
@@ -443,26 +443,18 @@ export class OpenAIStreamingSTT extends EventEmitter {
             if (lang) transcription.language = lang;
 
             this.ws!.send(JSON.stringify({
-                type: 'session.update',
+                type: 'transcription_session.update',
                 session: {
-                    type: 'transcription',
-                    audio: {
-                        input: {
-                            format: {
-                                type: 'audio/pcm',
-                                rate: WS_SAMPLE_RATE,
-                            },
-                            transcription,
-                            noise_reduction: { type: 'near_field' },
-                            turn_detection: {
-                                type:                'server_vad',
-                                threshold:           0.5,
-                                prefix_padding_ms:   300,
-                                // 1000ms reduces micro-turns that fragment one sentence into
-                                // many word-sized completed events (overlay queue rows).
-                                silence_duration_ms: 1000,
-                            },
-                        },
+                    input_audio_format: 'pcm16',
+                    input_audio_transcription: transcription,
+                    input_audio_noise_reduction: { type: 'near_field' },
+                    turn_detection: {
+                        type:                'server_vad',
+                        threshold:           0.5,
+                        prefix_padding_ms:   300,
+                        // 1000ms reduces micro-turns that fragment one sentence into
+                        // many word-sized completed events (overlay queue rows).
+                        silence_duration_ms: 1000,
                     },
                 },
             }));
@@ -548,7 +540,6 @@ export class OpenAIStreamingSTT extends EventEmitter {
         // a 20s setInterval against a class the caller thinks is shut down.
         if (!this.isActive) return;
         switch (msg.type) {
-            case 'session.created':
             case 'transcription_session.created':
                 if (this.sessionSetupTimer) {
                     clearTimeout(this.sessionSetupTimer);
@@ -559,6 +550,10 @@ export class OpenAIStreamingSTT extends EventEmitter {
                 this.wsFailures     = 0; // Reset failures on successful session
                 this._startKeepAlive();
                 this._flushRingBuffer();
+                break;
+
+            case 'session.created':
+                console.warn('[OpenAIStreaming] Ignoring general session.created on transcription intent');
                 break;
 
             case 'conversation.item.input_audio_transcription.delta': {

@@ -1,20 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit2, AlertCircle, CheckCircle, Save, ChevronDown, Check, RefreshCw, ExternalLink, Loader2 } from 'lucide-react';
-import { CODEX_CLI_MODEL, CODEX_CLI_MODEL_PRESETS, codexCliSelectorId, STANDARD_CLOUD_MODELS, prettifyModelId } from '../../utils/modelUtils';
-import { validateCurl } from '../../lib/curl-validator';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ChevronDown, Check } from 'lucide-react';
+import { STANDARD_CLOUD_MODELS, prettifyModelId } from '../../utils/modelUtils';
 import { ProviderCard } from './ProviderCard';
 
-const CODEX_SERVICE_TIERS = ['default', 'fast', 'flex'] as const;
-const CODEX_MODEL_REASONING_EFFORTS = ['low', 'medium', 'high', 'xhigh'] as const;
-
-interface CustomProvider {
-    id: string;
-    name: string;
-    curlCommand: string;
-    responsePath: string;
-    /** Whether this provider accepts screenshots. undefined = auto-detect from the cURL template. */
-    multimodal?: boolean;
-}
+type ProviderId = 'openai' | 'gemini' | 'claude';
+type ProviderDataScopeKey = 'transcript' | 'screenshots' | 'reference_files' | 'profile_history' | 'embeddings' | 'post_call_summary';
+type ProviderDataScopes = Partial<Record<ProviderDataScopeKey, boolean>>;
 
 interface ModelOption {
     id: string;
@@ -29,7 +20,35 @@ interface ModelSelectProps {
     className?: string;
 }
 
-const ModelSelect: React.FC<ModelSelectProps> = ({ value, options, onChange, placeholder = "Select model", className = "" }) => {
+const PROVIDER_ORDER: ProviderId[] = ['openai', 'gemini', 'claude'];
+const PROVIDER_DATA_SCOPE_OPTIONS: Array<{ key: ProviderDataScopeKey; label: string; description: string }> = [
+    { key: 'transcript', label: 'Transcript', description: 'Live interview and meeting text.' },
+    { key: 'screenshots', label: 'Screenshots', description: 'Screen context used for visual answers.' },
+    { key: 'reference_files', label: 'Reference files', description: 'Selected docs and uploaded context.' },
+    { key: 'profile_history', label: 'Profile history', description: 'Saved profile and prior interview context.' },
+    { key: 'embeddings', label: 'Embeddings', description: 'Document chunks sent for vector indexing.' },
+    { key: 'post_call_summary', label: 'Post-call summary', description: 'Finished interview summaries.' },
+];
+
+const PROVIDER_LABELS: Record<ProviderId, string> = {
+    openai: 'OpenAI',
+    gemini: 'Google Gemini',
+    claude: 'Anthropic Claude',
+};
+
+const PROVIDER_KEY_PLACEHOLDERS: Record<ProviderId, string> = {
+    openai: 'sk-...',
+    gemini: 'AIzaSy...',
+    claude: 'sk-ant-...',
+};
+
+const PROVIDER_KEY_URLS: Record<ProviderId, string> = {
+    openai: 'https://platform.openai.com/api-keys',
+    gemini: 'https://aistudio.google.com/app/apikey',
+    claude: 'https://console.anthropic.com/settings/keys',
+};
+
+const ModelSelect: React.FC<ModelSelectProps> = ({ value, options, onChange, placeholder = 'Select model', className = '' }) => {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = React.useRef<HTMLDivElement>(null);
 
@@ -43,16 +62,16 @@ const ModelSelect: React.FC<ModelSelectProps> = ({ value, options, onChange, pla
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const selectedOption = options.find(o => o.id === value);
-
+    const selectedOption = options.find(option => option.id === value);
     const paddingClass = className.includes('py-') ? '' : 'py-1.5';
 
     return (
         <div className="relative" ref={containerRef}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className={`w-40 bg-bg-input border border-border-subtle rounded-lg px-3 ${paddingClass} ${className} text-xs text-text-primary focus:outline-none focus:border-accent-primary flex items-center justify-between hover:bg-bg-elevated transition-colors`}
+                className={`w-48 bg-bg-input border border-border-subtle rounded-lg px-3 ${paddingClass} ${className} text-xs text-text-primary focus:outline-none focus:border-accent-primary flex items-center justify-between hover:bg-bg-elevated transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
                 type="button"
+                disabled={options.length === 0}
             >
                 <span className="truncate pr-2">{selectedOption ? selectedOption.name : placeholder}</span>
                 <ChevronDown size={14} className={`text-text-secondary transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -75,9 +94,6 @@ const ModelSelect: React.FC<ModelSelectProps> = ({ value, options, onChange, pla
                                 {value === option.id && <Check size={14} className="text-accent-primary shrink-0 ml-2" />}
                             </button>
                         ))}
-                        {options.length === 0 && (
-                            <div className="px-3 py-2 text-xs text-gray-500 italic">No models available</div>
-                        )}
                     </div>
                 </div>
             )}
@@ -85,497 +101,179 @@ const ModelSelect: React.FC<ModelSelectProps> = ({ value, options, onChange, pla
     );
 };
 
-const CodexCliModelField: React.FC<{
-    label: string;
-    value: string;
-    placeholder: string;
-    onChange: (value: string) => void;
-    onSelect: (value: string) => void;
-    onSave: () => void;
-}> = ({ label, value, placeholder, onChange, onSelect, onSave }) => (
-    <label className="space-y-1">
-        <span className="text-[10px] font-medium text-text-secondary uppercase tracking-wide">{label}</span>
-        <div className="flex gap-2">
-            <input
-                value={value}
-                onChange={e => onChange(e.target.value)}
-                onBlur={onSave}
-                className="min-w-0 flex-1 bg-bg-input border border-border-subtle rounded-lg px-3 py-2 text-xs text-text-primary font-mono focus:outline-none focus:border-accent-primary"
-                placeholder={placeholder}
-            />
-            <ModelSelect
-                value={value}
-                options={value && !CODEX_CLI_MODEL_PRESETS.some(option => option.id === value)
-                    ? [{ id: value, name: prettifyModelId(value) }, ...CODEX_CLI_MODEL_PRESETS]
-                    : CODEX_CLI_MODEL_PRESETS}
-                onChange={(modelId) => {
-                    onChange(modelId);
-                    onSelect(modelId);
-                }}
-                placeholder="Preset"
-                className="py-2"
-            />
-        </div>
-    </label>
-);
-
 export const AIProvidersSettings: React.FC = () => {
-    // --- Standard Providers ---
-    const [apiKey, setApiKey] = useState('');
-    const [groqApiKey, setGroqApiKey] = useState('');
-    const [openaiApiKey, setOpenaiApiKey] = useState('');
-    const [claudeApiKey, setClaudeApiKey] = useState('');
-    const [deepseekApiKey, setDeepseekApiKey] = useState('');
-
-    // Status
+    const [apiKeys, setApiKeys] = useState<Record<ProviderId, string>>({
+        openai: '',
+        gemini: '',
+        claude: '',
+    });
+    const [hasStoredKey, setHasStoredKey] = useState<Record<ProviderId, boolean>>({
+        openai: false,
+        gemini: false,
+        claude: false,
+    });
+    const [preferredModels, setPreferredModels] = useState<Record<string, string>>({});
+    const [defaultModel, setDefaultModel] = useState('');
+    const [credentialsLoaded, setCredentialsLoaded] = useState(false);
     const [savedStatus, setSavedStatus] = useState<Record<string, boolean>>({});
     const [savingStatus, setSavingStatus] = useState<Record<string, boolean>>({});
-    const [hasStoredKey, setHasStoredKey] = useState<Record<string, boolean>>({});
     const [testStatus, setTestStatus] = useState<Record<string, 'idle' | 'testing' | 'success' | 'error'>>({});
     const [testError, setTestError] = useState<Record<string, string>>({});
+    const [providerDataScopes, setProviderDataScopes] = useState<ProviderDataScopes>({});
 
-    // --- Custom Providers ---
-    const [customProviders, setCustomProviders] = useState<CustomProvider[]>([]);
-    const [isEditingCustom, setIsEditingCustom] = useState(false);
-    const [editingProvider, setEditingProvider] = useState<CustomProvider | null>(null);
-    const [customName, setCustomName] = useState('');
-    const [customCurl, setCustomCurl] = useState('');
-    const [customResponsePath, setCustomResponsePath] = useState('');
-    // 'auto' = detect vision support from the template; 'on'/'off' = explicit override.
-    const [customVision, setCustomVision] = useState<'auto' | 'on' | 'off'>('auto');
-    const [curlError, setCurlError] = useState<string | null>(null);
-
-    // --- Local (Ollama) ---
-    const [ollamaModels, setOllamaModels] = useState<string[]>([]);
-    const [ollamaStatus, setOllamaStatus] = useState<'checking' | 'detected' | 'not-found' | 'fixing'>('checking');
-    const [ollamaRestarted, setOllamaRestarted] = useState(false);
-    const [isRefreshingOllama, setIsRefreshingOllama] = useState(false);
-
-    // --- Local (Codex CLI) ---
-    const [codexCliConfig, setCodexCliConfig] = useState({ enabled: false, path: 'codex', model: 'gpt-5.4', fastModel: 'gpt-5.3-codex-spark', timeoutMs: 60000, sandboxMode: 'read-only' as string, serviceTier: 'default' as string | undefined, modelReasoningEffort: undefined as string | undefined });
-    const [codexCliStatus, setCodexCliStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
-    const [codexCliError, setCodexCliError] = useState('');
-
-    // --- Default Model ---
-    const [defaultModel, setDefaultModel] = useState<string>('gemini-3.5-flash');
-    const [fastResponseMode, setFastResponseMode] = useState(false);
-    const [credentialsLoaded, setCredentialsLoaded] = useState(false);
-    const canUseFastMode = !!(hasStoredKey.groq || hasStoredKey.natively || codexCliConfig.enabled);
-
-    // --- Dynamic Model Discovery ---
-    const [preferredModels, setPreferredModels] = useState<Record<string, string>>({});
-
-    // --- Screen Understanding (vision routing) ---
-    const [screenUnderstandingMode, setScreenUnderstandingMode] = useState<'vision_first' | 'vision_only' | 'private_vision'>('vision_first');
-    const [technicalInterviewVisionFirst, setTechnicalInterviewVisionFirst] = useState<boolean>(true);
-
-    // --- Cloud Provider Data Scopes (fail-closed cloud share controls) ---
-    const [providerDataScopes, setProviderDataScopes] = useState<{ transcript?: boolean; screenshots?: boolean; reference_files?: boolean; profile_history?: boolean; embeddings?: boolean; post_call_summary?: boolean }>({});
-
-    // Load Initial Data
     useEffect(() => {
         const loadCredentials = async () => {
             try {
-                // Load credentials FIRST so canUseFastMode is correct before we set fastResponseMode.
-                // If we set fastResponseMode before hasStoredKey is populated, the enforcement
-                // effect below fires with canUseFastMode=false and immediately resets fast mode
-                // to false — writing that reset back to SettingsManager on every startup.
-                // @ts-ignore
                 const creds = await window.electronAPI?.getStoredCredentials?.();
                 if (creds) {
                     setHasStoredKey({
-                        gemini: creds.hasGeminiKey,
-                        groq: creds.hasGroqKey,
-                        openai: creds.hasOpenaiKey,
-                        claude: creds.hasClaudeKey,
-                        deepseek: creds.hasDeepseekKey || false,
-                        natively: creds.hasNativelyKey || false
+                        openai: !!creds.hasOpenaiKey,
+                        gemini: !!creds.hasGeminiKey,
+                        claude: !!creds.hasClaudeKey,
                     });
-                    // Load preferred models
-                    const pm: Record<string, string> = {};
-                    if (creds.geminiPreferredModel) pm.gemini = creds.geminiPreferredModel;
-                    if (creds.groqPreferredModel) pm.groq = creds.groqPreferredModel;
-                    if (creds.openaiPreferredModel) pm.openai = creds.openaiPreferredModel;
-                    if (creds.claudePreferredModel) pm.claude = creds.claudePreferredModel;
-                    if (creds.deepseekPreferredModel) pm.deepseek = creds.deepseekPreferredModel;
-                    setPreferredModels(pm);
+
+                    const nextPreferred: Record<string, string> = {};
+                    if (creds.openaiPreferredModel) nextPreferred.openai = creds.openaiPreferredModel;
+                    if (creds.geminiPreferredModel) nextPreferred.gemini = creds.geminiPreferredModel;
+                    if (creds.claudePreferredModel) nextPreferred.claude = creds.claudePreferredModel;
+                    setPreferredModels(nextPreferred);
                 }
 
-                // Now it's safe to read fast mode — hasStoredKey is already set so
-                // canUseFastMode will be correct when the enforcement effect runs.
-                // @ts-ignore
-                const cliConfig = await window.electronAPI?.getCodexCliConfig?.();
-                if (cliConfig) setCodexCliConfig(cliConfig as typeof codexCliConfig);
-
-                const fastMode = await window.electronAPI?.getGroqFastTextMode();
-                if (fastMode) setFastResponseMode(fastMode.enabled);
-
-                // Mark credentials as fully loaded so the enforcement effect can fire
-                setCredentialsLoaded(true);
-
-                // @ts-ignore
-                const custom = await window.electronAPI?.getCustomProviders();
-                if (custom) {
-                    setCustomProviders(custom);
-                }
-
-                // Load persisted default model
-                // @ts-ignore
-                const result = await window.electronAPI?.getDefaultModel();
-                if (result && result.model) {
+                const result = await window.electronAPI?.getDefaultModel?.();
+                if (result?.model && result.model !== 'natively') {
                     setDefaultModel(result.model);
                 }
-
-                // Check Ollama
-                checkOllama();
-
-            } catch (e) {
-                console.error("Failed to load settings:", e);
-                setCredentialsLoaded(true); // Unblock even on error
+            } catch (error) {
+                console.error('Failed to load AI provider settings:', error);
+            } finally {
+                setCredentialsLoaded(true);
             }
         };
+
         loadCredentials();
+    }, []);
 
-        // Listen for changes from other windows (2-way sync)
-        if (window.electronAPI?.onGroqFastTextChanged) {
-            // @ts-ignore
-            const unsubscribe = window.electronAPI.onGroqFastTextChanged((enabled: boolean) => {
-                setFastResponseMode(enabled);
-                localStorage.setItem('natively_groq_fast_text', String(enabled));
+    useEffect(() => {
+        window.electronAPI?.getProviderDataScopes?.().then(setProviderDataScopes).catch(console.error);
+        const unsubscribeProviderDataScopes = window.electronAPI?.onProviderDataScopesChanged
+            ? window.electronAPI.onProviderDataScopesChanged(setProviderDataScopes)
+            : undefined;
+        return () => unsubscribeProviderDataScopes?.();
+    }, []);
+
+    const defaultModelOptions = useMemo<ModelOption[]>(() => {
+        const options: ModelOption[] = [];
+
+        for (const provider of PROVIDER_ORDER) {
+            const config = STANDARD_CLOUD_MODELS[provider];
+            if (!config || !hasStoredKey[provider]) continue;
+
+            config.ids.forEach((id, index) => {
+                options.push({ id, name: config.names[index] || prettifyModelId(id) });
             });
-            return () => unsubscribe();
-        }
-    }, []);
 
-    // Effect to enforce fast mode disabled if neither Groq key nor Natively API is configured.
-    // Guard with credentialsLoaded so this never fires during the initial async load phase
-    // (when hasStoredKey is still empty and canUseFastMode is incorrectly false).
-    useEffect(() => {
-        if (!credentialsLoaded) return;
-        if (!canUseFastMode && fastResponseMode) {
-            setFastResponseMode(false);
-            localStorage.setItem('natively_groq_fast_text', 'false');
-            // @ts-ignore
-            window.electronAPI?.setGroqFastTextMode(false);
-        }
-    }, [credentialsLoaded, canUseFastMode, fastResponseMode]);
-
-    // Poll for Ollama status every 3 seconds requesting smart start on mount
-    useEffect(() => {
-        // Immediate "Smart Start" check
-        ensureOllamaStartup();
-
-        // Background polling for maintenance
-        const interval = setInterval(() => {
-            checkOllama(false);
-        }, 3000);
-        return () => clearInterval(interval);
-    }, []);
-
-    // Load Screen Understanding (vision routing) settings
-    useEffect(() => {
-        window.electronAPI?.getScreenUnderstandingMode?.().then(setScreenUnderstandingMode as any).catch(() => { });
-        (window.electronAPI as any)?.getTechnicalInterviewVisionFirst?.()
-            .then(setTechnicalInterviewVisionFirst)
-            .catch(() => {
-                // Fallback to deprecated alias if the renderer is talking to an older main process.
-                window.electronAPI?.getTechnicalInterviewDirectVision?.().then(setTechnicalInterviewVisionFirst).catch(() => { });
-            });
-    }, []);
-
-    useEffect(() => {
-        const api: any = window.electronAPI;
-        if (!api?.onScreenUnderstandingModeChanged) return;
-        const unsubscribe = api.onScreenUnderstandingModeChanged(setScreenUnderstandingMode);
-        return () => unsubscribe?.();
-    }, []);
-
-    useEffect(() => {
-        const api: any = window.electronAPI;
-        const handler = (enabled: boolean) => setTechnicalInterviewVisionFirst(enabled);
-        const unsub1 = api?.onTechnicalInterviewVisionFirstChanged?.(handler);
-        const unsub2 = api?.onTechnicalInterviewDirectVisionChanged?.(handler);
-        return () => {
-            unsub1?.();
-            unsub2?.();
-        };
-    }, []);
-
-    // Load Cloud Provider Data Scopes and subscribe to cross-window changes
-    useEffect(() => {
-        window.electronAPI?.getProviderDataScopes?.().then(setProviderDataScopes).catch(() => { });
-    }, []);
-
-    useEffect(() => {
-        if (window.electronAPI?.onProviderDataScopesChanged) {
-            const unsubscribe = window.electronAPI.onProviderDataScopesChanged(setProviderDataScopes);
-            return () => unsubscribe();
-        }
-    }, []);
-
-    const ensureOllamaStartup = async () => {
-        setOllamaStatus('checking');
-        try {
-            // @ts-ignore
-            const result = await window.electronAPI?.invoke?.('ensure-ollama-running');
-            if (result && result.success) {
-                // It's running (or just started), now fetch models
-                checkOllama(true);
-            } else {
-                setOllamaStatus('not-found');
-            }
-        } catch (e) {
-            console.warn("Ollama ensure startup failed:", e);
-            setOllamaStatus('not-found');
-        }
-    };
-
-    const checkOllama = async (_isInitial = true) => {
-        // Don't override 'checking' if we are already in smart-start mode
-        // if (isInitial) setOllamaStatus('checking'); 
-
-        try {
-            // @ts-ignore
-            const models = await window.electronAPI?.getAvailableOllamaModels?.();
-            if (models && models.length > 0) {
-                setOllamaModels(models);
-                setOllamaStatus('detected');
-            } else {
-                // Silent failure on background checks
-                // Only set not-found if we haven't detected it yet
-                if (ollamaStatus !== 'detected') {
-                    setOllamaStatus('not-found');
-                }
-            }
-        } catch (e) {
-            // console.warn(`Ollama check failed:`, e);
-            if (ollamaStatus !== 'detected') {
-                setOllamaStatus('not-found');
+            const preferredModel = preferredModels[provider];
+            if (preferredModel && !config.ids.includes(preferredModel)) {
+                options.push({ id: preferredModel, name: prettifyModelId(preferredModel) });
             }
         }
+
+        return options;
+    }, [hasStoredKey, preferredModels]);
+
+    useEffect(() => {
+        if (!credentialsLoaded || defaultModelOptions.length === 0) return;
+        if (defaultModel && defaultModelOptions.some(option => option.id === defaultModel)) return;
+
+        const nextModel = defaultModelOptions[0].id;
+        setDefaultModel(nextModel);
+        window.electronAPI?.setDefaultModel?.(nextModel).catch(console.error);
+    }, [credentialsLoaded, defaultModel, defaultModelOptions]);
+
+    const setProviderKey = (provider: ProviderId, value: string) => {
+        setApiKeys(prev => ({ ...prev, [provider]: value }));
     };
 
-    const handleFixOllama = async () => {
-        setOllamaStatus('fixing');
-        try {
-            // @ts-ignore
-            const result = await window.electronAPI?.invoke?.('force-restart-ollama');
-            if (result && result.success) {
-                setOllamaRestarted(true);
-                // Wait for server to be ready
-                setTimeout(() => checkOllama(false), 2000);
-            } else {
-                setOllamaStatus('not-found');
-            }
-        } catch (e) {
-            console.error("Fix failed", e);
-            setOllamaStatus('not-found');
-        }
-    };
+    const handleSaveKey = async (provider: ProviderId) => {
+        const key = apiKeys[provider].trim();
+        if (!key) return;
 
-    const saveCodexCliConfig = async (next = codexCliConfig) => {
-        const normalized = { ...next, timeoutMs: Number(next.timeoutMs) || 60000 };
-        setCodexCliConfig(normalized);
-        const result = await window.electronAPI?.setCodexCliConfig?.(normalized);
-        if (result?.config) setCodexCliConfig(result.config as typeof codexCliConfig);
-        return result;
-    };
-
-    const handleTestCodexCli = async () => {
-        setCodexCliStatus('testing');
-        setCodexCliError('');
-        try {
-            const saveResult = await saveCodexCliConfig();
-            const configToTest = saveResult?.config || codexCliConfig;
-            const result = await window.electronAPI?.testCodexCli?.(configToTest);
-            if (result?.success) {
-                // If the main process auto-detected an install, reflect the
-                // resolved path in the form so the user sees what got picked.
-                if (result.config) setCodexCliConfig(result.config as typeof codexCliConfig);
-                setCodexCliStatus('success');
-                setTimeout(() => setCodexCliStatus('idle'), 3000);
-            } else {
-                setCodexCliStatus('error');
-                setCodexCliError(result?.error || 'Codex CLI test failed');
-            }
-        } catch (e: any) {
-            setCodexCliStatus('error');
-            setCodexCliError(e.message || 'Codex CLI test failed');
-        }
-    };
-
-    const handleSaveKey = async (provider: string, key: string, setter: (val: string) => void) => {
-        if (!key.trim()) return;
         setSavingStatus(prev => ({ ...prev, [provider]: true }));
         try {
             let result;
-            // @ts-ignore
-            if (provider === 'gemini') result = await window.electronAPI.setGeminiApiKey(key);
-            // @ts-ignore
-            if (provider === 'groq') result = await window.electronAPI.setGroqApiKey(key);
-            // @ts-ignore
-            if (provider === 'openai') result = await window.electronAPI.setOpenaiApiKey(key);
-            // @ts-ignore
-            if (provider === 'claude') result = await window.electronAPI.setClaudeApiKey(key);
-            // @ts-ignore
-            if (provider === 'deepseek') result = await window.electronAPI.setDeepseekApiKey(key);
+            if (provider === 'openai') result = await window.electronAPI?.setOpenaiApiKey?.(key);
+            if (provider === 'gemini') result = await window.electronAPI?.setGeminiApiKey?.(key);
+            if (provider === 'claude') result = await window.electronAPI?.setClaudeApiKey?.(key);
 
-            if (result && result.success) {
+            if (result?.success) {
                 setSavedStatus(prev => ({ ...prev, [provider]: true }));
                 setHasStoredKey(prev => ({ ...prev, [provider]: true }));
-                setter('');
+                setProviderKey(provider, '');
                 setTimeout(() => setSavedStatus(prev => ({ ...prev, [provider]: false })), 2000);
             }
-        } catch (e) {
-            console.error(`Failed to save ${provider} key:`, e);
+        } catch (error) {
+            console.error(`Failed to save ${provider} API key:`, error);
         } finally {
             setSavingStatus(prev => ({ ...prev, [provider]: false }));
         }
     };
 
-    const handleRemoveKey = async (provider: string, setter: (val: string) => void) => {
-        if (!confirm(`Are you sure you want to remove the ${provider} API key?`)) return;
+    const handleRemoveKey = async (provider: ProviderId) => {
+        if (!confirm(`Are you sure you want to remove the ${PROVIDER_LABELS[provider]} API key?`)) return;
+
         try {
             let result;
-            // @ts-ignore
-            if (provider === 'gemini') result = await window.electronAPI.setGeminiApiKey('');
-            // @ts-ignore
-            if (provider === 'groq') result = await window.electronAPI.setGroqApiKey('');
-            // @ts-ignore
-            if (provider === 'openai') result = await window.electronAPI.setOpenaiApiKey('');
-            // @ts-ignore
-            if (provider === 'claude') result = await window.electronAPI.setClaudeApiKey('');
-            // @ts-ignore
-            if (provider === 'deepseek') result = await window.electronAPI.setDeepseekApiKey('');
+            if (provider === 'openai') result = await window.electronAPI?.setOpenaiApiKey?.('');
+            if (provider === 'gemini') result = await window.electronAPI?.setGeminiApiKey?.('');
+            if (provider === 'claude') result = await window.electronAPI?.setClaudeApiKey?.('');
 
-            if (result && result.success) {
+            if (result?.success) {
                 setHasStoredKey(prev => ({ ...prev, [provider]: false }));
-                setter('');
+                setProviderKey(provider, '');
             }
-        } catch (e) {
-            console.error(`Failed to remove ${provider} key:`, e);
+        } catch (error) {
+            console.error(`Failed to remove ${provider} API key:`, error);
         }
     };
 
-    const handleTestConnection = async (provider: string, key: string) => {
-        // Allow testing if key is provided OR if we have a stored key
-        if (!key.trim() && !hasStoredKey[provider]) {
-            return;
-        }
+    const handleTestConnection = async (provider: ProviderId) => {
+        const key = apiKeys[provider].trim();
+        if (!key && !hasStoredKey[provider]) return;
+
         setTestStatus(prev => ({ ...prev, [provider]: 'testing' }));
         setTestError(prev => ({ ...prev, [provider]: '' }));
 
         try {
-            // @ts-ignore
-            const result = await window.electronAPI.testLlmConnection(provider, key);
-            if (result.success) {
+            const result = await window.electronAPI?.testLlmConnection?.(provider, key);
+            if (result?.success) {
                 setTestStatus(prev => ({ ...prev, [provider]: 'success' }));
                 setTimeout(() => setTestStatus(prev => ({ ...prev, [provider]: 'idle' })), 3000);
             } else {
                 setTestStatus(prev => ({ ...prev, [provider]: 'error' }));
-                setTestError(prev => ({ ...prev, [provider]: result.error || 'Connection failed' }));
+                setTestError(prev => ({ ...prev, [provider]: result?.error || 'Connection failed' }));
             }
-        } catch (e: any) {
+        } catch (error: any) {
             setTestStatus(prev => ({ ...prev, [provider]: 'error' }));
-            setTestError(prev => ({ ...prev, [provider]: e.message || 'Connection failed' }));
+            setTestError(prev => ({ ...prev, [provider]: error.message || 'Connection failed' }));
         }
     };
 
-    const openKeyUrl = (provider: string) => {
-        const urls: Record<string, string> = {
-            gemini: 'https://aistudio.google.com/app/apikey',
-            groq: 'https://console.groq.com/keys',
-            openai: 'https://platform.openai.com/api-keys',
-            claude: 'https://console.anthropic.com/settings/keys'
-        };
-        // @ts-ignore
-        window.electronAPI?.openExternal(urls[provider]);
+    const handlePreferredModelChange = (provider: ProviderId, model: string) => {
+        setPreferredModels(prev => ({ ...prev, [provider]: model }));
     };
 
-
-    // --- Custom Provider Handlers ---
-
-    const handleEditProvider = (provider: CustomProvider) => {
-        setEditingProvider(provider);
-        setCustomName(provider.name);
-        setCustomCurl(provider.curlCommand);
-        setCustomResponsePath(provider.responsePath || '');
-        setCustomVision(provider.multimodal === true ? 'on' : provider.multimodal === false ? 'off' : 'auto');
-        setIsEditingCustom(true);
-        setCurlError(null);
-    };
-
-    const handleNewProvider = () => {
-        setEditingProvider(null);
-        setCustomName('');
-        setCustomCurl('');
-        setCustomResponsePath('');
-        setCustomVision('auto');
-        setIsEditingCustom(true);
-        setCurlError(null);
-    };
-
-    const handleSaveCustom = async () => {
-        setCurlError(null);
-        if (!customName.trim()) {
-            setCurlError("Provider Name is required.");
-            return;
-        }
-
-        const validation = validateCurl(customCurl);
-        if (!validation.isValid) {
-            setCurlError(validation.message || "Invalid cURL command.");
-            return;
-        }
-
-        const newProvider: CustomProvider = {
-            id: editingProvider ? editingProvider.id : crypto.randomUUID(),
-            name: customName,
-            curlCommand: customCurl,
-            responsePath: customResponsePath,
-            // 'auto' → omit the flag so the backend auto-detects from the template.
-            ...(customVision === 'on' ? { multimodal: true } : customVision === 'off' ? { multimodal: false } : {}),
-        };
-
-        try {
-            // @ts-ignore
-            const result = await window.electronAPI.saveCustomProvider(newProvider);
-            if (result.success) {
-                // Refresh list
-                // @ts-ignore
-                const updated = await window.electronAPI.getCustomProviders();
-                setCustomProviders(updated);
-                setIsEditingCustom(false);
-            } else {
-                setCurlError(result.error ?? null);
-            }
-        } catch (e: any) {
-            setCurlError(e.message);
-        }
-    };
-
-    const handleDeleteCustom = async (id: string) => {
-        if (!confirm("Are you sure you want to delete this provider?")) return;
-        try {
-            // @ts-ignore
-            const result = await window.electronAPI.deleteCustomProvider(id);
-            if (result.success) {
-                // @ts-ignore
-                const updated = await window.electronAPI.getCustomProviders();
-                setCustomProviders(updated);
-            }
-        } catch (e) {
-            console.error("Failed to delete provider:", e);
-        }
+    const handleProviderDataScopeChange = (scope: ProviderDataScopeKey, enabled: boolean) => {
+        const next = { ...providerDataScopes, [scope]: enabled };
+        setProviderDataScopes(next);
+        window.electronAPI?.setProviderDataScopes?.(next).catch(console.error);
     };
 
     return (
         <div className="space-y-5 animated fadeIn pb-10">
-            {/* Default Model for Chat */}
             <div className="space-y-5">
                 <div>
                     <h3 className="text-sm font-bold text-text-primary mb-1">Default Model for Chat</h3>
-                    <p className="text-xs text-text-secondary mb-2">Primary model for new chats. Other configured models act as fallbacks.</p>
+                    <p className="text-xs text-text-secondary mb-2">Choose from configured OpenAI, Google, and Anthropic models.</p>
                 </div>
 
                 <div className="bg-bg-item-surface rounded-xl p-5 border border-border-subtle flex items-center justify-between">
@@ -585,715 +283,71 @@ export const AIProvidersSettings: React.FC = () => {
                     </div>
                     <ModelSelect
                         value={defaultModel}
-                        options={(() => {
-                            const opts: { id: string; name: string }[] = [];
-
-                            if (hasStoredKey.natively) {
-                                opts.push({ id: 'natively', name: 'Natively API' });
-                            }
-
-                            for (const [prov, cfg] of Object.entries(STANDARD_CLOUD_MODELS)) {
-                                if (!hasStoredKey[prov as keyof typeof hasStoredKey]) continue;
-                                cfg.ids.forEach((id, i) => opts.push({ id, name: cfg.names[i] }));
-                                const pm = preferredModels[prov as keyof typeof preferredModels];
-                                if (pm && !cfg.ids.includes(pm)) {
-                                    opts.push({ id: pm, name: prettifyModelId(pm) });
-                                }
-                            }
-                            if (codexCliConfig.enabled) {
-                                opts.push({ id: CODEX_CLI_MODEL.id, name: `${CODEX_CLI_MODEL.name} (${prettifyModelId(codexCliConfig.model)})` });
-                                CODEX_CLI_MODEL_PRESETS.forEach(model => {
-                                    const id = codexCliSelectorId(model.id);
-                                    if (!opts.find(o => o.id === id)) {
-                                        opts.push({ id, name: `${CODEX_CLI_MODEL.name}: ${model.name}` });
-                                    }
-                                });
-                            }
-                            customProviders.forEach(p => opts.push({ id: p.id, name: p.name }));
-                            ollamaModels.forEach(m => opts.push({ id: `ollama-${m}`, name: `${m} (Local)` }));
-
-                            if (defaultModel && !opts.find(o => o.id === defaultModel)) {
-                                opts.unshift({ id: defaultModel, name: prettifyModelId(defaultModel) });
-                            }
-                            return opts;
-                        })()}
-                        onChange={(val) => {
-                            setDefaultModel(val);
-                            // @ts-ignore - persist as default + update runtime + broadcast
-                            window.electronAPI?.setDefaultModel(val).catch(console.error);
+                        options={defaultModelOptions}
+                        placeholder={defaultModelOptions.length ? 'Select model' : 'Add a provider key first'}
+                        onChange={(value) => {
+                            setDefaultModel(value);
+                            window.electronAPI?.setDefaultModel?.(value).catch(console.error);
                         }}
                     />
                 </div>
-
-                {/* Fast Response Mode */}
-                <div
-                    className={`bg-bg-item-surface rounded-xl p-5 border border-border-subtle flex items-center justify-between gap-4 ${!canUseFastMode ? 'opacity-50 grayscale' : ''}`}
-                    title={!canUseFastMode ? "Requires Groq, Natively API, or Codex CLI to be configured" : ""}
-                >
-                    <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                            <label className="block text-xs font-medium text-text-primary uppercase tracking-wide mb-0">Fast Response Mode</label>
-                            <span className="bg-orange-500/10 text-orange-500 text-[9px] font-bold px-1.5 py-0.5 rounded border border-orange-500/20">NEW</span>
-                        </div>
-                        <p className="text-[10px] text-text-secondary mt-0.5">Super fast responses using the Codex CLI fast model, Groq, or Natively. Turn this off to use the selected normal model.</p>
-                        {!canUseFastMode && (
-                            <p className="text-[10px] text-orange-500 mt-0.5 font-medium">Requires Groq, Natively API, or Codex CLI to be configured.</p>
-                        )}
-                    </div>
-                    <div
-                        onClick={async () => {
-                            if (!canUseFastMode) {
-                                alert("Please configure Groq, Natively API, or Codex CLI first to enable Fast Response Mode.");
-                                return;
-                            }
-                            const newState = !fastResponseMode;
-                            setFastResponseMode(newState);
-                            localStorage.setItem('natively_groq_fast_text', String(newState));
-                            // @ts-ignore
-                            await window.electronAPI?.setGroqFastTextMode(newState);
-                        }}
-                        className={`shrink-0 w-11 h-6 rounded-full relative cursor-pointer transition-colors ${!canUseFastMode ? 'cursor-not-allowed bg-bg-toggle-switch' : fastResponseMode ? 'bg-orange-500' : 'bg-bg-toggle-switch border border-border-muted'}`}
-                    >
-                        <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${fastResponseMode ? 'translate-x-5' : 'translate-x-0'}`} />
-                    </div>
-                </div>
             </div>
 
-            {/* Cloud Providers */}
             <div className="space-y-5">
                 <div>
-                    <h3 className="text-sm font-bold text-text-primary mb-1">Cloud Providers</h3>
-                    <p className="text-xs text-text-secondary mb-2">Add API keys to unlock cloud AI models.</p>
+                    <h3 className="text-sm font-bold text-text-primary mb-1">AI Providers</h3>
+                    <p className="text-xs text-text-secondary mb-2">Add one or more provider keys. Only OpenAI, Google, and Anthropic are shown here.</p>
                 </div>
 
                 <div className="space-y-4">
-
-                    {/* Gemini */}
-                    <ProviderCard
-                        providerId="gemini"
-                        providerName="Gemini"
-                        apiKey={apiKey}
-                        preferredModel={preferredModels.gemini}
-                        hasStoredKey={!!hasStoredKey.gemini}
-                        onKeyChange={setApiKey}
-                        onSaveKey={async () => { await handleSaveKey('gemini', apiKey, setApiKey); }}
-                        onRemoveKey={() => handleRemoveKey('gemini', setApiKey)}
-                        onTestConnection={() => handleTestConnection('gemini', apiKey)}
-                        testStatus={testStatus.gemini || 'idle'}
-                        testError={testError.gemini}
-                        savingStatus={!!savingStatus.gemini}
-                        savedStatus={!!savedStatus.gemini}
-                        keyPlaceholder="AIzaSy..."
-                        keyUrl="https://aistudio.google.com/app/apikey"
-                        onPreferredModelChange={(model) => setPreferredModels(prev => ({ ...prev, gemini: model }))}
-                    />
-
-                    {/* Groq */}
-                    <ProviderCard
-                        providerId="groq"
-                        providerName="Groq"
-                        apiKey={groqApiKey}
-                        preferredModel={preferredModels.groq}
-                        hasStoredKey={!!hasStoredKey.groq}
-                        onKeyChange={setGroqApiKey}
-                        onSaveKey={async () => { await handleSaveKey('groq', groqApiKey, setGroqApiKey); }}
-                        onRemoveKey={() => handleRemoveKey('groq', setGroqApiKey)}
-                        onTestConnection={() => handleTestConnection('groq', groqApiKey)}
-                        testStatus={testStatus.groq || 'idle'}
-                        testError={testError.groq}
-                        savingStatus={!!savingStatus.groq}
-                        savedStatus={!!savedStatus.groq}
-                        keyPlaceholder="gsk_..."
-                        keyUrl="https://console.groq.com/keys"
-                        onPreferredModelChange={(model) => setPreferredModels(prev => ({ ...prev, groq: model }))}
-                    />
-
-                    {/* OpenAI */}
-                    <ProviderCard
-                        providerId="openai"
-                        providerName="OpenAI"
-                        apiKey={openaiApiKey}
-                        preferredModel={preferredModels.openai}
-                        hasStoredKey={!!hasStoredKey.openai}
-                        onKeyChange={setOpenaiApiKey}
-                        onSaveKey={async () => { await handleSaveKey('openai', openaiApiKey, setOpenaiApiKey); }}
-                        onRemoveKey={() => handleRemoveKey('openai', setOpenaiApiKey)}
-                        onTestConnection={() => handleTestConnection('openai', openaiApiKey)}
-                        testStatus={testStatus.openai || 'idle'}
-                        testError={testError.openai}
-                        savingStatus={!!savingStatus.openai}
-                        savedStatus={!!savedStatus.openai}
-                        keyPlaceholder="sk-..."
-                        keyUrl="https://platform.openai.com/api-keys"
-                        onPreferredModelChange={(model) => setPreferredModels(prev => ({ ...prev, openai: model }))}
-                    />
-
-                    {/* Claude */}
-                    <ProviderCard
-                        providerId="claude"
-                        providerName="Claude"
-                        apiKey={claudeApiKey}
-                        preferredModel={preferredModels.claude}
-                        hasStoredKey={!!hasStoredKey.claude}
-                        onKeyChange={setClaudeApiKey}
-                        onSaveKey={async () => { await handleSaveKey('claude', claudeApiKey, setClaudeApiKey); }}
-                        onRemoveKey={() => handleRemoveKey('claude', setClaudeApiKey)}
-                        onTestConnection={() => handleTestConnection('claude', claudeApiKey)}
-                        testStatus={testStatus.claude || 'idle'}
-                        testError={testError.claude}
-                        savingStatus={!!savingStatus.claude}
-                        savedStatus={!!savedStatus.claude}
-                        keyPlaceholder="sk-ant-..."
-                        keyUrl="https://console.anthropic.com/settings/keys"
-                        onPreferredModelChange={(model) => setPreferredModels(prev => ({ ...prev, claude: model }))}
-                    />
-
-                    {/* DeepSeek — text-only; intentionally not part of the screenshot/vision fallback chain. */}
-                    <ProviderCard
-                        providerId="deepseek"
-                        providerName="DeepSeek"
-                        apiKey={deepseekApiKey}
-                        preferredModel={preferredModels.deepseek}
-                        hasStoredKey={!!hasStoredKey.deepseek}
-                        onKeyChange={setDeepseekApiKey}
-                        onSaveKey={async () => { await handleSaveKey('deepseek', deepseekApiKey, setDeepseekApiKey); }}
-                        onRemoveKey={() => handleRemoveKey('deepseek', setDeepseekApiKey)}
-                        onTestConnection={() => handleTestConnection('deepseek', deepseekApiKey)}
-                        testStatus={testStatus.deepseek || 'idle'}
-                        testError={testError.deepseek}
-                        savingStatus={!!savingStatus.deepseek}
-                        savedStatus={!!savedStatus.deepseek}
-                        keyPlaceholder="sk-..."
-                        keyUrl="https://platform.deepseek.com/api_keys"
-                        onPreferredModelChange={(model) => setPreferredModels(prev => ({ ...prev, deepseek: model }))}
-                    />
-
-                </div>
-            </div>
-
-            {/* Local (Codex CLI) Provider */}
-            <div className="space-y-5">
-                <div>
-                    <h3 className="text-sm font-bold text-text-primary mb-1">Local Provider (Codex CLI)</h3>
-                    <p className="text-xs text-text-secondary">Route text and screenshot responses through a locally authenticated Codex CLI.</p>
-                </div>
-
-                <div className="bg-bg-item-surface rounded-xl p-5 border border-border-subtle space-y-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <label className="block text-xs font-medium text-text-primary uppercase tracking-wide mb-0">Enable Codex CLI</label>
-                            <p className="text-[10px] text-text-secondary">Adds Codex CLI as a selectable local backend and fallback.</p>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={async () => {
-                                const next = { ...codexCliConfig, enabled: !codexCliConfig.enabled };
-                                await saveCodexCliConfig(next);
-                            }}
-                            className={`w-11 h-6 rounded-full relative transition-colors ${codexCliConfig.enabled ? 'bg-accent-primary' : 'bg-bg-toggle-switch border border-border-muted'}`}
-                        >
-                            <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${codexCliConfig.enabled ? 'translate-x-5' : 'translate-x-0'}`} />
-                        </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <label className="space-y-1">
-                            <span className="text-[10px] font-medium text-text-secondary uppercase tracking-wide">Executable</span>
-                            <input
-                                value={codexCliConfig.path}
-                                onChange={e => setCodexCliConfig(prev => ({ ...prev, path: e.target.value }))}
-                                onBlur={() => saveCodexCliConfig()}
-                                className="w-full bg-bg-input border border-border-subtle rounded-lg px-3 py-2 text-xs text-text-primary font-mono focus:outline-none focus:border-accent-primary"
-                                placeholder="codex"
-                            />
-                        </label>
-                        <label className="space-y-1">
-                            <span className="text-[10px] font-medium text-text-secondary uppercase tracking-wide">Timeout (ms)</span>
-                            <input
-                                type="number"
-                                value={codexCliConfig.timeoutMs}
-                                onChange={e => setCodexCliConfig(prev => ({ ...prev, timeoutMs: Number(e.target.value) }))}
-                                onBlur={() => saveCodexCliConfig()}
-                                className="w-full bg-bg-input border border-border-subtle rounded-lg px-3 py-2 text-xs text-text-primary font-mono focus:outline-none focus:border-accent-primary"
-                                min={1000}
-                            />
-                        </label>
-                        <CodexCliModelField
-                            label="Normal Model"
-                            value={codexCliConfig.model}
-                            placeholder="gpt-5.5"
-                            onChange={(model) => setCodexCliConfig(prev => ({ ...prev, model }))}
-                            onSelect={(model) => saveCodexCliConfig({ ...codexCliConfig, model })}
-                            onSave={() => saveCodexCliConfig()}
+                    {PROVIDER_ORDER.map(provider => (
+                        <ProviderCard
+                            key={provider}
+                            providerId={provider}
+                            providerName={PROVIDER_LABELS[provider]}
+                            apiKey={apiKeys[provider]}
+                            preferredModel={preferredModels[provider]}
+                            hasStoredKey={hasStoredKey[provider]}
+                            onKeyChange={(value) => setProviderKey(provider, value)}
+                            onSaveKey={() => handleSaveKey(provider)}
+                            onRemoveKey={() => handleRemoveKey(provider)}
+                            onTestConnection={() => handleTestConnection(provider)}
+                            testStatus={testStatus[provider] || 'idle'}
+                            testError={testError[provider]}
+                            savingStatus={!!savingStatus[provider]}
+                            savedStatus={!!savedStatus[provider]}
+                            keyPlaceholder={PROVIDER_KEY_PLACEHOLDERS[provider]}
+                            keyUrl={PROVIDER_KEY_URLS[provider]}
+                            onPreferredModelChange={(model) => handlePreferredModelChange(provider, model)}
                         />
-                        <CodexCliModelField
-                            label="Fast Model"
-                            value={codexCliConfig.fastModel}
-                            placeholder="gpt-5.3-codex-spark"
-                            onChange={(fastModel) => setCodexCliConfig(prev => ({ ...prev, fastModel }))}
-                            onSelect={(fastModel) => saveCodexCliConfig({ ...codexCliConfig, fastModel })}
-                            onSave={() => saveCodexCliConfig()}
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <label className="space-y-1">
-                            <span className="text-[10px] font-medium text-text-secondary uppercase tracking-wide">Service Tier</span>
-                            <ModelSelect
-                                value={codexCliConfig.serviceTier ?? 'default'}
-                                options={CODEX_SERVICE_TIERS.map(t => ({ id: t, name: t.charAt(0).toUpperCase() + t.slice(1) }))}
-                                onChange={(serviceTier) => saveCodexCliConfig({ ...codexCliConfig, serviceTier: serviceTier as typeof CODEX_SERVICE_TIERS[number] })}
-                                placeholder="default"
-                            />
-                            <p className="text-[9px] text-text-tertiary">Use faster service tier if available. Codex Cloud only.</p>
-                        </label>
-                        <label className="space-y-1">
-                            <span className="text-[10px] font-medium text-text-secondary uppercase tracking-wide">Reasoning Effort</span>
-                            <ModelSelect
-                                value={codexCliConfig.modelReasoningEffort ?? ''}
-                                options={[
-                                    { id: '', name: 'None' },
-                                    ...CODEX_MODEL_REASONING_EFFORTS.map(e => ({ id: e, name: e.charAt(0).toUpperCase() + e.slice(1) })),
-                                ]}
-                                onChange={(effort) => saveCodexCliConfig({ ...codexCliConfig, modelReasoningEffort: effort || undefined })}
-                                placeholder="None"
-                            />
-                            <p className="text-[9px] text-text-tertiary">How much reasoning effort the model uses. Model-dependent.</p>
-                        </label>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3">
-                        <div className="min-h-5">
-                            {codexCliStatus === 'success' && (
-                                <div className="flex items-center gap-2 text-xs text-green-400">
-                                    <CheckCircle size={14} />
-                                    <span>Codex CLI detected</span>
-                                </div>
-                            )}
-                            {codexCliStatus === 'error' && (
-                                <div className="flex items-center gap-2 text-xs text-red-400">
-                                    <AlertCircle size={14} />
-                                    <span>{codexCliError}</span>
-                                </div>
-                            )}
-                        </div>
-                        <button
-                            type="button"
-                            onClick={handleTestCodexCli}
-                            disabled={codexCliStatus === 'testing'}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-bg-input hover:bg-bg-elevated border border-border-subtle rounded-lg text-xs font-medium text-text-primary transition-colors disabled:opacity-60"
-                        >
-                            {codexCliStatus === 'testing' ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
-                            Test CLI
-                        </button>
-                    </div>
+                    ))}
                 </div>
             </div>
 
-            {/* Local (Ollama) Providers */}
-            <div className="space-y-5">
-                <div className="flex items-center justify-between mb-2">
-                    <div>
-                        <h3 className="text-sm font-bold text-text-primary mb-1">Local Models (Ollama)</h3>
-                        <p className="text-xs text-text-secondary">Run open-source models locally.</p>
-                    </div>
-                    <button
-                        onClick={async () => {
-                            setIsRefreshingOllama(true);
-                            await checkOllama(false);
-                            // Add a small delay for visual feedback if the check is too fast
-                            setTimeout(() => setIsRefreshingOllama(false), 500);
-                        }}
-                        className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-bg-input transition-colors"
-                        title="Refresh Ollama"
-                        disabled={isRefreshingOllama}
-                    >
-                        <RefreshCw size={18} className={isRefreshingOllama ? "animate-spin" : ""} />
-                    </button>
-                </div>
-
-                <div className="bg-bg-item-surface rounded-xl p-5 border border-border-subtle">
-                    {ollamaStatus === 'checking' && (
-                        <div className="flex items-center gap-2 text-xs text-text-secondary">
-                            <span className="animate-spin">⏳</span> Checking for Ollama...
-                        </div>
-                    )}
-
-                    {ollamaStatus === 'fixing' && (
-                        <div className="flex items-center gap-2 text-xs text-text-secondary">
-                            <span className="animate-spin">🔧</span> Attempting to auto-fix connection...
-                        </div>
-                    )}
-
-                    {ollamaStatus === 'not-found' && (
-                        <div className="flex flex-col gap-2">
-                            <div className="flex items-center gap-2 text-xs text-red-400">
-                                <AlertCircle size={14} />
-                                <span>Ollama not detected</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <p className="text-xs text-text-secondary">
-                                    Ensure Ollama is running (`ollama serve`).
-                                </p>
-                                <button
-                                    onClick={handleFixOllama}
-                                    className="text-[10px] bg-bg-elevated hover:bg-bg-input px-2 py-1 rounded border border-border-subtle"
-                                >
-                                    Auto-Fix Connection
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {ollamaStatus === 'detected' && ollamaModels.length > 0 && (
-                        <div className="space-y-3">
-                            <div className="flex items-center gap-2 text-xs text-green-400 mb-3">
-                                <CheckCircle size={14} />
-                                <span>Ollama connected</span>
-                            </div>
-
-                            <div className="grid grid-cols-1 gap-2">
-                                {ollamaModels.map(model => (
-                                    <div key={model} className="flex items-center justify-between p-2 bg-bg-input rounded-lg border border-border-subtle">
-                                        <span className="text-xs text-text-primary font-mono">{model}</span>
-                                        <span className="text-[10px] text-bg-elevated bg-text-secondary px-1.5 py-0.5 rounded-full font-bold">LOCAL</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                    {ollamaStatus === 'detected' && ollamaModels.length === 0 && (
-                        <div className="text-xs text-text-secondary">
-                            Ollama is running but no models found. Run `ollama pull llama3` to get started.
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Custom Providers */}
-            <div className="space-y-5">
-                <div className="flex items-center justify-between mb-2">
-                    <div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <h3 className="text-sm font-bold text-text-primary">Custom Providers</h3>
-                            <span className="px-1.5 py-0 rounded-full text-[7px] font-bold bg-yellow-500/10 text-yellow-500 uppercase tracking-widest border border-yellow-500/20 leading-loose mt-0.5">Experimental</span>
-                        </div>
-                        <p className="text-xs text-text-secondary">Add your own AI endpoints via cURL.</p>
-                    </div>
-                    {!isEditingCustom && (
-                        <button
-                            onClick={handleNewProvider}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-bg-input hover:bg-bg-elevated border border-border-subtle rounded-lg text-xs font-medium text-text-primary transition-colors"
-                        >
-                            <Plus size={14} /> Add Provider
-                        </button>
-                    )}
-                </div>
-
-                {isEditingCustom ? (
-                    <div className="bg-bg-item-surface rounded-xl p-5 border border-border-subtle animated fadeIn">
-                        <h4 className="text-sm font-bold text-text-primary mb-4">{editingProvider ? 'Edit Provider' : 'New Provider'}</h4>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-medium text-text-primary uppercase tracking-wide mb-1">Provider Name</label>
-                                <input
-                                    type="text"
-                                    value={customName}
-                                    onChange={(e) => setCustomName(e.target.value)}
-                                    placeholder="My Custom LLM"
-                                    className="w-full bg-bg-input border border-border-subtle rounded-lg px-4 py-2.5 text-xs text-text-primary focus:outline-none focus:border-accent-primary transition-colors"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-medium text-text-primary uppercase tracking-wide mb-1">cURL Command</label>
-                                <div className="relative">
-                                    <textarea
-                                        value={customCurl}
-                                        onChange={(e) => setCustomCurl(e.target.value)}
-                                        placeholder={`curl https://api.openai.com/v1/chat/completions ... "content": "{{TEXT}}"`}
-                                        className="w-full h-32 bg-bg-input border border-border-subtle rounded-lg p-4 text-xs font-mono text-text-primary focus:outline-none focus:border-accent-primary transition-colors resize-none leading-relaxed"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-medium text-text-primary uppercase tracking-wide mb-1">
-                                    Response JSON Path <span className="text-text-tertiary normal-case font-normal">(Optional)</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={customResponsePath}
-                                    onChange={(e) => setCustomResponsePath(e.target.value)}
-                                    placeholder="e.g. choices[0].message.content"
-                                    className="w-full bg-bg-input border border-border-subtle rounded-lg px-4 py-2.5 text-xs text-text-primary focus:outline-none focus:border-accent-primary transition-colors font-mono"
-                                />
-                                <p className="text-[10px] text-text-secondary mt-1">
-                                    Dot notation path to the answer text in the JSON response. If empty, the full JSON is returned.
-                                </p>
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-medium text-text-primary uppercase tracking-wide mb-1">
-                                    Screenshot / Vision Support
-                                </label>
-                                <select
-                                    value={customVision}
-                                    onChange={(e) => setCustomVision(e.target.value as 'auto' | 'on' | 'off')}
-                                    className="w-full bg-bg-input border border-border-subtle rounded-lg px-4 py-2.5 text-xs text-text-primary focus:outline-none focus:border-accent-primary transition-colors"
-                                >
-                                    <option value="auto">Auto-detect (recommended)</option>
-                                    <option value="on">Always send screenshots</option>
-                                    <option value="off">Never send screenshots (text only)</option>
-                                </select>
-                                <p className="text-[10px] text-text-secondary mt-1">
-                                    Auto-detect enables vision when your cURL uses <code className="font-mono">{"{{IMAGE_BASE64}}"}</code> or an OpenAI-style <code className="font-mono">messages</code> body. Choose “Always” only if your endpoint accepts images another way; “Never” keeps this provider out of screenshot analysis.
-                                </p>
-                            </div>
-
-                            <div className="bg-bg-elevated/30 rounded-lg overflow-hidden border border-border-subtle mt-4">
-                                <div className="px-4 py-3 bg-bg-elevated/50 border-b border-border-subtle flex items-center justify-between">
-                                    <h5 className="block text-xs font-medium text-text-primary uppercase tracking-wide">
-                                        Configuration Guide
-                                    </h5>
-                                </div>
-
-                                <div className="p-4 space-y-4">
-                                    <div>
-                                        <p className="text-xs text-text-secondary mb-2 font-medium">Available Variables</p>
-                                        <div className="grid grid-cols-1 gap-2">
-                                            <div className="flex items-center gap-2 text-xs">
-                                                <code className="bg-bg-input px-1.5 py-0.5 rounded text-text-primary font-mono border border-border-subtle">{"{{TEXT}}"}</code>
-                                                <span className="text-text-tertiary">Combined System + Context + Message (Recommended)</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-xs">
-                                                <code className="bg-bg-input px-1.5 py-0.5 rounded text-text-primary font-mono border border-border-subtle">{"{{IMAGE_BASE64}}"}</code>
-                                                <span className="text-text-tertiary">Screenshot data (if available)</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <p className="text-xs text-text-secondary mb-2 font-medium">Examples</p>
-                                        <div className="space-y-3">
-                                            {/* Ollama Example */}
-                                            <div>
-                                                <div className="text-[10px] uppercase tracking-wider text-text-tertiary mb-1.5">Local (Ollama)</div>
-                                                <div className="bg-bg-input p-2.5 rounded-lg border border-border-subtle overflow-x-auto group relative">
-                                                    <code className="font-mono text-[10px] text-text-primary whitespace-pre block">
-                                                        curl http://localhost:11434/api/generate -d '{"{"}"model": "llama3", "prompt": "{`{{TEXT}}`}"{"}"}'
-                                                    </code>
-                                                </div>
-                                            </div>
-
-                                            {/* OpenAI Example */}
-                                            <div>
-                                                <div className="text-[10px] uppercase tracking-wider text-text-tertiary mb-1.5">OpenAI Compatible</div>
-                                                <div className="bg-bg-input p-2.5 rounded-lg border border-border-subtle overflow-x-auto">
-                                                    <code className="font-mono text-[10px] text-text-primary whitespace-pre block">
-                                                        {`curl https://api.openai.com/v1/chat/completions \\
-  -H "Content-Type: application/json" \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
-  -d '{
-    "model": "chat-latest",
-    "messages": [
-      {"role": "system", "content": "You are a helpful assistant."},
-      {"role": "user", "content": "{{TEXT}}"}
-    ],
-    "max_completion_tokens": 1024
-  }'`}
-                                                    </code>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {curlError && (
-                                <div className="flex items-start gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-xs">
-                                    <AlertCircle size={14} className="shrink-0 mt-0.5" />
-                                    <span>{curlError}</span>
-                                </div>
-                            )}
-
-                            <div className="flex justify-end gap-3 pt-2">
-                                <button
-                                    onClick={() => setIsEditingCustom(false)}
-                                    className="px-4 py-2 rounded-lg text-xs font-medium text-text-secondary hover:text-text-primary hover:bg-bg-input transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleSaveCustom}
-                                    className="px-4 py-2 rounded-lg text-xs font-medium bg-accent-primary text-white hover:bg-accent-secondary transition-colors flex items-center gap-2"
-                                >
-                                    <Save size={14} /> Save Provider
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="space-y-3">
-                        {customProviders.length === 0 ? (
-                            <div className="text-center py-8 bg-bg-item-surface rounded-xl border border-border-subtle border-dashed">
-                                <p className="text-xs text-text-tertiary">No custom providers added yet.</p>
-                            </div>
-                        ) : (
-                            customProviders.map((provider) => (
-                                <div key={provider.id} className="bg-bg-item-surface rounded-xl p-4 border border-border-subtle flex items-center justify-between group">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-bg-input flex items-center justify-center text-text-secondary font-mono text-xs font-bold">
-                                            {provider.name.substring(0, 2).toUpperCase()}
-                                        </div>
-                                        <div>
-                                            <h4 className="text-sm font-medium text-text-primary">{provider.name}</h4>
-                                            <p className="text-[10px] text-text-tertiary font-mono truncate max-w-[200px] opacity-60">
-                                                {provider.curlCommand.substring(0, 30)}...
-                                            </p>
-                                            {provider.responsePath && (
-                                                <p className="text-[9px] text-text-tertiary font-mono opacity-40 mt-0.5">
-                                                    path: {provider.responsePath}
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button
-                                            onClick={() => handleEditProvider(provider)}
-                                            className="p-1.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
-                                            title="Edit"
-                                        >
-                                            <Edit2 size={14} />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDeleteCustom(provider.id)}
-                                            className="p-1.5 rounded-lg text-text-secondary hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                                            title="Delete"
-                                        >
-                                            <Trash2 size={14} />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                )}
-
-            {/* Screen Understanding — vision-first routing */}
-            <div className="space-y-5">
-                <div>
-                    <h3 className="text-sm font-bold text-text-primary mb-1">Screen understanding</h3>
-                    <p className="text-xs text-text-secondary mb-2">Pick how Natively reads what is on your screen. All paths use the vision-capable AI provider directly; OCR is no longer used.</p>
-                </div>
-                <div className="bg-bg-item-surface rounded-xl p-4 border border-border-subtle flex flex-col gap-2">
-                    {([
-                        {
-                            value: 'vision_first' as const,
-                            label: 'Vision first',
-                            description: 'Recommended. Try every configured vision provider in order; first success wins.',
-                        },
-                        {
-                            value: 'vision_only' as const,
-                            label: 'Vision only',
-                            description: 'Stricter. Require a vision-capable provider; never silently drop the screenshot.',
-                        },
-                        {
-                            value: 'private_vision' as const,
-                            label: 'Private vision (local only)',
-                            description: 'Use a local vision model (Ollama) only. Never call cloud vision. Clear error if no local provider is configured.',
-                        },
-                    ]).map(({ value, label, description }) => {
-                        const selected = screenUnderstandingMode === value;
-                        return (
-                            <div
-                                key={value}
-                                onClick={() => {
-                                    setScreenUnderstandingMode(value);
-                                    window.electronAPI?.setScreenUnderstandingMode?.(value);
-                                }}
-                                className={`px-3 py-2 rounded-lg border cursor-pointer transition-colors ${selected ? 'border-emerald-500/50 bg-emerald-500/10' : 'border-border-subtle hover:border-border-muted bg-bg-elevated/50'}`}
-                                role="radio"
-                                aria-checked={selected}
-                            >
-                                <div className="flex items-center justify-between gap-3">
-                                    <div className="flex flex-col">
-                                        <span className={`text-xs font-semibold ${selected ? 'text-emerald-300' : 'text-text-primary'}`}>{label}</span>
-                                        <span className="text-[11px] text-text-secondary leading-snug mt-0.5">{description}</span>
-                                    </div>
-                                    <div className={`w-4 h-4 rounded-full border-2 shrink-0 ${selected ? 'border-emerald-400 bg-emerald-400' : 'border-border-muted'}`} />
-                                </div>
-                            </div>
-                        );
-                    })}
-                    <div className="flex items-center justify-between pt-2 mt-1 border-t border-border-subtle">
-                        <div className="flex flex-col">
-                            <span className="text-xs text-text-primary font-semibold">Technical interview direct vision</span>
-                            <span className="text-[11px] text-text-secondary leading-snug mt-0.5">Use the highest-resolution image profile so code text stays sharp in interview mode.</span>
-                        </div>
-                        <div
-                            onClick={() => {
-                                const next = !technicalInterviewVisionFirst;
-                                setTechnicalInterviewVisionFirst(next);
-                                const api: any = window.electronAPI;
-                                if (api?.setTechnicalInterviewVisionFirst) {
-                                    api.setTechnicalInterviewVisionFirst(next);
-                                } else {
-                                    window.electronAPI?.setTechnicalInterviewDirectVision?.(next);
-                                }
-                            }}
-                            className={`w-9 h-5 rounded-full relative transition-colors cursor-pointer shrink-0 ${technicalInterviewVisionFirst ? 'bg-emerald-500' : 'bg-bg-toggle-switch border border-border-muted'}`}
-                            role="switch"
-                            aria-checked={technicalInterviewVisionFirst}
-                        >
-                            <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${technicalInterviewVisionFirst ? 'translate-x-4' : 'translate-x-0'}`} />
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Cloud Provider Data Scopes — fail-closed cloud share controls */}
-            <div className="space-y-5">
+            <div className="space-y-4">
                 <div>
                     <h3 className="text-sm font-bold text-text-primary mb-1">Cloud provider data scopes</h3>
-                    <p className="text-xs text-text-secondary mb-2">Control what data cloud AI providers can access. Disabled types are handled locally for privacy.</p>
+                    <p className="text-xs text-text-secondary mb-2">Choose what app context cloud providers may receive.</p>
                 </div>
-                <div className="bg-bg-item-surface rounded-xl p-4 border border-border-subtle flex flex-col gap-2">
-                    {([
-                        { key: 'transcript', label: 'Transcripts' },
-                        { key: 'screenshots', label: 'Screenshots' },
-                        { key: 'reference_files', label: 'Reference files' },
-                        { key: 'profile_history', label: 'Profile history' },
-                        { key: 'embeddings', label: 'Cloud embeddings' },
-                        { key: 'post_call_summary', label: 'Post-call summaries' },
-                    ] as const).map(({ key, label }) => {
-                        const allowed = providerDataScopes[key] !== false;
-                        return (
-                            <div key={key} className="flex items-center justify-between">
-                                <span className="text-xs text-text-secondary">{label}</span>
-                                <div
-                                    onClick={() => {
-                                        const next = { ...providerDataScopes, [key]: !allowed };
-                                        setProviderDataScopes(next);
-                                        window.electronAPI?.setProviderDataScopes?.(next);
-                                    }}
-                                    className={`w-9 h-5 rounded-full relative transition-colors cursor-pointer ${allowed ? 'bg-emerald-500' : 'bg-bg-toggle-switch border border-border-muted'}`}
-                                    role="switch"
-                                    aria-checked={allowed}
-                                    aria-label={`Allow ${label} to cloud providers`}
-                                >
-                                    <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${allowed ? 'translate-x-4' : 'translate-x-0'}`} />
-                                </div>
-                            </div>
-                        );
-                    })}
-                    <div className="flex items-start gap-2 mt-1 pt-3 border-t border-border-subtle">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-tertiary shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-                        <p className="text-[11px] text-text-tertiary leading-relaxed">When a data type is disabled, Natively falls back to the best available local model to keep that data on-device.</p>
-                    </div>
+                <div className="bg-bg-item-surface rounded-xl p-4 border border-border-subtle grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {PROVIDER_DATA_SCOPE_OPTIONS.map(option => (
+                        <label
+                            key={option.key}
+                            className="flex items-start gap-3 rounded-lg border border-border-subtle bg-bg-input/70 px-3 py-3 cursor-pointer hover:bg-bg-elevated transition-colors"
+                        >
+                            <input
+                                type="checkbox"
+                                className="mt-0.5 h-4 w-4 accent-accent-primary"
+                                checked={providerDataScopes[option.key] !== false}
+                                onChange={(event) => handleProviderDataScopeChange(option.key, event.target.checked)}
+                            />
+                            <span className="min-w-0">
+                                <span className="block text-xs font-semibold text-text-primary">{option.label}</span>
+                                <span className="block text-[10px] leading-snug text-text-secondary">{option.description}</span>
+                            </span>
+                        </label>
+                    ))}
                 </div>
-            </div>
             </div>
         </div>
     );

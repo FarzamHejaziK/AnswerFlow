@@ -85,14 +85,14 @@ test('issue #252: banner title is not hardcoded to "Screen Recording Permission 
 });
 
 test('issue #252: Open Settings button does not unconditionally fire x-apple.systempreferences', () => {
-  // The macOS-only URL is correct ONLY for kind=screen-recording-permission.
-  // For kind=audio-capture-failure the action must open Natively's own
-  // settings (toggleSettingsWindow / openSettingsTab) — not an OS URL.
+  // macOS-only URLs are correct only inside the guarded macOS/channel branches.
+  // On Windows the action must fall back to Natively's own settings
+  // (toggleSettingsWindow / openSettingsTab) instead of firing an OS URI.
   const stripped = ui.replace(/\s+/g, ' ');
   const xAppleCount = (stripped.match(/x-apple\.systempreferences:/g) || []).length;
   assert.ok(
-    xAppleCount <= 1,
-    'x-apple.systempreferences should appear at most once (only in the screen-recording branch)'
+    xAppleCount <= 2,
+    'x-apple.systempreferences should appear only in the guarded screen-recording and microphone branches'
   );
 
   // The banner JSX must include a JSX-level conditional keyed on the

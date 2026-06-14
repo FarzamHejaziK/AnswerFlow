@@ -36,7 +36,7 @@ const CopyBlock = ({ command }: { command: string }) => {
     };
     return (
         <div className="flex items-center justify-between bg-black/20 rounded-lg pl-3 pr-1.5 py-1.5 border border-white/[0.03] group hover:border-white/10 transition-colors mt-1.5 mb-2.5 w-full">
-            <code className="text-[10px] font-mono text-blue-400 truncate mr-2 select-all overflow-hidden whitespace-nowrap">
+            <code className="text-[10px] font-mono text-accent-primary truncate mr-2 select-all overflow-hidden whitespace-nowrap">
                 {command}
             </code>
             <button
@@ -258,7 +258,7 @@ const UpdateModal: React.FC<UpdateModalProps> = ({
 
                                     {/* Code Block with Copy */}
                                     <div className="flex items-center justify-between bg-black/20 rounded-lg pl-3 pr-1.5 py-1.5 border border-white/[0.03] group hover:border-white/10 transition-colors">
-                                        <code className="text-[10px] font-mono text-blue-400 truncate mr-2 select-all">
+                                        <code className="text-[10px] font-mono text-accent-primary truncate mr-2 select-all">
                                             xattr -cr /Applications/Natively.app
                                         </code>
                                         <button
@@ -283,7 +283,7 @@ const UpdateModal: React.FC<UpdateModalProps> = ({
                                             initial={{ width: 0 }}
                                             animate={{ width: `${downloadProgress}%` }}
                                             transition={{ ease: "linear", duration: 0.2 }}
-                                            className="h-full bg-[#007AFF] rounded-full shadow-[0_0_10px_rgba(0,122,255,0.5)]"
+                                            className="h-full bg-accent-primary rounded-full shadow-[0_0_10px_rgba(249,115,22,0.45)]"
                                         />
                                     </div>
                                     <p className="text-[11px] font-medium text-white/30 tabular-nums">
@@ -365,14 +365,14 @@ const UpdateModal: React.FC<UpdateModalProps> = ({
                                     {status === 'ready' ? (
                                         <button
                                             onClick={() => window.electronAPI.restartAndInstall()}
-                                            className="px-5 py-[6px] bg-[#007AFF] hover:bg-[#0062CC] text-white text-[13px] font-medium rounded-lg shadow-sm transition-colors"
+                                            className="px-5 py-[6px] bg-accent-primary hover:opacity-90 text-white text-[13px] font-medium rounded-lg shadow-sm transition-colors"
                                         >
                                             Restart & Install
                                         </button>
                                     ) : (
                                         <button
                                             onClick={handleUpdateClick}
-                                            className="px-5 py-[6px] bg-[#007AFF] hover:bg-[#0062CC] text-white text-[13px] font-medium rounded-lg shadow-sm transition-colors"
+                                            className="px-5 py-[6px] bg-accent-primary hover:opacity-90 text-white text-[13px] font-medium rounded-lg shadow-sm transition-colors"
                                         >
                                             Update Now
                                         </button>

@@ -333,22 +333,22 @@ function formatPermissionMessage(reason: PermissionReason, extra?: { device?: st
         : 'System audio capture is unavailable. Interviewer audio will not be captured. Check your audio device routing in Settings and restart the meeting.';
     case 'mac-screen-recording-restricted':
       if (!isMac) return formatPermissionMessage('system-audio-stuck');
-      return 'Screen Recording is restricted by device policy. Interviewer audio will not be captured. Contact your administrator to allow screen capture for Natively.';
+      return 'Screen Recording is restricted by device policy. Interviewer audio will not be captured. Contact your administrator to allow screen capture for AnswerFlow.';
     case 'mac-screen-recording-revoked-rebuild':
       // Defense-in-depth: even though all call sites must be darwin-gated
       // (the `mac-` prefix marks this constraint), if a future contributor
       // calls this from a cross-platform path we degrade gracefully rather
       // than leak macOS UI strings to Windows users.
       if (!isMac) return formatPermissionMessage('system-audio-stuck');
-      return 'System audio is being captured but every sample is silent. This usually means macOS Screen Recording permission needs to be re-granted to this build of Natively. Open System Settings → Privacy & Security → Screen Recording, toggle Natively off and back on, then restart the app. (If you recently rebuilt or updated, the previous grant may not apply.)';
+      return 'System audio is being captured but every sample is silent. This usually means macOS Screen Recording permission needs to be re-granted to this build of AnswerFlow. Open System Settings → Privacy & Security → Screen Recording, toggle AnswerFlow off and back on, then restart the app. (If you recently rebuilt or updated, the previous grant may not apply.)';
     case 'mic-denied':
       return isMac
-        ? 'Microphone access denied. Please allow microphone access in System Settings → Privacy & Security → Microphone, then restart Natively.'
-        : 'Microphone access denied. Please allow microphone access in Settings → Privacy → Microphone, then restart Natively.';
+        ? 'Microphone access denied. Please allow microphone access in System Settings → Privacy & Security → Microphone, then restart AnswerFlow.'
+        : 'Microphone access denied. Please allow microphone access in Settings → Privacy → Microphone, then restart AnswerFlow.';
     case 'mic-zero-fill':
       return isMac
-        ? 'Microphone is producing silent audio. Check that the device is unmuted and that macOS Microphone permission is granted to Natively in System Settings → Privacy & Security → Microphone.'
-        : 'Microphone is producing silent audio. Check that the device is unmuted and that Natively has microphone access in Settings → Privacy → Microphone.';
+        ? 'Microphone is producing silent audio. Check that the device is unmuted and that macOS Microphone permission is granted to AnswerFlow in System Settings → Privacy & Security → Microphone.'
+        : 'Microphone is producing silent audio. Check that the device is unmuted and that AnswerFlow has microphone access in Settings → Privacy → Microphone.';
     case 'mac-same-device-input-output':
       // Defense-in-depth: see comment on `mac-screen-recording-revoked-rebuild`.
       // The CoreAudio Process Tap same-device limitation is macOS-specific;
@@ -358,7 +358,7 @@ function formatPermissionMessage(reason: PermissionReason, extra?: { device?: st
     case 'system-audio-stuck':
       return 'No audio detected on system output for 12s. If your meeting app is using a different output device (Bluetooth headset, virtual cable, second monitor), switch it to your default output, or restart the meeting after switching.';
     case 'system-audio-output-mismatch':
-      return 'No audio detected on the selected output device. Natively is listening to an output that is different from the Windows default, so the meeting audio may be playing somewhere else. In Natively Settings choose Default Speakers, or set the meeting app to the selected output, then restart the meeting.';
+      return 'No audio detected on the selected output device. AnswerFlow is listening to an output that is different from the Windows default, so the meeting audio may be playing somewhere else. In AnswerFlow Settings choose Default Speakers, or set the meeting app to the selected output, then restart the meeting.';
   }
 }
 
@@ -508,7 +508,7 @@ export class AppState {
   // (and only the transcript handler) treats `isMeetingActive || _isDraining`
   // as "accept trailing finals" — every other call site looks at
   // `isMeetingActive` alone, which flips to false synchronously on Stop so the
-  // launcher's "Meeting ongoing" pill switches back to "Start Natively" the
+  // launcher's "Meeting ongoing" pill switches back to "Start AnswerFlow" the
   // instant the user clicks Stop, with no 250 ms green-→-blue stutter.
   private _isDraining: boolean = false;
   // Tracks remembered output device so reconfigureAudio can no-op when nothing changed.
@@ -585,20 +585,19 @@ export class AppState {
       this.cropperWindowHelper.preload();
     }
 
-    // Warm the local Whisper worker in the background so the first recording
+    // Warm the local Moonshine worker in the background so the first recording
     // session starts instantly instead of waiting for model load from disk.
-    // Only fires if local-whisper is selected AND a model is already cached.
     setImmediate(() => {
       try {
         const { CredentialsManager } = require('./services/CredentialsManager');
         if (CredentialsManager.getInstance().getSttProvider() === 'local-whisper') {
-          const { isModelCached } = require('./audio/whisper/modelManager');
+          const { DEFAULT_LOCAL_TRANSCRIPTION_MODEL_ID, isModelCached } = require('./audio/whisper/modelManager');
           const { modelPreloader } = require('./audio/whisper/modelPreloader');
           const { resolveInferenceConfig } = require('./audio/whisper/inferenceConfig');
-          const modelId = settingsManager.get('localWhisperModel') ?? 'Xenova/whisper-tiny.en';
+          const modelId = DEFAULT_LOCAL_TRANSCRIPTION_MODEL_ID;
           const { dtype } = resolveInferenceConfig();
           if (isModelCached(modelId, dtype)) {
-            console.log(`[AppState] Preloading local Whisper model: ${modelId}`);
+            console.log(`[AppState] Preloading local Moonshine model: ${modelId}`);
             modelPreloader.preload(modelId);
           }
         }
@@ -1323,113 +1322,13 @@ export class AppState {
     const sttProvider = CredentialsManager.getInstance().getSttProvider();
     const sttLanguage = CredentialsManager.getInstance().getSttLanguage();
 
-    // 'none' means the user has explicitly disabled STT (no provider selected).
-    // Return null so the pipeline skips STT without falling back to Google.
-    if (sttProvider === 'none') {
-      console.log(`[Main] STT provider is 'none' — audio capture will proceed but transcription is disabled.`);
-      return null;
-    }
-
-    let stt: STTProvider;
-
-    if (sttProvider === 'natively') {
-      const nativelyKey = CredentialsManager.getInstance().getNativelyApiKey();
-      if (!nativelyKey) {
-        // Natively is Coming Soon — no key means degrade gracefully like every other provider
-        console.warn(`[Main] No Natively API Key configured for ${speaker}, falling back to GoogleSTT`);
-        stt = new GoogleSTT(speaker);
-      } else {
-        // 'system' for interviewer (system audio), 'mic' for user (microphone).
-        // The server uses ${key}:${channel} as the session key so both streams
-        // can coexist without triggering concurrent_session_blocked.
-        stt = new NativelyProSTT(nativelyKey, speaker === 'interviewer' ? 'system' : 'mic');
-      }
-    } else if (sttProvider === 'deepgram') {
-      const apiKey = CredentialsManager.getInstance().getDeepgramApiKey();
-      if (apiKey) {
-        console.log(`[Main] Using DeepgramStreamingSTT for ${speaker}`);
-        stt = new DeepgramStreamingSTT(apiKey);
-      } else {
-        console.warn(`[Main] No API key for Deepgram STT, falling back to GoogleSTT`);
-        stt = new GoogleSTT(speaker);
-      }
-    } else if (sttProvider === 'soniox') {
-      const apiKey = CredentialsManager.getInstance().getSonioxApiKey();
-      if (apiKey) {
-        console.log(`[Main] Using SonioxStreamingSTT for ${speaker}`);
-        stt = new SonioxStreamingSTT(apiKey);
-      } else {
-        console.warn(`[Main] No API key for Soniox STT, falling back to GoogleSTT`);
-        stt = new GoogleSTT(speaker);
-      }
-    } else if (sttProvider === 'elevenlabs') {
-      const apiKey = CredentialsManager.getInstance().getElevenLabsApiKey();
-      if (apiKey) {
-        console.log(`[Main] Using ElevenLabsStreamingSTT for ${speaker}`);
-        stt = new ElevenLabsStreamingSTT(apiKey);
-      } else {
-        console.warn(`[Main] No API key for ElevenLabs STT, falling back to GoogleSTT`);
-        stt = new GoogleSTT(speaker);
-      }
-    } else if (sttProvider === 'openai') {
-      // OpenAI: WebSocket Realtime (gpt-4o-transcribe → gpt-4o-mini-transcribe) with whisper-1 REST fallback.
-      // If a custom OpenAI-compatible base URL is configured (e.g. Speaches), the STT class
-      // skips the Realtime WS path and uses REST against the custom endpoint.
-      const apiKey = CredentialsManager.getInstance().getOpenAiSttApiKey();
-      const baseUrl = CredentialsManager.getInstance().getOpenAiSttBaseUrl();
-      if (apiKey) {
-        console.log(`[Main] Using OpenAIStreamingSTT for ${speaker}${baseUrl ? ` (custom endpoint: ${baseUrl})` : ' (WebSocket+REST fallback)'}`);
-        stt = new OpenAIStreamingSTT(apiKey, baseUrl);
-      } else {
-        console.warn(`[Main] No API key for OpenAI STT, falling back to GoogleSTT`);
-        stt = new GoogleSTT(speaker);
-      }
-    } else if (sttProvider === 'groq' || sttProvider === 'azure' || sttProvider === 'ibmwatson') {
-      let apiKey: string | undefined;
-      let region: string | undefined;
-      let modelOverride: string | undefined;
-
-      if (sttProvider === 'groq') {
-        apiKey = CredentialsManager.getInstance().getGroqSttApiKey();
-        modelOverride = CredentialsManager.getInstance().getGroqSttModel();
-      } else if (sttProvider === 'azure') {
-        apiKey = CredentialsManager.getInstance().getAzureApiKey();
-        region = CredentialsManager.getInstance().getAzureRegion();
-      } else if (sttProvider === 'ibmwatson') {
-        apiKey = CredentialsManager.getInstance().getIbmWatsonApiKey();
-        region = CredentialsManager.getInstance().getIbmWatsonRegion();
-      }
-
-      if (apiKey) {
-        console.log(`[Main] Using RestSTT (${sttProvider}) for ${speaker}`);
-        stt = new RestSTT(sttProvider, apiKey, modelOverride, region);
-      } else {
-        console.warn(`[Main] No API key for ${sttProvider} STT, falling back to GoogleSTT`);
-        stt = new GoogleSTT(speaker);
-      }
-    } else if (sttProvider === 'local-whisper') {
-      const { LocalWhisperSTT } = require('./audio/LocalWhisperSTT');
-      const sm = SettingsManager.getInstance();
-      const globalModel = sm.get('localWhisperModel') ?? 'Xenova/whisper-tiny.en';
-      // Per-channel override: when enabled the two STT instances may load
-      // different models (e.g. Moonshine Tiny for mic, Moonshine Base for
-      // system audio). Falls back to globalModel if the per-channel slot is
-      // empty or the feature is disabled.
-      let modelId = globalModel;
-      if (sm.get('localWhisperPerChannelEnabled')) {
-        const override = speaker === 'interviewer'
-          ? sm.get('localWhisperModelSystem')
-          : sm.get('localWhisperModelMic');
-        if (override) modelId = override;
-      }
-      console.log(`[Main] Using LocalWhisperSTT for ${speaker}, model: ${modelId}`);
-      const lws = new LocalWhisperSTT(modelId);
-      // Channel label disambiguates the two concurrent instances in latency logs.
-      lws.setChannel(speaker === 'interviewer' ? 'system' : 'mic');
-      stt = lws as any;
-    } else {
-      stt = new GoogleSTT(speaker);
-    }
+    const { LocalWhisperSTT } = require('./audio/LocalWhisperSTT');
+    const { DEFAULT_LOCAL_TRANSCRIPTION_MODEL_ID } = require('./audio/whisper/modelManager');
+    console.log(`[Main] Using local Moonshine Base STT for ${speaker}, model: ${DEFAULT_LOCAL_TRANSCRIPTION_MODEL_ID}`);
+    const lws = new LocalWhisperSTT(DEFAULT_LOCAL_TRANSCRIPTION_MODEL_ID);
+    // Channel label disambiguates the two concurrent instances in latency logs.
+    lws.setChannel(speaker === 'interviewer' ? 'system' : 'mic');
+    const stt = lws as any;
 
     stt.setRecognitionLanguage(sttLanguage);
 
@@ -2066,7 +1965,7 @@ export class AppState {
           this.systemAudioCapture = null;
           this.sendAudioCaptureFailed({
             channel: 'system',
-            message: 'System audio capture failed to initialize. The native audio module could not allocate the capture device. Restarting Natively may help; if the problem persists, file a bug.',
+            message: 'System audio capture failed to initialize. The native audio module could not allocate the capture device. Restarting AnswerFlow may help; if the problem persists, file a bug.',
             attempt: 0,
             maxAttempts: 0,
             terminal: true,
@@ -2089,7 +1988,7 @@ export class AppState {
           this.microphoneCapture = null;
           this.sendAudioCaptureFailed({
             channel: 'mic',
-            message: 'Microphone capture failed to initialize. The native audio module could not open the default input device. Check that the device is connected and not in exclusive use by another app, then restart Natively.',
+            message: 'Microphone capture failed to initialize. The native audio module could not open the default input device. Check that the device is connected and not in exclusive use by another app, then restart AnswerFlow.',
             attempt: 0,
             maxAttempts: 0,
             terminal: true,
@@ -3656,7 +3555,7 @@ export class AppState {
 
     // ─── UX STATE FLIP — SYNCHRONOUS ───────────────────────────────────────
     // Now flip the UX-facing meeting flag and broadcast. The launcher's
-    // "Meeting ongoing" pill reverts to "Start Natively" immediately;
+    // "Meeting ongoing" pill reverts to "Start AnswerFlow" immediately;
     // trailing transcript finals are still accepted via `_isDraining`.
     this.isMeetingActive = false;
     this._meetingGeneration++;
@@ -3852,8 +3751,14 @@ export class AppState {
     // names + preload bridges are kept (defense-in-depth, no callers).
     type BatchKind = 'suggested_answer' | 'refined_answer' | 'recap' | 'clarify' | 'follow_up_questions';
     const tokenBatches = new Map<BatchKind, any[]>();
+    let pendingFlushHandle: NodeJS.Immediate | null = null;
     let batchFlushScheduled = false;
     const flushBatchesNow = () => {
+      if (pendingFlushHandle) {
+        clearImmediate(pendingFlushHandle);
+        pendingFlushHandle = null;
+      }
+      batchFlushScheduled = false;
       const win = mainWindow();
       if (!win) { tokenBatches.clear(); return; }
       for (const [kind, items] of tokenBatches.entries()) {
@@ -3866,7 +3771,8 @@ export class AppState {
     const scheduleBatchFlush = () => {
       if (batchFlushScheduled) return;
       batchFlushScheduled = true;
-      setImmediate(() => {
+      pendingFlushHandle = setImmediate(() => {
+        pendingFlushHandle = null;
         batchFlushScheduled = false;
         flushBatchesNow();
       });
@@ -4411,7 +4317,7 @@ export class AppState {
     trayIcon.setTemplateImage(iconToUse.endsWith('Template.png'));
 
     this.tray = new Tray(trayIcon)
-    this.tray.setToolTip('Natively') // This tooltip might also need update if we change global shortcut, but global shortcut is removed.
+    this.tray.setToolTip('AnswerFlow') // This tooltip might also need update if we change global shortcut, but global shortcut is removed.
     this.updateTrayMenu();
 
     // Double-click to show window
@@ -4429,7 +4335,7 @@ export class AppState {
     console.log('[Main] updateTrayMenu called. Screenshot Accelerator:', screenshotAccel);
 
     // Update tooltip for verification
-    this.tray.setToolTip('Natively');
+    this.tray.setToolTip('AnswerFlow');
 
     // Helper to format accelerator for display (e.g. CommandOrControl+H -> Cmd+H)
     const formatAccel = (accel: string) => {
@@ -4449,7 +4355,7 @@ export class AppState {
 
     const contextMenu = Menu.buildFromTemplate([
       {
-        label: 'Show Natively',
+        label: 'Show AnswerFlow',
         click: () => {
           this.centerAndShowWindow()
         }
@@ -4593,7 +4499,7 @@ export class AppState {
         }
 
         if (settled) {
-          // Capture whether Natively is currently the frontmost app BEFORE
+          // Capture whether AnswerFlow is currently the frontmost app BEFORE
           // dock.hide() — that call triggers an implicit macOS app-deactivation
           // which shifts keyboard focus to the next frontmost app (Chrome, etc.).
           const nativelyWasFocused =
@@ -4605,7 +4511,7 @@ export class AppState {
           app.dock.hide();
           this.hideTray();
 
-          // If Natively was the focused window when the user toggled stealth,
+          // If AnswerFlow was the focused window when the user toggled stealth,
           // restore focus to our window after dock.hide() so macOS does not
           // hand control to Chrome / whatever is behind us.
           // We use win.focus() (not app.focus()) to avoid the heavy-handed
@@ -4699,7 +4605,7 @@ export class AppState {
   }
 
   private _applyDisguise(mode: 'terminal' | 'settings' | 'activity' | 'none'): void {
-    let appName = "Natively";
+    let appName = "AnswerFlow";
     let iconPath = "";
 
     const isWin = process.platform === 'win32';
@@ -4743,7 +4649,7 @@ export class AppState {
         }
         break;
       case 'none':
-        appName = "Natively";
+        appName = "AnswerFlow";
         if (isMac) {
           iconPath = app.isPackaged
             ? path.join(process.resourcesPath, "natively.icns")
@@ -4870,7 +4776,7 @@ export class AppState {
 
 async function initializeApp() {
   // When a duplicate launch is attempted (e.g. user invokes Spotlight again
-  // while Natively is running), focus and recenter the existing window so the
+  // while AnswerFlow is running), focus and recenter the existing window so the
   // launch is visibly handled instead of silently absorbed.
   app.on('second-instance', () => {
     try {
@@ -5030,7 +4936,7 @@ async function initializeApp() {
   // One-time macOS screen recording permission prompt.
   //
   // We must fire this AFTER createWindow() so that:
-  //   1. The Natively launcher window is visible and focused when the TCC dialog
+  //   1. The AnswerFlow launcher window is visible and focused when the TCC dialog
   //      appears — macOS anchors the dialog to the frontmost app window on Ventura+.
   //      Without a visible window the dialog can appear behind other apps (Sequoia).
   //   2. In stealth/undetectable mode the dock icon is hidden, but the window is
@@ -5109,7 +5015,7 @@ async function initializeApp() {
             console.warn('[Init] Microphone is restricted by device policy at startup.');
             appState.sendAudioCaptureFailed({
               channel: 'mic',
-              message: 'Microphone is restricted by device policy. Contact your administrator to enable microphone access for Natively.',
+              message: 'Microphone is restricted by device policy. Contact your administrator to enable microphone access for AnswerFlow.',
               attempt: 0,
               maxAttempts: 0,
               terminal: true,

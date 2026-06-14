@@ -18,6 +18,13 @@ export interface InterviewContextDocument {
   updatedAt: string;
 }
 
+export interface IngestedMarkdownDocument {
+  fileName: string;
+  fileType: InterviewContextDocument['fileType'];
+  markdown: string;
+  sizeBytes: number;
+}
+
 const ALLOWED_EXTENSIONS = new Set(['.md', '.markdown', '.txt', '.pdf', '.docx']);
 const MAX_FILE_BYTES = 15 * 1024 * 1024;
 const PARSE_TIMEOUT_MS = 15_000;
@@ -179,58 +186,15 @@ export class InterviewContextDocsManager {
   }
 
   public async addDocumentFromFile(filePath: string): Promise<InterviewContextDocument> {
-    const fileName = path.basename(filePath);
-    const ext = path.extname(filePath).toLowerCase();
-
-    if (!ALLOWED_EXTENSIONS.has(ext)) {
-      throw new Error(`Unsupported file type "${ext || 'none'}". Supported formats: MD, TXT, PDF, DOCX.`);
-    }
-
-    let stats: fs.Stats;
-    try {
-      stats = fs.lstatSync(filePath);
-    } catch {
-      throw new Error('Could not read the selected file. It may have moved or been deleted.');
-    }
-
-    if (!stats.isFile()) {
-      throw new Error('Selected path is not a regular file.');
-    }
-
-    if (stats.size > MAX_FILE_BYTES) {
-      const mb = (stats.size / (1024 * 1024)).toFixed(1);
-      throw new Error(`File is ${mb} MB; the maximum is 15 MB.`);
-    }
-
-    let markdown = '';
-    if (ext === '.pdf') {
-      const { PDFParse } = require('pdf-parse');
-      configurePdfWorker(PDFParse);
-      const parser = new PDFParse({ data: fs.readFileSync(filePath) });
-      const data = await withTimeout<any>(parser.getText(), PARSE_TIMEOUT_MS, 'PDF parse');
-      markdown = plainTextToMarkdown(data.text || '', fileName);
-    } else if (ext === '.docx') {
-      const mammoth = require('mammoth');
-      const result = await withTimeout<any>(
-        mammoth.convertToMarkdown({ path: filePath }),
-        PARSE_TIMEOUT_MS,
-        'DOCX parse',
-      );
-      markdown = normalizeMarkdown(result.value || '', fileName);
-    } else {
-      const content = decodeTextFile(fs.readFileSync(filePath, { encoding: null }), fileName, ext);
-      markdown = ext === '.md' || ext === '.markdown'
-        ? normalizeMarkdown(content, fileName)
-        : plainTextToMarkdown(content, fileName);
-    }
+    const { fileName, fileType, markdown, sizeBytes } = await ingestMarkdownDocument(filePath);
 
     const now = new Date().toISOString();
     const doc: InterviewContextDocument = {
       id: crypto.randomUUID(),
       name: fileName,
-      fileType: extensionToFileType(ext),
+      fileType,
       markdown,
-      sizeBytes: stats.size,
+      sizeBytes,
       createdAt: now,
       updatedAt: now,
     };
@@ -245,4 +209,58 @@ export class InterviewContextDocsManager {
     fs.writeFileSync(tmpPath, JSON.stringify(documents, null, 2));
     fs.renameSync(tmpPath, this.docsPath);
   }
+}
+
+export async function ingestMarkdownDocument(filePath: string): Promise<IngestedMarkdownDocument> {
+  const fileName = path.basename(filePath);
+  const ext = path.extname(filePath).toLowerCase();
+
+  if (!ALLOWED_EXTENSIONS.has(ext)) {
+    throw new Error(`Unsupported file type "${ext || 'none'}". Supported formats: MD, TXT, PDF, DOCX.`);
+  }
+
+  let stats: fs.Stats;
+  try {
+    stats = fs.lstatSync(filePath);
+  } catch {
+    throw new Error('Could not read the selected file. It may have moved or been deleted.');
+  }
+
+  if (!stats.isFile()) {
+    throw new Error('Selected path is not a regular file.');
+  }
+
+  if (stats.size > MAX_FILE_BYTES) {
+    const mb = (stats.size / (1024 * 1024)).toFixed(1);
+    throw new Error(`File is ${mb} MB; the maximum is 15 MB.`);
+  }
+
+  let markdown = '';
+  if (ext === '.pdf') {
+    const { PDFParse } = require('pdf-parse');
+    configurePdfWorker(PDFParse);
+    const parser = new PDFParse({ data: fs.readFileSync(filePath) });
+    const data = await withTimeout<any>(parser.getText(), PARSE_TIMEOUT_MS, 'PDF parse');
+    markdown = plainTextToMarkdown(data.text || '', fileName);
+  } else if (ext === '.docx') {
+    const mammoth = require('mammoth');
+    const result = await withTimeout<any>(
+      mammoth.convertToMarkdown({ path: filePath }),
+      PARSE_TIMEOUT_MS,
+      'DOCX parse',
+    );
+    markdown = normalizeMarkdown(result.value || '', fileName);
+  } else {
+    const content = decodeTextFile(fs.readFileSync(filePath, { encoding: null }), fileName, ext);
+    markdown = ext === '.md' || ext === '.markdown'
+      ? normalizeMarkdown(content, fileName)
+      : plainTextToMarkdown(content, fileName);
+  }
+
+  return {
+    fileName,
+    fileType: extensionToFileType(ext),
+    markdown,
+    sizeBytes: stats.size,
+  };
 }

@@ -105,7 +105,7 @@ export const SuggestionOverlay: React.FC<SuggestionOverlayProps> = ({ className 
             {currentTranscript && (
                 <div className="transcript-bubble mb-3 p-3 rounded-lg bg-gray-800/80 backdrop-blur-sm border border-gray-700">
                     <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-medium text-blue-400">
+                        <span className="text-xs font-medium text-accent-primary">
                             {currentTranscript.speaker === 'interviewer' ? '🎤 Interviewer' : '👤 You'}
                         </span>
                         {!currentTranscript.final && (

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import packageJson from '../../package.json';
 import {
-    X, Mic, Speaker, Monitor, Keyboard, User, LifeBuoy, LogOut, Upload,
+    X, Mic, Speaker, Monitor, Keyboard, User, LifeBuoy, LogOut, Upload, FileText,
     ArrowUp, ArrowDown, ArrowLeft, ArrowRight,
     Camera, RotateCcw, Eye, Layout, MessageSquare, Crop,
     ChevronDown, ChevronUp, Check, BadgeCheck, Power, Palette, Calendar, Ghost, Sun, Moon, RefreshCw, Info, Globe, FlaskConical, Terminal, Settings, Activity, ExternalLink, Trash2,
@@ -12,12 +12,9 @@ import { analytics } from '../lib/analytics/analytics.service';
 import { AboutSection } from './AboutSection';
 import { HelpSettings } from './settings/HelpSettings';
 import { AIProvidersSettings } from './settings/AIProvidersSettings';
-import { NativelyApiSettings } from './settings/NativelyApiSettings';
-import { NativelyProSettings } from './settings/NativelyProSettings';
+import { CustomInstructionsSettings } from './settings/CustomInstructionsSettings';
 import { PhoneMirrorSettings } from './settings/PhoneMirrorSettings';
 import { SkillsSettings } from './settings/SkillsSettings';
-import { LocalWhisperModelPanel } from './LocalWhisperModelPanel';
-import { NativelyLogoMark } from './NativelyLogoMark';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useShortcuts } from '../hooks/useShortcuts';
 import { isMac } from '../utils/platformUtils';
@@ -82,7 +79,7 @@ const MockupNativelyInterface = ({ opacity }: { opacity: number }) => {
                         {/* Rolling Transcript Bar */}
                         <div className="w-full flex justify-center py-2 px-4 border-b mb-1 overlay-transcript-surface" style={appearance.transcriptStyle}>
                             <p className="text-[13px] truncate max-w-[90%] font-medium overlay-text-primary">
-                                <span className={`${resolvedTheme === 'light' ? 'text-blue-700' : 'text-blue-400'} mr-2 font-semibold`}>Interviewer</span>
+                                <span className={`${resolvedTheme === 'light' ? 'text-accent-primary' : 'text-accent-primary'} mr-2 font-semibold`}>Interviewer</span>
                                 <span className="opacity-95">So how would you optimize the current algorithm?</span>
                             </p>
                         </div>
@@ -190,9 +187,9 @@ const CustomSelect: React.FC<CustomSelectProps> = ({ label, icon, value, options
                 {isOpen && (
                     <div className="absolute top-full left-0 w-full mt-1 bg-bg-elevated border border-border-subtle rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto animated fadeIn">
                         <div className="p-1 space-y-0.5">
-                            {options.map((device) => (
+                            {options.map((device, index) => (
                                 <button
-                                    key={device.deviceId}
+                                    key={`${device.deviceId || 'device'}-${index}`}
                                     onClick={() => {
                                         onChange(device.deviceId);
                                         setIsOpen(false);
@@ -249,7 +246,7 @@ const ProviderSelect: React.FC<ProviderSelectProps> = ({ value, options, onChang
 
     const getBadgeStyle = (color?: string) => {
         switch (color) {
-            case 'blue': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
+            case 'blue': return 'bg-accent-secondary text-accent-primary border-border-subtle';
             case 'orange': return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
             case 'purple': return 'bg-purple-500/10 text-purple-500 border-purple-500/20';
             case 'teal': return 'bg-teal-500/10 text-teal-500 border-teal-500/20';
@@ -264,7 +261,7 @@ const ProviderSelect: React.FC<ProviderSelectProps> = ({ value, options, onChang
         if (isSelectedItem) return 'bg-accent-primary text-white shadow-sm';
         // For unselected items in list or trigger
         switch (color) {
-            case 'blue': return 'bg-blue-500/10 text-blue-600';
+            case 'blue': return 'bg-accent-secondary text-accent-primary';
             case 'orange': return 'bg-orange-500/10 text-orange-600';
             case 'purple': return 'bg-purple-500/10 text-purple-600';
             case 'teal': return 'bg-teal-500/10 text-teal-600';
@@ -279,7 +276,7 @@ const ProviderSelect: React.FC<ProviderSelectProps> = ({ value, options, onChang
         <div ref={containerRef} className="relative z-20 font-sans">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className={`w-full group bg-bg-input border border-border-subtle hover:border-border-muted shadow-sm rounded-xl p-2.5 pr-3.5 flex items-center justify-between transition-all duration-200 outline-none focus:ring-2 focus:ring-accent-primary/20 ${isOpen ? 'ring-2 ring-accent-primary/20 border-accent-primary/50' : 'hover:shadow-md'}`}
+                className={`w-full group bg-bg-input border border-border-subtle hover:border-border-muted shadow-sm rounded-xl p-2.5 pr-3.5 flex items-center justify-between transition-all duration-200 outline-none focus:ring-2 focus:ring-[var(--accent-ring)] ${isOpen ? 'ring-2 ring-[var(--accent-ring)] border-[var(--accent-border)]' : 'hover:shadow-md'}`}
             >
                 {selected ? (
                     <div className="flex items-center gap-3 overflow-hidden">
@@ -312,11 +309,11 @@ const ProviderSelect: React.FC<ProviderSelectProps> = ({ value, options, onChang
                         className={`absolute top-full left-0 w-full mt-2 backdrop-blur-xl rounded-xl shadow-2xl overflow-hidden ring-1 ring-black/5 ${isLight ? 'bg-bg-elevated border border-border-subtle' : 'bg-bg-elevated/90 border border-white/5'}`}
                     >
                         <div className="max-h-[320px] overflow-y-auto p-1.5 space-y-0.5 custom-scrollbar">
-                            {options.map(option => {
+                            {options.map((option, index) => {
                                 const isSelected = value === option.id;
                                 return (
                                     <button
-                                        key={option.id}
+                                        key={`${option.id}-${index}`}
                                         onClick={() => { onChange(option.id); setIsOpen(false); }}
                                         className={`w-full rounded-[10px] p-2 flex items-center gap-3 transition-all duration-200 group relative ${isSelected ? (isLight ? 'bg-bg-item-active shadow-inner' : 'bg-white/10 shadow-inner') : (isLight ? 'hover:bg-bg-item-surface' : 'hover:bg-white/5')}`}
                                     >
@@ -353,14 +350,51 @@ interface SettingsOverlayProps {
     initialTab?: string;
 }
 
+const settingsTabs = new Set([
+    'general',
+    'ai-providers',
+    'custom-instructions',
+    'skills',
+    'calendar',
+    'audio',
+    'keybinds',
+    'phone-mirror',
+    'help',
+    'about',
+]);
+
+const normalizeSettingsTab = (tab?: string) => {
+    if (tab === 'profile' || tab === 'profile-intelligence') return 'custom-instructions';
+    return tab && settingsTabs.has(tab) ? tab : 'general';
+};
+
+type VisibleSttProvider = 'none' | 'google' | 'groq' | 'openai' | 'deepgram' | 'elevenlabs' | 'azure' | 'ibmwatson' | 'soniox' | 'local-whisper';
+
+const visibleSttProviders = new Set<string>([
+    'none',
+    'google',
+    'groq',
+    'openai',
+    'deepgram',
+    'elevenlabs',
+    'azure',
+    'ibmwatson',
+    'soniox',
+    'local-whisper',
+]);
+
+const normalizeSttProvider = (provider?: string): VisibleSttProvider => {
+    return provider && visibleSttProviders.has(provider) ? provider as VisibleSttProvider : 'none';
+};
+
 const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, initialTab = 'general' }) => {
     const isLight = useResolvedTheme() === 'light';
-    const [activeTab, setActiveTab] = useState(initialTab);
+    const [activeTab, setActiveTab] = useState(() => normalizeSettingsTab(initialTab));
 
     // Sync active tab when modal opens
     useEffect(() => {
         if (isOpen && initialTab) {
-            setActiveTab(initialTab);
+            setActiveTab(normalizeSettingsTab(initialTab));
 
 
         }
@@ -810,6 +844,11 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
     // Theme Handlers
     const handleSetTheme = async (mode: 'system' | 'light' | 'dark') => {
         setThemeMode(mode);
+        const resolved = mode === 'system'
+            ? (window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+            : mode;
+        document.documentElement.setAttribute('data-theme', resolved);
+        localStorage.setItem('natively_resolved_theme', resolved);
         if (window.electronAPI?.setThemeMode) {
             await window.electronAPI.setThemeMode(mode);
         }
@@ -835,7 +874,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
     } | null>(null);
 
     // STT Provider settings
-    const [sttProvider, setSttProvider] = useState<'none' | 'google' | 'groq' | 'openai' | 'deepgram' | 'elevenlabs' | 'azure' | 'ibmwatson' | 'soniox' | 'natively' | 'local-whisper'>('none');
+    const [sttProvider, setSttProvider] = useState<VisibleSttProvider>('none');
     const [groqSttModel, setGroqSttModel] = useState('whisper-large-v3-turbo');
     const [sttGroqKey, setSttGroqKey] = useState('');
     const [sttOpenaiKey, setSttOpenaiKey] = useState('');
@@ -850,7 +889,6 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
     const [sttSaving, setSttSaving] = useState(false);
     const [sttSaved, setSttSaved] = useState(false);
     const [googleServiceAccountPath, setGoogleServiceAccountPath] = useState<string | null>(null);
-    const [hasNativelyKey, setHasNativelyKey] = useState(false);
     const [hasStoredSttGroqKey, setHasStoredSttGroqKey] = useState(false);
     const [hasStoredSttOpenaiKey, setHasStoredSttOpenaiKey] = useState(false);
     const [hasStoredDeepgramKey, setHasStoredDeepgramKey] = useState(false);
@@ -882,7 +920,12 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                 // @ts-ignore
                 const creds = await window.electronAPI?.getStoredCredentials?.();
                 if (creds) {
-                    setSttProvider(creds.sttProvider || 'none');
+                    const provider = normalizeSttProvider(creds.sttProvider);
+                    setSttProvider(provider);
+                    if (creds.sttProvider === 'natively') {
+                        // @ts-ignore
+                        window.electronAPI?.setSttProvider?.('none').catch(console.error);
+                    }
                     if (creds.groqSttModel) setGroqSttModel(creds.groqSttModel);
                     setGoogleServiceAccountPath(creds.googleServiceAccountPath);
                     setHasStoredSttGroqKey(creds.hasSttGroqKey);
@@ -893,8 +936,6 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                     if (creds.azureRegion) setSttAzureRegion(creds.azureRegion);
                     setHasStoredIbmWatsonKey(creds.hasIbmWatsonKey);
                     setHasStoredSonioxKey(creds.hasSonioxKey || false);
-
-                    setHasNativelyKey(creds.hasNativelyKey || false);
                     // Populate key fields so switching providers doesn't make saved keys appear gone
                     if (creds.sttGroqKey) setSttGroqKey(creds.sttGroqKey);
                     if (creds.sttOpenaiKey) setSttOpenaiKey(creds.sttOpenaiKey);
@@ -914,7 +955,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
 
     // PR #173: Live-reload settings whenever the backend broadcasts a credentials change
     // (e.g., when the user saves an STT key in a different window, or main fires it after
-    // a provider auto-reconfigure like Natively key clear).
+    // a provider auto-reconfigure like AnswerFlow key clear).
     useEffect(() => {
         if (!window.electronAPI?.onCredentialsChanged) return;
         const unsubscribe = window.electronAPI.onCredentialsChanged(() => {
@@ -922,9 +963,12 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                 // Re-fetch credentials silently — purely additive, no state reset
                 window.electronAPI?.getStoredCredentials?.().then((creds: any) => {
                     if (!creds) return;
-                    setSttProvider(creds.sttProvider || 'none');
+                    const provider = normalizeSttProvider(creds.sttProvider);
+                    setSttProvider(provider);
+                    if (creds.sttProvider === 'natively') {
+                        window.electronAPI?.setSttProvider?.('none').catch(console.error);
+                    }
                     if (creds.groqSttModel) setGroqSttModel(creds.groqSttModel);
-                    setHasNativelyKey(creds.hasNativelyKey || false);
                     setHasStoredSttGroqKey(creds.hasSttGroqKey);
                     setHasStoredSttOpenaiKey(creds.hasSttOpenaiKey);
                     setHasStoredDeepgramKey(creds.hasDeepgramKey);
@@ -938,7 +982,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
         return () => unsubscribe();
     }, []); // mount-once: isOpen is checked inside the callback
 
-    const handleSttProviderChange = async (provider: 'none' | 'google' | 'groq' | 'openai' | 'deepgram' | 'elevenlabs' | 'azure' | 'ibmwatson' | 'soniox' | 'natively' | 'local-whisper') => {
+    const handleSttProviderChange = async (provider: VisibleSttProvider) => {
         setSttProvider(provider);
         setIsSttDropdownOpen(false);
         setSttTestStatus('idle');
@@ -1077,7 +1121,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
     };
 
     const handleTestSttConnection = async () => {
-        if (sttProvider === 'none' || sttProvider === 'google' || sttProvider === 'natively' || sttProvider === 'local-whisper') return;
+        if (sttProvider === 'none' || sttProvider === 'google' || sttProvider === 'local-whisper') return;
         const keyMap: Record<string, string> = {
             groq: sttGroqKey, openai: sttOpenaiKey, deepgram: sttDeepgramKey,
             elevenlabs: sttElevenLabsKey, azure: sttAzureKey, ibmwatson: sttIbmKey,
@@ -1359,24 +1403,16 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                                         <Monitor size={16} /> General
                                     </button>
                                     <button
-                                        onClick={() => setActiveTab('natively-api')}
-                                        className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-3 ${activeTab === 'natively-api' ? 'bg-bg-item-active text-text-primary' : 'text-text-secondary hover:text-text-primary hover:bg-bg-item-active/50'}`}
-                                    >
-                                        <NativelyLogoMark size={16} className={activeTab === 'natively-api' ? 'text-blue-500' : 'text-blue-500/70'} />
-                                        <span>Natively API</span>
-                                    </button>
-                                    <button
-                                        onClick={() => setActiveTab('natively-pro')}
-                                        className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-3 ${activeTab === 'natively-pro' ? 'bg-bg-item-active text-text-primary' : 'text-text-secondary hover:text-text-primary hover:bg-bg-item-active/50'}`}
-                                    >
-                                        <NativelyLogoMark size={16} className={activeTab === 'natively-pro' ? 'text-text-primary' : 'text-text-secondary'} />
-                                        <span>Natively Pro</span>
-                                    </button>
-                                    <button
                                         onClick={() => setActiveTab('ai-providers')}
                                         className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-3 ${activeTab === 'ai-providers' ? 'bg-bg-item-active text-text-primary' : 'text-text-secondary hover:text-text-primary hover:bg-bg-item-active/50'}`}
                                     >
                                         <FlaskConical size={16} /> AI Providers
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab('custom-instructions')}
+                                        className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-3 ${activeTab === 'custom-instructions' ? 'bg-bg-item-active text-text-primary' : 'text-text-secondary hover:text-text-primary hover:bg-bg-item-active/50'}`}
+                                    >
+                                        <FileText size={16} /> Custom Instructions
                                     </button>
                                     <button
                                         onClick={() => setActiveTab('skills')}
@@ -1431,7 +1467,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                                     onClick={() => window.electronAPI.quitApp()}
                                     className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-3"
                                 >
-                                    <LogOut size={16} /> Quit Natively
+                                    <LogOut size={16} /> Quit AnswerFlow
                                 </button>
                                 <button onClick={onClose} className="group mt-2 w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-bg-item-active/50 transition-colors flex items-center gap-3">
                                     <X size={18} className="group-hover:text-red-500 transition-colors" /> Close
@@ -1445,7 +1481,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                                 <div className="space-y-6 animated fadeIn">
                                     <div className="space-y-3.5">
                                         {/* UndetectableToggle */}
-                                        <div className={`${isLight ? 'bg-bg-card' : 'bg-bg-item-surface'} rounded-xl p-5 border border-border-subtle flex items-center justify-between transition-all ${isUndetectable ? 'shadow-lg shadow-blue-500/10' : ''}`}>
+                                        <div className={`${isLight ? 'bg-bg-card' : 'bg-bg-item-surface'} rounded-xl p-5 border border-border-subtle flex items-center justify-between transition-all ${isUndetectable ? 'shadow-lg shadow-[0_0_24px_rgba(249,115,22,0.12)]' : ''}`}>
                                             <div className="flex flex-col gap-1">
                                                 <div className="flex items-center gap-2">
                                                     {isUndetectable ? (
@@ -1470,7 +1506,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                                                     <h3 className="text-lg font-bold text-text-primary">{isUndetectable ? 'Undetectable' : 'Detectable'}</h3>
                                                 </div>
                                                 <p className="text-xs text-text-secondary">
-                                                    Natively is currently {isUndetectable ? 'undetectable' : 'detectable'} by screen-sharing. <button className="text-blue-400 hover:underline">Supported apps here</button>
+                                                    AnswerFlow is currently {isUndetectable ? 'undetectable' : 'detectable'} by screen-sharing. <button className="text-accent-primary hover:underline">Supported apps here</button>
                                                 </p>
                                             </div>
                                             <div
@@ -1512,7 +1548,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
 
                                         <div>
                                             <h3 className="text-lg font-bold text-text-primary mb-1">General settings</h3>
-                                            <p className="text-xs text-text-secondary mb-2">Customize how Natively works for you</p>
+                                            <p className="text-xs text-text-secondary mb-2">Customize how AnswerFlow works for you</p>
 
                                             <div className={`rounded-xl border ${isLight ? 'bg-bg-card border-border-subtle divide-y divide-border-subtle' : 'bg-transparent border-transparent divide-y divide-border-subtle/20'}`}>
                                             <div className="space-y-0">
@@ -1529,8 +1565,8 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                                                             <Power size={20} />
                                                         </div>
                                                         <div>
-                                                            <h3 className="text-sm font-bold text-text-primary">Open Natively when you log in</h3>
-                                                            <p className="text-xs text-text-secondary mt-0.5">Natively will open automatically when you log in to your computer</p>
+                                                            <h3 className="text-sm font-bold text-text-primary">Open AnswerFlow when you log in</h3>
+                                                            <p className="text-xs text-text-secondary mt-0.5">AnswerFlow will open automatically when you log in to your computer</p>
                                                         </div>
                                                     </div>
                                                     <div
@@ -1651,8 +1687,8 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                                                         <div className={`w-10 h-10 bg-bg-item-surface rounded-lg border flex items-center justify-center shrink-0 transition-all duration-200 ${
                                                             showTranscript
                                                                 ? isLight
-                                                                    ? 'border-blue-500/30 text-blue-600 bg-blue-50/50'
-                                                                    : 'border-blue-500/40 text-blue-400 bg-blue-500/5'
+                                                                    ? 'border-accent-primary text-accent-primary bg-accent-secondary'
+                                                                    : 'border-accent-primary text-accent-primary bg-accent-secondary'
                                                                 : 'border-border-subtle text-text-tertiary'
                                                         }`}>
                                                             <MessageSquare size={20} />
@@ -1720,7 +1756,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                                                         </div>
                                                         <div>
                                                             <h3 className="text-sm font-bold text-text-primary">Theme</h3>
-                                                            <p className="text-xs text-text-secondary mt-0.5">Customize how Natively looks on your device</p>
+                                                            <p className="text-xs text-text-secondary mt-0.5">Customize how AnswerFlow looks on your device</p>
                                                         </div>
                                                     </div>
 
@@ -1895,7 +1931,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                                                         <div>
                                                             <h3 className="text-sm font-bold text-text-primary">Version</h3>
                                                             <p className="text-xs text-text-secondary mt-0.5">
-                                                                You are currently using Natively version {packageJson.version}
+                                                                You are currently using AnswerFlow version {packageJson.version}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -1918,7 +1954,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                                                             updateStatus === 'checking'
                                                                 ? 'bg-bg-input text-text-tertiary border-border-subtle cursor-wait'
                                                                 : updateStatus === 'available'
-                                                                    ? 'bg-accent-primary text-white border-accent-primary hover:bg-accent-secondary shadow-lg shadow-blue-500/20'
+                                                                    ? 'bg-accent-primary text-white border-accent-primary hover:bg-accent-secondary shadow-lg shadow-[0_0_28px_rgba(249,115,22,0.18)]'
                                                                     : updateStatus === 'uptodate'
                                                                         ? 'bg-green-500/10 text-green-400 border-green-500/20'
                                                                         : updateStatus === 'error'
@@ -2029,7 +2065,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                                                 <h3 className="text-lg font-bold text-text-primary">Process Disguise</h3>
                                             </div>
                                             <p className="text-xs text-text-secondary">
-                                                Disguise Natively as another application to prevent detection during screen sharing.
+                                                Disguise AnswerFlow as another application to prevent detection during screen sharing.
                                                 <span className="block mt-1 text-text-tertiary">
                                                     Select a disguise to be automatically applied when Undetectable mode is on.
                                                 </span>
@@ -2061,7 +2097,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                                                         analytics.trackModeSelected(`disguise_${option.id}`);
                                                     }}
                                                     className={`p-3 rounded-lg border text-left flex items-center gap-3 transition-all ${disguiseMode === option.id
-                                                        ? 'bg-accent-primary border-accent-primary text-white shadow-lg shadow-blue-500/20'
+                                                        ? 'bg-accent-primary border-accent-primary text-white shadow-lg shadow-[0_0_28px_rgba(249,115,22,0.18)]'
                                                         : 'bg-bg-input border-border-subtle text-text-secondary hover:text-text-primary hover:bg-bg-subtle-hover'
                                                         } ${isUndetectable ? 'cursor-not-allowed' : ''}`}
                                                 >
@@ -2081,21 +2117,18 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                             {activeTab === 'ai-providers' && (
                                 <AIProvidersSettings />
                             )}
+                            {activeTab === 'custom-instructions' && (
+                                <CustomInstructionsSettings />
+                            )}
                             {activeTab === 'skills' && (
                                 <SkillsSettings />
-                            )}
-                            {activeTab === 'natively-api' && (
-                                <NativelyApiSettings />
-                            )}
-                            {activeTab === 'natively-pro' && (
-                                <NativelyProSettings />
                             )}
                             {activeTab === 'keybinds' && (
                                 <div className="space-y-5 animated fadeIn select-text pb-4">
                                     <div className="flex items-start justify-between">
                                         <div>
                                             <h3 className="text-lg font-bold text-text-primary mb-1">Keyboard shortcuts</h3>
-                                            <p className="text-xs text-text-secondary">Natively works with these easy to remember commands.</p>
+                                            <p className="text-xs text-text-secondary">AnswerFlow works with these easy to remember commands.</p>
                                         </div>
                                         <button
                                             onClick={resetShortcuts}
@@ -2247,7 +2280,27 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
 
                             {activeTab === 'audio' && (
                                 <div className="space-y-6 animated fadeIn">
-                                    {/* ── Speech Provider Section ── */}
+                                    {/* ── Local Transcription Section ── */}
+                                    <div className="bg-bg-card rounded-xl border border-border-subtle p-4">
+                                        <div className="flex items-start gap-3">
+                                            <div className="h-9 w-9 rounded-lg bg-green-500/10 text-green-400 flex items-center justify-center shrink-0">
+                                                <Cpu size={18} />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <h3 className="text-lg font-bold text-text-primary">Local Transcription</h3>
+                                                    <span className="rounded-full bg-green-500/10 border border-green-500/20 px-2 py-0.5 text-[11px] font-medium text-green-300">
+                                                        Moonshine Base
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-text-secondary leading-relaxed">
+                                                    Audio transcription runs locally with the packaged Moonshine Base model. There are no cloud speech providers or transcription model choices to configure.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {false && (
                                     <div>
                                         <h3 className="text-lg font-bold text-text-primary mb-1">Speech Provider</h3>
                                         <p className="text-xs text-text-secondary mb-5">Choose the engine that transcribes audio to text.</p>
@@ -2260,7 +2313,6 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                                                         value={sttProvider}
                                                         onChange={(val) => handleSttProviderChange(val as any)}
                                                         options={[
-                                                            ...(hasNativelyKey ? [{ id: 'natively', label: 'Natively API', badge: 'Saved' as const, recommended: true, desc: 'Managed transcription via Natively backend', color: 'blue', icon: <Mic size={14} /> }] : []),
                                                             { id: 'google', label: 'Google Cloud', badge: googleServiceAccountPath ? 'Saved' : null, recommended: true, desc: 'gRPC streaming via Service Account', color: 'blue', icon: <Mic size={14} /> },
                                                             { id: 'groq', label: 'Groq Whisper', badge: hasStoredSttGroqKey ? 'Saved' : null, recommended: true, desc: 'Ultra-fast REST transcription', color: 'orange', icon: <Mic size={14} /> },
                                                             { id: 'openai', label: 'OpenAI Whisper', badge: hasStoredSttOpenaiKey ? 'Saved' : null, desc: 'OpenAI-compatible Whisper API', color: 'green', icon: <Mic size={14} /> },
@@ -2296,7 +2348,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                                                                     }
                                                                 }}
                                                                 className={`rounded-lg px-3 py-2.5 text-left transition-all duration-200 ease-in-out active:scale-[0.98] ${groqSttModel === m.id
-                                                                    ? 'bg-blue-600 text-white shadow-md'
+                                                                    ? 'bg-accent-primary text-white shadow-md'
                                                                     : 'bg-bg-input hover:bg-bg-elevated text-text-primary'
                                                                     }`}
                                                             >
@@ -2316,7 +2368,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                                                     <div className="flex gap-2">
                                                         <div className="flex-1 bg-bg-input border border-border-subtle rounded-lg px-3 py-2 text-xs text-text-secondary font-mono truncate">
                                                             {googleServiceAccountPath
-                                                                ? <span className="text-text-primary">{googleServiceAccountPath.split('/').pop()}</span>
+                                                                ? <span className="text-text-primary">{(googleServiceAccountPath ?? '').split('/').pop()}</span>
                                                                 : <span className="text-text-tertiary italic">No file selected</span>}
                                                         </div>
                                                         <button
@@ -2339,7 +2391,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                                             )}
 
                                             {/* API Key Input (non-Google providers) */}
-                                            {sttProvider !== 'google' && sttProvider !== 'local-whisper' && sttProvider !== 'natively' && sttProvider !== 'none' && (
+                                            {sttProvider !== 'google' && sttProvider !== 'local-whisper' && sttProvider !== 'none' && (
                                                 <div className="bg-bg-card rounded-xl border border-border-subtle p-4 space-y-3">
                                                     <label className="text-xs font-medium text-text-secondary block">
                                                         {sttProvider === 'groq' ? 'Groq' : sttProvider === 'openai' ? 'OpenAI STT' : sttProvider === 'elevenlabs' ? 'ElevenLabs' : sttProvider === 'azure' ? 'Azure' : sttProvider === 'ibmwatson' ? 'IBM Watson' : sttProvider === 'soniox' ? 'Soniox' : 'Deepgram'} API Key
@@ -2533,11 +2585,6 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                                                 </div>
                                             )}
 
-                                            {/* Local Whisper Model Panel */}
-                                            {sttProvider === 'local-whisper' && (
-                                                <LocalWhisperModelPanel />
-                                            )}
-
                                             {/* Recognition Language Family */}
                                             <CustomSelect
                                                 label="Language"
@@ -2586,6 +2633,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                                             </div>
                                         </div>
                                     </div>
+                                    )}
 
                                     <div className="h-px bg-border-subtle" />
 
@@ -2673,7 +2721,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                                                 </div>
                                                 <div className="h-1.5 bg-bg-input rounded-full overflow-hidden">
                                                     <div
-                                                        className="h-full bg-blue-500 transition-all duration-100 ease-out"
+                                                        className="h-full bg-accent-primary transition-all duration-100 ease-out"
                                                         style={{ width: `${systemAudioLevel}%` }}
                                                     />
                                                 </div>
@@ -2787,7 +2835,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                                                 {/* Connection header */}
                                                 <div className="p-6 flex items-center justify-between">
                                                     <div className="flex items-center gap-4">
-                                                        <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500">
+                                                        <div className="w-10 h-10 rounded-lg bg-accent-secondary flex items-center justify-center text-accent-primary">
                                                             <Calendar size={20} />
                                                         </div>
                                                         <div>
@@ -2821,7 +2869,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                                                 <div className="relative border-t border-white/[0.05]">
                                                     {/* Ambient mesh — soft cool radial behind the list, pointer-events-none */}
                                                     <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                                                        <div className="absolute -top-20 -left-10 w-[260px] h-[260px] bg-blue-500/[0.06] blur-[90px]" />
+                                                        <div className="absolute -top-20 -left-10 w-[260px] h-[260px] bg-orange-500/[0.04] blur-[90px]" />
                                                         <div className="absolute -bottom-24 right-0 w-[220px] h-[220px] bg-violet-500/[0.04] blur-[80px]" />
                                                     </div>
 
@@ -3039,7 +3087,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                             )}
 
                             {activeTab === 'help' && (
-                                <HelpSettings onNavigate={setActiveTab} />
+                                <HelpSettings />
                             )}
 
                             {activeTab === 'about' && (

@@ -670,6 +670,7 @@ interface ElectronAPI {
     success?: boolean;
     cancelled?: boolean;
     fileName?: string;
+    fileType?: 'md' | 'txt' | 'pdf' | 'docx';
     content?: string;
     error?: string;
   }>;

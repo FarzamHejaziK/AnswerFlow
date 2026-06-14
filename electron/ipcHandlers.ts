@@ -9,7 +9,7 @@ import { AudioDevices } from './audio/AudioDevices';
 import { DatabaseManager } from './db/DatabaseManager'; // Import Database Manager
 import { AppState } from './main';
 import { CodexCliService } from './services/CodexCliService';
-import { InterviewContextDocsManager } from './services/InterviewContextDocsManager';
+import { InterviewContextDocsManager, ingestMarkdownDocument } from './services/InterviewContextDocsManager';
 import { InterviewWorkspaceStateManager } from './services/InterviewWorkspaceStateManager';
 import { PhoneMirrorService } from './services/PhoneMirrorService';
 import { SettingsManager } from './services/SettingsManager';
@@ -63,19 +63,16 @@ export function initializeIpcHandlers(appState: AppState): void {
     }
   };
 
-  // Clears premium-only context when the pro license is lost.
+  // Clears premium-only mode context when the pro license is lost.
   const clearActiveModeOnLicenseLoss = (): void => {
     try {
       const { DatabaseManager } = require('./db/DatabaseManager');
       const db = DatabaseManager.getInstance();
       db.setActiveMode(null);
-      db.clearProfilePersona?.();
-      const llmHelper = appState.processingHelper?.getLLMHelper?.();
-      llmHelper?.setPersonaPrompt?.('');
       BrowserWindow.getAllWindows().forEach((win) => {
         if (!win.isDestroyed()) win.webContents.send('modes-active-cleared');
       });
-      console.log('[IPC] Premium-only context cleared due to license loss');
+      console.log('[IPC] Premium-only mode context cleared due to license loss');
     } catch (e) {
       /* non-fatal */
     }
@@ -511,7 +508,7 @@ export function initializeIpcHandlers(appState: AppState): void {
   const _chatStreamsBySender = new Map<number, { streamId: number; controller: AbortController }>();
 
   // Matches narrow identity/meta probes only. Kept tight so coding/normal asks don't trip it.
-  // Prevents the small fast-mode model from over-firing the "I'm Natively" canned reply
+    // Prevents the small fast-mode model from over-firing the "I'm AnswerFlow" canned reply
   // (which used to escape the prompt's hard rule for any ambiguous input).
   const IDENTITY_PROBE_RE =
     /^\s*(who\s+(are|r)\s+(you|u|this|natively)|what\s+(are|r)\s+(you|u)|are\s+you\s+(chatgpt|gpt[-\s]?\d?|claude|gemini|llama|an?\s+(ai|bot|llm|model|assistant))|what('?s|\s+is)\s+your\s+(name|model)|which\s+(ai|model|llm)\s+are\s+you|who\s+(made|built|created|developed|trained)\s+(you|this|natively)|what\s+model\s+(are\s+you|do\s+you\s+use)|introduce\s+yourself)\s*\??\s*$/i;
@@ -551,7 +548,7 @@ export function initializeIpcHandlers(appState: AppState): void {
           const identityHit = CREATOR_PROBE_RE.test(message)
             ? 'I was developed by Evin John.'
             : IDENTITY_PROBE_RE.test(message)
-              ? "I'm Natively, an AI assistant."
+              ? "I'm AnswerFlow, an AI assistant."
               : null;
           if (identityHit) {
             if (recordInSession) {
@@ -1923,7 +1920,7 @@ export function initializeIpcHandlers(appState: AppState): void {
         hasDeepseekKey: hasKey(creds.deepseekApiKey),
         hasNativelyKey: hasKey(creds.nativelyApiKey),
         googleServiceAccountPath: creds.googleServiceAccountPath || null,
-        sttProvider: creds.sttProvider || 'none',
+        sttProvider: 'local-whisper',
         groqSttModel: creds.groqSttModel || 'whisper-large-v3-turbo',
         hasSttGroqKey: hasKey(creds.groqSttApiKey),
         hasSttOpenaiKey: hasKey(creds.openAiSttApiKey),
@@ -1963,7 +1960,7 @@ export function initializeIpcHandlers(appState: AppState): void {
         hasDeepseekKey: false,
         hasNativelyKey: false,
         googleServiceAccountPath: null,
-        sttProvider: 'none',
+        sttProvider: 'local-whisper',
         groqSttModel: 'whisper-large-v3-turbo',
         hasSttGroqKey: false,
         hasSttOpenaiKey: false,
@@ -2052,6 +2049,7 @@ export function initializeIpcHandlers(appState: AppState): void {
         | 'azure'
         | 'ibmwatson'
         | 'soniox'
+        | 'local-whisper'
         | 'natively',
     ) => {
       try {
@@ -2494,19 +2492,19 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle('local-whisper-get-models', async () => {
     try {
-      const { getAvailableModels } = require('./audio/whisper/modelManager');
-      const models = getAvailableModels();
-      const activeModelId = SettingsManager.getInstance().get('localWhisperModel') ?? '';
-      return { models, activeModelId };
+      const { DEFAULT_LOCAL_TRANSCRIPTION_MODEL_ID, getAvailableModels } = require('./audio/whisper/modelManager');
+      const models = getAvailableModels().filter((model: any) => model.id === DEFAULT_LOCAL_TRANSCRIPTION_MODEL_ID);
+      return { models, activeModelId: DEFAULT_LOCAL_TRANSCRIPTION_MODEL_ID };
     } catch (e: any) {
       console.error('[IPC] local-whisper-get-models error:', e.message);
       return { models: [], activeModelId: '' };
     }
   });
 
-  safeHandle('local-whisper-set-model', async (_, modelId: string) => {
+  safeHandle('local-whisper-set-model', async (_, _modelId: string) => {
     try {
-      SettingsManager.getInstance().set('localWhisperModel', modelId);
+      const { DEFAULT_LOCAL_TRANSCRIPTION_MODEL_ID } = require('./audio/whisper/modelManager');
+      SettingsManager.getInstance().set('localWhisperModel', DEFAULT_LOCAL_TRANSCRIPTION_MODEL_ID);
       return { success: true };
     } catch (e: any) {
       return { success: false, error: e.message };
@@ -2517,24 +2515,25 @@ export function initializeIpcHandlers(appState: AppState): void {
   // STT instances pick their own model via these slots. When disabled, both
   // fall back to localWhisperModel (the existing global setting).
   safeHandle('local-whisper-get-channel-config', async () => {
-    const sm = SettingsManager.getInstance();
+    const { DEFAULT_LOCAL_TRANSCRIPTION_MODEL_ID } = require('./audio/whisper/modelManager');
     return {
-      enabled: !!sm.get('localWhisperPerChannelEnabled'),
-      micModelId: sm.get('localWhisperModelMic') ?? '',
-      systemModelId: sm.get('localWhisperModelSystem') ?? '',
-      globalModelId: sm.get('localWhisperModel') ?? '',
+      enabled: false,
+      micModelId: DEFAULT_LOCAL_TRANSCRIPTION_MODEL_ID,
+      systemModelId: DEFAULT_LOCAL_TRANSCRIPTION_MODEL_ID,
+      globalModelId: DEFAULT_LOCAL_TRANSCRIPTION_MODEL_ID,
     };
   });
 
   safeHandle(
     'local-whisper-set-channel-config',
-    async (_, cfg: { enabled?: boolean; micModelId?: string; systemModelId?: string }) => {
+    async (_, _cfg: { enabled?: boolean; micModelId?: string; systemModelId?: string }) => {
       try {
         const sm = SettingsManager.getInstance();
-        if (typeof cfg?.enabled === 'boolean') sm.set('localWhisperPerChannelEnabled', cfg.enabled);
-        if (typeof cfg?.micModelId === 'string') sm.set('localWhisperModelMic', cfg.micModelId);
-        if (typeof cfg?.systemModelId === 'string')
-          sm.set('localWhisperModelSystem', cfg.systemModelId);
+        const { DEFAULT_LOCAL_TRANSCRIPTION_MODEL_ID } = require('./audio/whisper/modelManager');
+        sm.set('localWhisperPerChannelEnabled', false);
+        sm.set('localWhisperModelMic', DEFAULT_LOCAL_TRANSCRIPTION_MODEL_ID);
+        sm.set('localWhisperModelSystem', DEFAULT_LOCAL_TRANSCRIPTION_MODEL_ID);
+        sm.set('localWhisperModel', DEFAULT_LOCAL_TRANSCRIPTION_MODEL_ID);
         return { success: true };
       } catch (e: any) {
         return { success: false, error: e.message };
@@ -2552,7 +2551,9 @@ export function initializeIpcHandlers(appState: AppState): void {
     }
   });
 
-  safeHandle('local-whisper-start-download', async (event, modelId: string) => {
+  safeHandle('local-whisper-start-download', async (event, _modelId: string) => {
+    const { DEFAULT_LOCAL_TRANSCRIPTION_MODEL_ID } = require('./audio/whisper/modelManager');
+    const modelId = DEFAULT_LOCAL_TRANSCRIPTION_MODEL_ID;
     if (activeWhisperDownloads.has(modelId)) {
       return { success: false, error: 'already-downloading' };
     }
@@ -2592,16 +2593,12 @@ export function initializeIpcHandlers(appState: AppState): void {
     }
   });
 
-  safeHandle('local-whisper-preload', async (_, modelId: string) => {
+  safeHandle('local-whisper-preload', async (_, _modelId: string) => {
     try {
       const { modelPreloader } = require('./audio/whisper/modelPreloader');
-      const { isModelCached } = require('./audio/whisper/modelManager');
+      const { DEFAULT_LOCAL_TRANSCRIPTION_MODEL_ID, isModelCached } = require('./audio/whisper/modelManager');
       const { resolveInferenceConfig } = require('./audio/whisper/inferenceConfig');
-      const { SettingsManager } = require('./services/SettingsManager');
-      const id =
-        modelId ||
-        SettingsManager.getInstance().get('localWhisperModel') ||
-        'Xenova/whisper-tiny.en';
+      const id = DEFAULT_LOCAL_TRANSCRIPTION_MODEL_ID;
       // Pass active dtype so the cache check verifies the SPECIFIC ONNX
       // files (e.g. encoder_model.onnx for fp32) are present — not just
       // "directory non-empty". Otherwise a v2-cached _quantized.onnx-only
@@ -3153,7 +3150,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       results,
       promptRelaunch: anyOk,
       message: anyOk
-        ? 'Permissions reset. Quit Natively completely (Cmd+Q) and reopen — macOS will ask you to grant Microphone and Screen Recording again. Approve both to restore audio capture.'
+        ? 'Permissions reset. Quit AnswerFlow completely (Cmd+Q) and reopen — macOS will ask you to grant Microphone and Screen Recording again. Approve both to restore audio capture.'
         : `Permission reset failed for ${bundleId}. ${results
             .filter((r) => !r.ok)
             .map((r) => `${r.service}: ${r.output}`)
@@ -4509,7 +4506,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       const result = await dialog.showOpenDialog({
         properties: ['openFile'],
         filters: [
-          { name: 'Markdown Files', extensions: ['md', 'markdown'] },
+          { name: 'Custom Instruction Files', extensions: ['md', 'markdown', 'txt', 'pdf', 'docx'] },
         ],
       });
 
@@ -4517,25 +4514,15 @@ export function initializeIpcHandlers(appState: AppState): void {
         return { cancelled: true };
       }
 
-      const filePath = result.filePaths[0];
-      const ext = path.extname(filePath).toLowerCase();
-      if (!['.md', '.markdown'].includes(ext)) {
-        return { success: false, error: 'Select a Markdown file (.md or .markdown).' };
-      }
-
-      const stat = fs.lstatSync(filePath);
-      if (!stat.isFile()) {
-        return { success: false, error: 'Selected path is not a regular file.' };
-      }
-
-      const content = fs.readFileSync(filePath, 'utf8');
+      const document = await ingestMarkdownDocument(result.filePaths[0]);
       return {
         success: true,
-        fileName: path.basename(filePath),
-        content,
+        fileName: document.fileName,
+        fileType: document.fileType,
+        content: document.markdown,
       };
     } catch (error: any) {
-      return { success: false, error: error.message || 'Could not import Markdown file.' };
+      return { success: false, error: error.message || 'Could not import the selected file.' };
     }
   });
 
@@ -4568,7 +4555,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle('profile:get-persona', async () => {
     try {
-      if (!isProOrTrialActive()) return { success: false, content: '', error: 'pro_required' };
       const content = DatabaseManager.getInstance().getPersona();
       const llmHelper = appState.processingHelper?.getLLMHelper?.();
       if (llmHelper?.setPersonaPrompt) llmHelper.setPersonaPrompt(content);
@@ -4580,7 +4566,6 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle('profile:save-persona', async (_, content: string) => {
     try {
-      if (!isProOrTrialActive()) return { success: false, error: 'pro_required' };
       if (typeof content !== 'string') return { success: false, error: 'invalid_persona' };
       const trimmed = content.trim();
       DatabaseManager.getInstance().savePersona(trimmed);

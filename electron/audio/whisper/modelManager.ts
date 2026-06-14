@@ -5,6 +5,9 @@ import type { WhisperModelId, WhisperModelInfo } from './types';
 // env is configured lazily via configureTransformersCache()
 // We import the type only here; the actual require() happens at runtime.
 
+export const DEFAULT_LOCAL_TRANSCRIPTION_MODEL_ID: WhisperModelId = 'onnx-community/moonshine-base-ONNX';
+export const DEFAULT_LOCAL_TRANSCRIPTION_MODEL_NAME = 'Moonshine Base';
+
 const MODEL_CATALOG: WhisperModelInfo[] = [
   // ── Moonshine — streaming-native ASR. ~100× lower latency than Whisper Large v3.
   //     Encoder caching + decoder state reuse. English-only. Best choice for live use.
@@ -34,12 +37,16 @@ const MODEL_CATALOG: WhisperModelInfo[] = [
 
 /**
  * Returns the directory where Whisper models are stored.
- * Uses electron app.getPath('userData') so models persist across updates.
+ * Uses the bundled resources/models directory so packaged builds ship with
+ * the required transcription model instead of downloading it at runtime.
  */
 export function getModelsDir(): string {
   // Use require to avoid issues with circular imports / early init
   const { app } = require('electron');
-  return path.join(app.getPath('userData'), 'whisper-models');
+  if (app.isPackaged && process.resourcesPath) {
+    return path.join(process.resourcesPath, 'models');
+  }
+  return path.join(app.getAppPath(), 'resources', 'models');
 }
 
 /**
@@ -54,8 +61,11 @@ export function configureTransformersCache(): void {
   // rewriting import() → require() in the CommonJS output.
   (new Function('return import("@huggingface/transformers")')() as Promise<{ env: any }>)
     .then(({ env }) => {
-      env.cacheDir = getModelsDir();
-      env.allowRemoteModels = true;
+      const { app } = require('electron');
+      const modelsDir = getModelsDir();
+      env.cacheDir = modelsDir;
+      env.localModelPath = modelsDir;
+      env.allowRemoteModels = !app.isPackaged;
     })
     .catch(() => {});
 }

@@ -15,10 +15,18 @@ document.documentElement.setAttribute(
 // Step 1: Apply cached theme synchronously — before React renders.
 // This ensures useResolvedTheme()'s initial useState read sees the correct value.
 const cachedTheme = localStorage.getItem(THEME_CACHE_KEY) as 'light' | 'dark' | null;
-document.documentElement.setAttribute('data-theme', cachedTheme ?? 'dark');
+const systemTheme = window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+const urlTheme = new URLSearchParams(window.location.search).get('theme');
+const previewTheme = urlTheme === 'light' || urlTheme === 'dark' ? urlTheme : null;
+document.documentElement.setAttribute('data-theme', previewTheme ?? cachedTheme ?? systemTheme);
+if (previewTheme) {
+  localStorage.setItem(THEME_CACHE_KEY, previewTheme);
+}
 
 // Step 2: Confirm/correct from main process (authoritative) and keep cache in sync.
-if (window.electronAPI?.getThemeMode) {
+// URL overrides are for local visual preview, so they should not be overwritten
+// by the persisted Electron/native theme a moment after first paint.
+if (window.electronAPI?.getThemeMode && !previewTheme) {
   window.electronAPI.getThemeMode().then(({ resolved }) => {
     document.documentElement.setAttribute('data-theme', resolved);
     localStorage.setItem(THEME_CACHE_KEY, resolved);

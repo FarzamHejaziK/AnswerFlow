@@ -21,53 +21,42 @@
 :root {
   /* System Fonts - SF Pro */
   --font-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  color-scheme: dark;
 
   /* --- SEMANTIC TOKEN SYSTEM (DEFAULT: DARK) --- */
-  /* Reference Image Matching */
-  --bg-sidebar: #18181B;
-  /* User Spec: Side Panel */
-  --bg-main: #1E1E21;
-  /* User Spec: Main BG */
-  --bg-card: #242429;
-  /* User Spec: Detectable Container */
+  /* Codex-inspired neutral shell: charcoal canvas, low-chroma panels, warm cue accent. */
+  --bg-primary: #181818;
+  --bg-secondary: #1f1f1f;
+  --bg-sidebar: #141414;
+  --bg-main: #181818;
+  --bg-card: #202020;
+  --bg-elevated: #252525;
+  --bg-input: #2f2f2f;
+  --bg-component: #2a2a2a;
+  --bg-toggle-switch: #3a3a3a;
+  --bg-item-surface: #262626;
+  --bg-item-active: #303030;
 
-  --bg-toggle-switch: #303033;
-  /* User Spec: Toggle Button */
-  --bg-item-surface: #27272A;
-  /* User Spec: Icons & Input Backgrounds */
-  --bg-item-active: #2C2C2C;
-  /* Selected state */
+  --text-primary: #f4f4f5;
+  --text-secondary: #b4b4b8;
+  --text-tertiary: #747478;
 
-  --bg-primary: #000000;
-  /* Fallback */
-  --bg-secondary: #050505;
-  /* Fallback */
-  --bg-elevated: #151515;
-  /* Fallback */
-  --bg-input: #1A1A1A;
-  /* Fallback */
+  --border-subtle: rgba(255, 255, 255, 0.075);
+  --border-muted: rgba(255, 255, 255, 0.12);
 
-  --text-primary: #ffffff;
-  --text-secondary: #A0A0A0;
-  --text-tertiary: #606060;
+  --accent-primary: #f97316;
+  --accent-muted: rgba(249, 115, 22, 0.15);
+  --accent-ring: rgba(249, 115, 22, 0.24);
+  --accent-border: rgba(249, 115, 22, 0.42);
 
-  --border-subtle: transparent;
-  --border-muted: #333333;
-
-  --accent-primary: #3b82f6;
-  --accent-muted: rgba(59, 130, 246, 0.15);
-
-  --bg-component: #262626;
-  /* Specific legacy value */
-
-  --overlay-bg: rgba(30, 30, 30, 0.65);
+  --overlay-bg: rgba(24, 24, 24, 0.72);
 
   --overlay-opacity: 0.65;
-  --overlay-border: rgba(255, 255, 255, 0.12);
-  --overlay-border-soft: rgba(255, 255, 255, 0.1);
-  --overlay-panel-bg: rgb(30 30 30 / calc(0.05 + (var(--overlay-opacity) * 0.55)));
-  --overlay-pill-bg: rgb(30 30 30 / calc(0.04 + (var(--overlay-opacity) * 0.48)));
-  --overlay-transcript-bg: rgb(30 30 30 / calc(0.02 + (var(--overlay-opacity) * 0.24)));
+  --overlay-border: rgba(255, 255, 255, 0.11);
+  --overlay-border-soft: rgba(255, 255, 255, 0.08);
+  --overlay-panel-bg: rgb(24 24 24 / calc(0.05 + (var(--overlay-opacity) * 0.55)));
+  --overlay-pill-bg: rgb(31 31 31 / calc(0.04 + (var(--overlay-opacity) * 0.48)));
+  --overlay-transcript-bg: rgb(24 24 24 / calc(0.02 + (var(--overlay-opacity) * 0.24)));
   --overlay-chip-bg: rgba(255, 255, 255, 0.035);
   --overlay-chip-hover-bg: rgba(255, 255, 255, 0.11);
   --overlay-input-bg: rgba(255, 255, 255, 0.05);
@@ -93,61 +82,48 @@
   --overlay-transcript-blur: calc(var(--overlay-opacity) * 6px);
 
   /* Primary Action Button Defaults (Dark) */
-  --btn-primary-bg: #2563EB; /* blue-600 */
-  --btn-primary-hover: #3b82f6; /* blue-500 */
-  --btn-primary-disabled-bg: rgba(30, 58, 138, 0.3); /* blue-900/30 */
-  --btn-primary-disabled-border: rgba(30, 64, 175, 0.3); /* blue-800/30 */
-  --btn-primary-disabled-text: rgba(96, 165, 250, 0.4); /* blue-400/40 */
-  --btn-primary-shadow-color: rgba(30, 58, 138, 0.3); /* blue-900/30 */
+  --btn-primary-bg: #f97316;
+  --btn-primary-hover: #fb923c;
+  --btn-primary-disabled-bg: rgba(249, 115, 22, 0.14);
+  --btn-primary-disabled-border: rgba(249, 115, 22, 0.18);
+  --btn-primary-disabled-text: rgba(251, 146, 60, 0.45);
+  --btn-primary-shadow-color: rgba(249, 115, 22, 0.24);
 }
 
 [data-theme='light'] {
-  /* ─── LIGHT MODE — Professional SaaS Standard ────────────────────────────
-     Synthesised from Linear, Vercel, Stripe, Figma, Notion design systems.
-
-     Rules used by every top product design team:
-       1. Canvas is near-white gray (#F5F5F5), never pure white — not harsh
-       2. Cards are #FFFFFF — elevated via SHADOW, not thick borders
-       3. Borders: rgba(0,0,0,0.07) — structural only, barely visible
-       4. Text: #111827 → #6B7280 → #9CA3AF (gray-900/500/400, WCAG AA)
-       5. Separation = whitespace first, shadow second, border last
-       6. Accent: blue-600 (#2563EB) — accessible, confident, not electric
-
-     Settings modal visual stack:
-       #F5F5F5 canvas  →  #FFFFFF sidebar/frame  →  #FFFFFF cards (shadow)
-     ─────────────────────────────────────────────────────────────────────── */
+  color-scheme: light;
 
   /* ── Canvas / page layer ── */
-  --bg-primary:        #fafafa;   /* App page / list canvas — neutral near-white  */
-  --bg-secondary:      #f5f5f5;   /* Header / nav bar chrome                      */
+  --bg-primary:        #f4f4f5;
+  --bg-secondary:      #ececec;
 
   /* ── Settings modal surfaces ── */
-  --bg-main:           #fafafa;   /* Content body — the recessed canvas           */
-  --bg-sidebar:        #FFFFFF;   /* Sidebar — white panel, matches modal frame   */
-  --bg-elevated:       #FFFFFF;   /* Modal outer frame & dropdowns                */
-  --bg-card:           #FFFFFF;   /* Section cards — white, depth via shadow      */
-  --bg-input:          #F9FAFB;   /* Inputs — hairline tint (gray-50)             */
+  --bg-main:           #f7f7f8;
+  --bg-sidebar:        #ffffff;
+  --bg-elevated:       #ffffff;
+  --bg-card:           #ffffff;
+  --bg-input:          #eeeeef;
 
   /* ── Interactive elements ── */
-  --bg-component:      #F3F4F6;   /* Secondary button fill (gray-100)             */
-  --bg-item-surface:   #EAECEF;   /* Row hover — clearly visible against canvas   */
-  --bg-item-active:    rgba(37, 99, 235, 0.09); /* Blue-tinted selection (Linear/Notion style) */
-  --bg-toggle-switch:  #D1D5DB;   /* Toggle off-state track (gray-300)            */
+  --bg-component:      #e8e8ea;
+  --bg-item-surface:   #efeff0;
+  --bg-item-active:    rgba(249, 115, 22, 0.10);
+  --bg-toggle-switch:  #d2d2d5;
 
   /* ── Typography — Tailwind gray scale, proven for readability ── */
-  --text-primary:      #111827;   /* gray-900 — near-black, warm                  */
-  --text-secondary:    #6B7280;   /* gray-500 — comfortable secondary             */
-  --text-tertiary:     #9CA3AF;   /* gray-400 — soft hints and labels             */
+  --text-primary:      #1c1c1f;
+  --text-secondary:    #6b6b70;
+  --text-tertiary:     #96969d;
 
   /* ── Borders — barely-there structural lines ── */
-  --border-subtle:     rgba(0, 0, 0, 0.07);   /* card outlines, dividers          */
-  --border-muted:      rgba(0, 0, 0, 0.11);   /* inputs, tables                   */
+  --border-subtle:     rgba(0, 0, 0, 0.075);
+  --border-muted:      rgba(0, 0, 0, 0.13);
 
   /* ── Accent ── */
-  --accent-primary:    #2563EB;   /* blue-600 — accessible, confident             */
-  --accent-muted:      rgba(37, 99, 235, 0.10);
-
-  --bg-component:      #F3F4F6;
+  --accent-primary:    #c2410c;
+  --accent-muted:      rgba(194, 65, 12, 0.10);
+  --accent-ring:       rgba(194, 65, 12, 0.18);
+  --accent-border:     rgba(194, 65, 12, 0.34);
 
   /* ── Overlay system (in-meeting floating UI) ── */
   /* Frosted white glass — lighter than dark mode for less visual weight    */
@@ -161,13 +137,13 @@
   --overlay-chip-hover-bg:   rgba(243, 244, 246, 0.32);
   --overlay-input-bg:        rgba(255, 255, 255, 0.24);
   --overlay-input-hover-bg:  rgba(255, 255, 255, 0.38);
-  --overlay-input-focus-bg:  rgba(239, 246, 255, 0.46);
+  --overlay-input-focus-bg:  rgba(255, 247, 237, 0.46);
   --overlay-control-bg:      rgba(255, 255, 255, 0.24);
   --overlay-control-hover-bg:rgba(243, 244, 246, 0.38);
   --overlay-code-bg:         rgba(249, 250, 251, 0.22);
   --overlay-code-border:     rgba(0, 0, 0, 0.08);
   --overlay-code-header-bg:  rgba(243, 244, 246, 0.28);
-  --overlay-inline-code-bg:  rgba(219, 234, 254, 0.42);
+  --overlay-inline-code-bg:  rgba(255, 237, 213, 0.42);
   --overlay-icon-bg:         rgba(255, 255, 255, 0.22);
   --overlay-icon-hover-bg:   rgba(243, 244, 246, 0.36);
   --overlay-panel-shadow:    rgb(0 0 0 / calc(0.04 + (var(--overlay-opacity) * 0.08)));
@@ -182,9 +158,9 @@
   --overlay-transcript-blur: calc(var(--overlay-opacity) * 5px);
 
   /* Primary Action Button (Light) */
-  --btn-primary-bg: #2563EB; /* blue-600 */
-  --btn-primary-hover: #1d4ed8; /* blue-700 */
-  --btn-primary-disabled-bg: var(--bg-input); /* #F9FAFB */
+  --btn-primary-bg: #c2410c;
+  --btn-primary-hover: #9a3412;
+  --btn-primary-disabled-bg: var(--bg-input);
   --btn-primary-disabled-border: var(--border-subtle);
   --btn-primary-disabled-text: var(--text-tertiary);
   --btn-primary-shadow-color: rgba(0, 0, 0, 0.05);
@@ -639,73 +615,73 @@
     0 1px 2px rgba(0, 0, 0, 0.12) !important;
 }
 
-/* Primary send button — Tailwind `bg-[#007AFF]` class kept; layered with a
-   jelly sheen + blue-tinted outer glow so it stays unmistakably the primary
+/* Primary send button — Tailwind `bg-accent-primary` class kept; layered with a
+   jelly sheen + accent-tinted outer glow so it stays unmistakably the primary
    action while wearing the same material vocabulary as the rest of the UI. */
-[data-interface-theme="liquid-glass"] button[class~="bg-[#007AFF]"] {
+[data-interface-theme="liquid-glass"] button[class~="bg-accent-primary"] {
   background:
     linear-gradient(180deg,
       rgba(255, 255, 255, 0.32) 0%,
       rgba(255, 255, 255, 0.00) 45%,
       rgba(0, 0, 0, 0.12) 100%
     ),
-    #007AFF !important;
+    var(--accent-primary) !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.55),
     inset 0 -1px 0 rgba(0, 0, 0, 0.22),
     inset 0 0 0 1px rgba(255, 255, 255, 0.22),
-    0 6px 18px rgba(0, 122, 255, 0.45),
+    0 6px 18px rgba(249, 115, 22, 0.45),
     0 2px 5px rgba(0, 0, 0, 0.22) !important;
   transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1),
               box-shadow 0.18s ease-out,
               background 0.18s ease-out !important;
 }
 
-[data-interface-theme="liquid-glass"] button[class~="bg-[#007AFF]"]:hover {
+[data-interface-theme="liquid-glass"] button[class~="bg-accent-primary"]:hover {
   background:
     linear-gradient(180deg,
       rgba(255, 255, 255, 0.42) 0%,
       rgba(255, 255, 255, 0.00) 45%,
       rgba(0, 0, 0, 0.12) 100%
     ),
-    #0071E3 !important;
+    var(--btn-primary-hover) !important;
   transform: translateY(-1px);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.68),
     inset 0 -1px 0 rgba(0, 0, 0, 0.22),
     inset 0 0 0 1px rgba(255, 255, 255, 0.30),
-    0 10px 24px rgba(0, 122, 255, 0.55),
+    0 10px 24px rgba(249, 115, 22, 0.55),
     0 3px 7px rgba(0, 0, 0, 0.24) !important;
 }
 
-[data-interface-theme="liquid-glass"] button[class~="bg-[#007AFF]"]:active {
+[data-interface-theme="liquid-glass"] button[class~="bg-accent-primary"]:active {
   transform: translateY(0) scale(0.96);
   box-shadow:
     inset 0 1px 3px rgba(0, 0, 0, 0.25),
     inset 0 0 0 1px rgba(255, 255, 255, 0.15),
-    0 1px 3px rgba(0, 122, 255, 0.30) !important;
+    0 1px 3px rgba(249, 115, 22, 0.30) !important;
 }
 
-/* User chat-message bubble — the bluish question card the user types.
-   Uses Tailwind `bg-blue-500/10` (light) or `bg-blue-600/20` (dark) so we
+/* User chat-message bubble — the accent question card the user types.
+   Uses Tailwind `bg-accent-secondary` (light) or `bg-accent-secondary` (dark) so we
    target via attribute selector. Layered with same jelly recipe: a wet top
-   highlight, a soft bottom shadow, blue-tinted outer glow → reads as the
-   same material as the send button (both are user/primary blue). */
-[data-interface-theme="liquid-glass"] [class*="bg-blue-500/10"],
-[data-interface-theme="liquid-glass"] [class*="bg-blue-600/20"] {
+   highlight, a soft bottom shadow, accent-tinted outer glow → reads as the
+   same material as the send button (both are user/primary accent). */
+[data-interface-theme="liquid-glass"] [class*="bg-accent-secondary"],
+[data-interface-theme="liquid-glass"] [class*="bg-accent-secondary"] {
   background:
     linear-gradient(180deg,
       rgba(255, 255, 255, 0.18) 0%,
       rgba(255, 255, 255, 0.00) 45%,
       rgba(0, 0, 0, 0.08) 100%
     ),
-    rgba(0, 122, 255, 0.22) !important;
-  border-color: rgba(120, 170, 255, 0.32) !important;
+    rgba(249, 115, 22, 0.22) !important;
+  border-color: rgba(249, 115, 22, 0.32) !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.38),
     inset 0 -1px 0 rgba(0, 0, 0, 0.14),
     inset 0 0 0 1px rgba(255, 255, 255, 0.10),
-    0 6px 16px rgba(0, 122, 255, 0.22),
+    0 6px 16px rgba(249, 115, 22, 0.22),
     0 2px 4px rgba(0, 0, 0, 0.18) !important;
 }
 
@@ -872,7 +848,7 @@
 }
 
 /* ── Meeting Interface: Modern Theme ────────────────────────────────────────
-   Polished dark slate/graphite glass with white gloss highlights and a cobalt
+   Polished dark slate/graphite glass with white gloss highlights and a accent
    blue primary action. Modeled after the marketing-site NativelyInterfaceCard
    (DARK_GLASS recipe). Distinct from liquid-glass: this panel is intentionally
    opaque-ish (low backdrop blur, 0.88–0.97 alpha base) rather than refractive.
@@ -912,9 +888,9 @@
   --overlay-shell-blur:         3px;   /* Intentionally LIGHT — panel is opaque-ish, not refractive */
   --overlay-pill-blur:          3px;
 
-  /* Focus ring — lifted cobalt to clear WCAG 2.2 SC 2.4.11 (3:1) against
+  /* Focus ring — lifted accent to clear WCAG 2.2 SC 2.4.11 (3:1) against
      the LIGHTEST gradient stop rgba(90,90,108,0.88) (top-left of the
-     panel), not just the dark stops. The brand cobalt #5B8EF0 measures
+     panel), not just the dark stops. The brand accent #fb923c measures
      2.40:1 there; #8FB4F7 measures 3.76:1 worst-case while staying in the
      same hue family. Scoped to the overlay subtree via the attribute
      selector — never applied to Launcher/Settings/ModelSelector windows
@@ -1250,18 +1226,17 @@
     0 1px 2px rgba(0, 0, 0, 0.18) !important;
 }
 
-/* Primary send button — Tailwind `bg-[#007AFF]` class kept; replace the iOS
-   blue fill with the cobalt 160deg gradient, deeper outer glow, white drop
+/* Primary send button — Tailwind `bg-accent-primary` class kept; replace the accent fill with the accent 160deg gradient, deeper outer glow, white drop
    so it stays unmistakably the primary action. */
-[data-interface-theme="modern"] button[class~="bg-[#007AFF]"] {
+[data-interface-theme="modern"] button[class~="bg-accent-primary"] {
   background: linear-gradient(160deg,
-      #5B8EF0 0%,
-      #3B6FE8 50%,
-      #2D5FD4 100%
+      #fb923c 0%,
+      #f97316 50%,
+      #ea580c 100%
     ) !important;
   border: 1px solid rgba(255, 255, 255, 0.20) !important;
   box-shadow:
-    0 8px 20px rgba(37, 99, 235, 0.35),
+    0 8px 20px rgba(249, 115, 22, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.30),
     0 0 0 0.5px rgba(255, 255, 255, 0.10) !important;
   position: relative;
@@ -1272,7 +1247,7 @@
 }
 
 /* Brighter, denser gloss strip on the primary action — reads as "wet". */
-[data-interface-theme="modern"] button[class~="bg-[#007AFF]"]::before {
+[data-interface-theme="modern"] button[class~="bg-accent-primary"]::before {
   content: '';
   position: absolute;
   inset: 2px 4px auto 4px;
@@ -1287,49 +1262,49 @@
   z-index: 0;
 }
 
-[data-interface-theme="modern"] button[class~="bg-[#007AFF]"]:hover {
+[data-interface-theme="modern"] button[class~="bg-accent-primary"]:hover {
   background: linear-gradient(160deg,
-      #6B9CF5 0%,
-      #4A7BEC 50%,
-      #3568D8 100%
+      #fb923c 0%,
+      #f97316 50%,
+      #ea580c 100%
     ) !important;
   transform: translateY(-1px);
   box-shadow:
-    0 10px 26px rgba(37, 99, 235, 0.45),
+    0 10px 26px rgba(249, 115, 22, 0.45),
     inset 0 1px 0 rgba(255, 255, 255, 0.40),
     0 0 0 0.5px rgba(255, 255, 255, 0.16) !important;
 }
 
-[data-interface-theme="modern"] button[class~="bg-[#007AFF]"]:active {
+[data-interface-theme="modern"] button[class~="bg-accent-primary"]:active {
   transform: translateY(0) scale(0.96);
   box-shadow:
     inset 0 1px 3px rgba(0, 0, 0, 0.25),
-    0 2px 6px rgba(37, 99, 235, 0.32) !important;
+    0 2px 6px rgba(249, 115, 22, 0.32) !important;
 }
 
-/* User chat-message bubble — the bluish question card the user types.
-   Targets Tailwind `bg-blue-500/10` (light) / `bg-blue-600/20` (dark) so the
-   bubble adopts the same cobalt gradient as the send button. Matching color
+/* User chat-message bubble — the accent question card the user types.
+   Targets Tailwind `bg-accent-secondary` (light) / `bg-accent-secondary` (dark) so the
+   bubble adopts the same accent gradient as the send button. Matching color
    identity per the website card. */
-[data-interface-theme="modern"] [class*="bg-blue-500/10"],
-[data-interface-theme="modern"] [class*="bg-blue-600/20"] {
+[data-interface-theme="modern"] [class*="bg-accent-secondary"],
+[data-interface-theme="modern"] [class*="bg-accent-secondary"] {
   background: linear-gradient(160deg,
-      #5B8EF0 0%,
-      #3B6FE8 50%,
-      #2D5FD4 100%
+      #fb923c 0%,
+      #f97316 50%,
+      #ea580c 100%
     ) !important;
   border-color: rgba(255, 255, 255, 0.20) !important;
   color: #ffffff !important;
   box-shadow:
-    0 8px 20px rgba(37, 99, 235, 0.35),
+    0 8px 20px rgba(249, 115, 22, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.20),
     0 0 0 0.5px rgba(255, 255, 255, 0.08) !important;
   position: relative;
   overflow: hidden;
 }
 
-[data-interface-theme="modern"] [class*="bg-blue-500/10"]::before,
-[data-interface-theme="modern"] [class*="bg-blue-600/20"]::before {
+[data-interface-theme="modern"] [class*="bg-accent-secondary"]::before,
+[data-interface-theme="modern"] [class*="bg-accent-secondary"]::before {
   content: '';
   position: absolute;
   inset: 2px 4px auto 4px;
@@ -1347,7 +1322,7 @@
 /* Emerald — live-transcription "listening" bubble.
    Default Tailwind bg-emerald-500/10 (rgba 16,185,129,0.10) composites to
    muddy olive over the slate panel and loses its semantic "live mic" cue.
-   Lift to 0.22 alpha and add the same jelly gloss recipe the cobalt user
+   Lift to 0.22 alpha and add the same jelly gloss recipe the accent user
    bubble uses so it reads as a distinct emerald lozenge. */
 [data-interface-theme="modern"] [class*="bg-emerald-500/10"] {
   background:
@@ -2038,12 +2013,12 @@ html[data-platform="linux"] body {
 [data-interface-theme="liquid-glass"] .natively-api-selector-pill-max {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.00) 45%, rgba(0, 0, 0, 0.18) 100%),
-    rgba(59, 130, 246, 0.32) !important;
+    rgba(249, 115, 22, 0.32) !important;
   border: 1px solid rgba(147, 197, 253, 0.45) !important;
   box-shadow:
     inset 0 1.5px 0.5px rgba(255, 255, 255, 0.70),
     inset 0 -1.5px 2px rgba(0, 0, 0, 0.40),
-    0 5px 16px rgba(59, 130, 246, 0.40) !important;
+    0 5px 16px rgba(249, 115, 22, 0.40) !important;
 }
 
 [data-interface-theme="liquid-glass"] .natively-api-selector-pill-ultra {
@@ -2160,15 +2135,15 @@ html[data-platform="linux"] body {
 [data-interface-theme="liquid-glass"] .natively-api-detail-card-max {
   background:
     radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.25) 0%, transparent 60%),
-    radial-gradient(circle at 100% 100%, rgba(59, 130, 246, 0.32) 0%, transparent 60%),
+    radial-gradient(circle at 100% 100%, rgba(249, 115, 22, 0.32) 0%, transparent 60%),
     linear-gradient(135deg, rgba(30, 48, 80, 0.50) 0%, rgba(15, 23, 42, 0.65) 100%) !important;
-  border-color: rgba(59, 130, 246, 0.32) !important;
+  border-color: rgba(249, 115, 22, 0.32) !important;
   box-shadow:
-    inset 0 1px 0 rgba(59, 130, 246, 0.55),
+    inset 0 1px 0 rgba(249, 115, 22, 0.55),
     inset 0 2.5px 0 rgba(255, 255, 255, 0.35),
     inset 0 -3px 8px rgba(0, 0, 0, 0.30),
     inset 0 0 0 1px rgba(255, 255, 255, 0.14),
-    0 14px 34px rgba(59, 130, 246, 0.20),
+    0 14px 34px rgba(249, 115, 22, 0.20),
     0 6px 18px rgba(0, 0, 0, 0.22) !important;
 }
 
@@ -2212,13 +2187,13 @@ html[data-platform="linux"] body {
 }
 
 [data-interface-theme="liquid-glass"] .natively-api-detail-card-max[data-active="true"] {
-  border-color: rgba(59, 130, 246, 0.65) !important;
+  border-color: rgba(249, 115, 22, 0.65) !important;
   box-shadow:
-    inset 0 1px 0 rgba(59, 130, 246, 0.80),
+    inset 0 1px 0 rgba(249, 115, 22, 0.80),
     inset 0 2px 6px rgba(255, 255, 255, 0.35),
     inset 0 -3px 8px rgba(0, 0, 0, 0.6),
-    0 0 32px rgba(59, 130, 246, 0.32),
-    0 16px 40px rgba(59, 130, 246, 0.26),
+    0 0 32px rgba(249, 115, 22, 0.32),
+    0 16px 40px rgba(249, 115, 22, 0.26),
     0 4px 12px rgba(0, 0, 0, 0.40) !important;
 }
 
@@ -2253,7 +2228,7 @@ html[data-platform="linux"] body {
 }
 
 .natively-api-price-max {
-  background: linear-gradient(135deg, #ffffff 30%, #93c5fd 100%) !important;
+  background: linear-gradient(135deg, #ffffff 30%, #fdb582 100%) !important;
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
   display: inline-block;
@@ -2278,7 +2253,7 @@ html[data-platform="linux"] body {
   filter: drop-shadow(0 0 4.5px rgba(139, 92, 246, 0.55)) !important;
 }
 .natively-api-check-icon-max {
-  filter: drop-shadow(0 0 4.5px rgba(59, 130, 246, 0.55)) !important;
+  filter: drop-shadow(0 0 4.5px rgba(249, 115, 22, 0.55)) !important;
 }
 .natively-api-check-icon-ultra {
   filter: drop-shadow(0 0 4.5px rgba(249, 115, 22, 0.55)) !important;
@@ -2387,12 +2362,12 @@ html[data-platform="linux"] body {
       rgba(255, 255, 255, 0.05) 50%,
       rgba(0, 0, 0, 0.24) 100%
     ),
-    #3b82f6 !important;
+    #f97316 !important;
   color: #ffffff !important;
   box-shadow:
     inset 0 2px 3px rgba(255, 255, 255, 0.45),
     inset 0 -2px 6px rgba(0, 0, 0, 0.35),
-    0 6px 18px rgba(59, 130, 246, 0.30) !important;
+    0 6px 18px rgba(249, 115, 22, 0.30) !important;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -2403,12 +2378,12 @@ html[data-platform="linux"] body {
         rgba(255, 255, 255, 0.05) 50%,
         rgba(0, 0, 0, 0.24) 100%
       ),
-      #2563eb !important;
+      #ea580c !important;
     transform: translateY(-1px) !important;
     box-shadow:
       inset 0 2px 3px rgba(255, 255, 255, 0.55),
       inset 0 -2px 6px rgba(0, 0, 0, 0.35),
-      0 10px 22px rgba(59, 130, 246, 0.45) !important;
+      0 10px 22px rgba(249, 115, 22, 0.45) !important;
   }
 }
 
@@ -2490,13 +2465,13 @@ html[data-platform="linux"] body {
 [data-interface-theme="liquid-glass"] .natively-api-pricing-badge-max {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.05) 50%, rgba(0, 0, 0, 0.18) 100%),
-    rgba(59, 130, 246, 0.32) !important;
+    rgba(249, 115, 22, 0.32) !important;
   border: 1px solid rgba(147, 197, 253, 0.45) !important;
   box-shadow:
     inset 0 1.5px 0.5px rgba(255, 255, 255, 0.75),
     inset 0 -1.5px 2.5px rgba(0, 0, 0, 0.45),
     inset 0 0 0 1px rgba(255, 255, 255, 0.15),
-    0 4px 12px rgba(59, 130, 246, 0.35) !important;
+    0 4px 12px rgba(249, 115, 22, 0.35) !important;
 }
 
 [data-interface-theme="liquid-glass"] .natively-api-pricing-badge-ultra {
@@ -2606,12 +2581,12 @@ html[data-platform="linux"] body {
 [data-interface-theme="modern"] .natively-api-selector-pill-max {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.00) 45%, rgba(0, 0, 0, 0.18) 100%),
-    rgba(59, 130, 246, 0.32) !important;
+    rgba(249, 115, 22, 0.32) !important;
   border: 1px solid rgba(147, 197, 253, 0.45) !important;
   box-shadow:
     inset 0 1.5px 0.5px rgba(255, 255, 255, 0.70),
     inset 0 -1.5px 2px rgba(0, 0, 0, 0.40),
-    0 5px 16px rgba(59, 130, 246, 0.40) !important;
+    0 5px 16px rgba(249, 115, 22, 0.40) !important;
 }
 
 [data-interface-theme="modern"] .natively-api-selector-pill-ultra {
@@ -2675,13 +2650,13 @@ html[data-platform="linux"] body {
   background:
     radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.18), transparent 50%),
     linear-gradient(160deg, rgba(85, 110, 165, 0.65) 0%, rgba(50, 68, 115, 0.75) 50%, rgba(30, 40, 75, 0.85) 100%) !important;
-  border-color: rgba(59, 130, 246, 0.32) !important;
+  border-color: rgba(249, 115, 22, 0.32) !important;
   box-shadow:
-    inset 0 1px 0 rgba(59, 130, 246, 0.45),
+    inset 0 1px 0 rgba(249, 115, 22, 0.45),
     inset 0 2px 3px rgba(255, 255, 255, 0.25),
     inset 0 -3px 8px rgba(0, 0, 0, 0.32),
     0 16px 36px rgba(0, 0, 0, 0.35),
-    0 4px 12px rgba(59, 130, 246, 0.15) !important;
+    0 4px 12px rgba(249, 115, 22, 0.15) !important;
 }
 
 /* Ultra - Sunset Accent */
@@ -2720,13 +2695,13 @@ html[data-platform="linux"] body {
 }
 
 [data-interface-theme="modern"] .natively-api-detail-card-max[data-active="true"] {
-  border-color: rgba(59, 130, 246, 0.65) !important;
+  border-color: rgba(249, 115, 22, 0.65) !important;
   box-shadow:
-    inset 0 1px 0 rgba(59, 130, 246, 0.80),
+    inset 0 1px 0 rgba(249, 115, 22, 0.80),
     inset 0 2px 3px rgba(255, 255, 255, 0.25),
     inset 0 -3px 8px rgba(0, 0, 0, 0.40),
     0 16px 36px rgba(0, 0, 0, 0.55),
-    0 0 32px rgba(59, 130, 246, 0.30) !important;
+    0 0 32px rgba(249, 115, 22, 0.30) !important;
 }
 
 [data-interface-theme="modern"] .natively-api-detail-card-ultra[data-active="true"] {
@@ -2851,12 +2826,12 @@ html[data-platform="linux"] body {
       rgba(255, 255, 255, 0.05) 50%,
       rgba(0, 0, 0, 0.24) 100%
     ),
-    #3b82f6 !important;
+    #f97316 !important;
   color: #ffffff !important;
   box-shadow:
     inset 0 2px 3px rgba(255, 255, 255, 0.45),
     inset 0 -2px 6px rgba(0, 0, 0, 0.35),
-    0 6px 18px rgba(59, 130, 246, 0.30) !important;
+    0 6px 18px rgba(249, 115, 22, 0.30) !important;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -2867,12 +2842,12 @@ html[data-platform="linux"] body {
         rgba(255, 255, 255, 0.05) 50%,
         rgba(0, 0, 0, 0.24) 100%
       ),
-      #2563eb !important;
+      #ea580c !important;
     transform: translateY(-1px) !important;
     box-shadow:
       inset 0 2px 3px rgba(255, 255, 255, 0.55),
       inset 0 -2px 6px rgba(0, 0, 0, 0.35),
-      0 10px 22px rgba(59, 130, 246, 0.45) !important;
+      0 10px 22px rgba(249, 115, 22, 0.45) !important;
   }
 }
 
@@ -2954,13 +2929,13 @@ html[data-platform="linux"] body {
 [data-interface-theme="modern"] .natively-api-pricing-badge-max {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.05) 50%, rgba(0, 0, 0, 0.18) 100%),
-    rgba(59, 130, 246, 0.32) !important;
+    rgba(249, 115, 22, 0.32) !important;
   border: 1px solid rgba(147, 197, 253, 0.45) !important;
   box-shadow:
     inset 0 1.5px 0.5px rgba(255, 255, 255, 0.75),
     inset 0 -1.5px 2.5px rgba(0, 0, 0, 0.45),
     inset 0 0 0 1px rgba(255, 255, 255, 0.15),
-    0 4px 12px rgba(59, 130, 246, 0.35) !important;
+    0 4px 12px rgba(249, 115, 22, 0.35) !important;
 }
 
 [data-interface-theme="modern"] .natively-api-pricing-badge-ultra {
@@ -3064,7 +3039,7 @@ html[data-platform="linux"] body {
 /* --- LIQUID GLASS THEME --- */
 [data-interface-theme="liquid-glass"] .pricing-card-yearly {
   background:
-    radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.28) 0%, transparent 60%),
+    radial-gradient(circle at 50% 0%, rgba(249, 115, 22, 0.28) 0%, transparent 60%),
     linear-gradient(135deg, rgba(30, 48, 80, 0.50) 0%, rgba(15, 23, 42, 0.65) 100%) !important;
   border: 1px solid rgba(255, 255, 255, 0.16) !important;
   border-radius: 28px !important;
@@ -3074,7 +3049,7 @@ html[data-platform="linux"] body {
               box-shadow 180ms cubic-bezier(0.23, 1, 0.32, 1),
               border-color 180ms cubic-bezier(0.23, 1, 0.32, 1) !important;
   box-shadow:
-    inset 0 1px 0 rgba(59, 130, 246, 0.5),
+    inset 0 1px 0 rgba(249, 115, 22, 0.5),
     inset 0 2px 4px rgba(255, 255, 255, 0.22),
     inset 0 -3px 8px rgba(0, 0, 0, 0.4),
     0 4px 16px rgba(0, 0, 0, 0.2) !important;
@@ -3099,12 +3074,12 @@ html[data-platform="linux"] body {
 
 @media (hover: hover) and (pointer: fine) {
   [data-interface-theme="liquid-glass"] .pricing-card-yearly:hover {
-    border-color: rgba(59, 130, 246, 0.48) !important;
+    border-color: rgba(249, 115, 22, 0.48) !important;
     box-shadow:
-      inset 0 1px 0 rgba(59, 130, 246, 0.6),
+      inset 0 1px 0 rgba(249, 115, 22, 0.6),
       inset 0 2px 6px rgba(255, 255, 255, 0.3),
       inset 0 -3px 8px rgba(0, 0, 0, 0.4),
-      0 12px 32px rgba(59, 130, 246, 0.2),
+      0 12px 32px rgba(249, 115, 22, 0.2),
       0 4px 12px rgba(0, 0, 0, 0.25) !important;
   }
 }
@@ -3251,7 +3226,7 @@ html[data-platform="linux"] body {
 /* --- MODERN THEME --- */
 [data-interface-theme="modern"] .pricing-card-yearly {
   background:
-    radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.28) 0%, transparent 60%),
+    radial-gradient(circle at 50% 0%, rgba(249, 115, 22, 0.28) 0%, transparent 60%),
     linear-gradient(135deg, rgba(30, 48, 80, 0.50) 0%, rgba(15, 23, 42, 0.65) 100%) !important;
   border: 1px solid rgba(255, 255, 255, 0.16) !important;
   border-radius: 28px !important;
@@ -3261,7 +3236,7 @@ html[data-platform="linux"] body {
               box-shadow 180ms cubic-bezier(0.23, 1, 0.32, 1),
               border-color 180ms cubic-bezier(0.23, 1, 0.32, 1) !important;
   box-shadow:
-    inset 0 1px 0 rgba(59, 130, 246, 0.5),
+    inset 0 1px 0 rgba(249, 115, 22, 0.5),
     inset 0 2px 4px rgba(255, 255, 255, 0.22),
     inset 0 -3px 8px rgba(0, 0, 0, 0.4),
     0 4px 16px rgba(0, 0, 0, 0.2) !important;
@@ -3286,12 +3261,12 @@ html[data-platform="linux"] body {
 
 @media (hover: hover) and (pointer: fine) {
   [data-interface-theme="modern"] .pricing-card-yearly:hover {
-    border-color: rgba(59, 130, 246, 0.48) !important;
+    border-color: rgba(249, 115, 22, 0.48) !important;
     box-shadow:
-      inset 0 1px 0 rgba(59, 130, 246, 0.6),
+      inset 0 1px 0 rgba(249, 115, 22, 0.6),
       inset 0 2px 6px rgba(255, 255, 255, 0.3),
       inset 0 -3px 8px rgba(0, 0, 0, 0.4),
-      0 12px 32px rgba(59, 130, 246, 0.2),
+      0 12px 32px rgba(249, 115, 22, 0.2),
       0 4px 12px rgba(0, 0, 0, 0.25) !important;
   }
 }
@@ -3513,13 +3488,13 @@ html[data-platform="linux"] body {
 }
 
 .about-jelly-blue {
-  background: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.28) 0%, transparent 60%), linear-gradient(135deg, rgba(25, 40, 75, 0.45) 0%, rgba(15, 20, 35, 0.6) 100%) !important;
-  border: 1px solid rgba(59, 130, 246, 0.22) !important;
-  box-shadow: inset 0 1px 0 rgba(59, 130, 246, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.15), inset 0 -3px 8px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.2) !important;
+  background: radial-gradient(circle at 50% 0%, rgba(249, 115, 22, 0.28) 0%, transparent 60%), linear-gradient(135deg, rgba(25, 40, 75, 0.45) 0%, rgba(15, 20, 35, 0.6) 100%) !important;
+  border: 1px solid rgba(249, 115, 22, 0.22) !important;
+  box-shadow: inset 0 1px 0 rgba(249, 115, 22, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.15), inset 0 -3px 8px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.2) !important;
 }
 .about-jelly-blue:hover {
-  border-color: rgba(59, 130, 246, 0.4) !important;
-  box-shadow: inset 0 1px 0 rgba(59, 130, 246, 0.6), inset 0 2px 6px rgba(255, 255, 255, 0.22), inset 0 -3px 8px rgba(0, 0, 0, 0.4), 0 12px 28px rgba(59, 130, 246, 0.15), 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+  border-color: rgba(249, 115, 22, 0.4) !important;
+  box-shadow: inset 0 1px 0 rgba(249, 115, 22, 0.6), inset 0 2px 6px rgba(255, 255, 255, 0.22), inset 0 -3px 8px rgba(0, 0, 0, 0.4), 0 12px 28px rgba(249, 115, 22, 0.15), 0 4px 12px rgba(0, 0, 0, 0.2) !important;
 }
 
 .about-jelly-purple {
@@ -3617,13 +3592,13 @@ html[data-platform="linux"] body {
 }
 
 [data-theme='light'] .about-jelly-blue {
-  background: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.12) 0%, transparent 60%), linear-gradient(135deg, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0.4) 100%) !important;
-  border-color: rgba(59, 130, 246, 0.18) !important;
-  box-shadow: inset 0 1px 0 rgba(59, 130, 246, 0.2), inset 0 2px 4px rgba(255, 255, 255, 0.6), inset 0 -2px 6px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.05) !important;
+  background: radial-gradient(circle at 50% 0%, rgba(249, 115, 22, 0.12) 0%, transparent 60%), linear-gradient(135deg, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0.4) 100%) !important;
+  border-color: rgba(249, 115, 22, 0.18) !important;
+  box-shadow: inset 0 1px 0 rgba(249, 115, 22, 0.2), inset 0 2px 4px rgba(255, 255, 255, 0.6), inset 0 -2px 6px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.05) !important;
 }
 [data-theme='light'] .about-jelly-blue:hover {
-  border-color: rgba(59, 130, 246, 0.35) !important;
-  box-shadow: inset 0 1px 0 rgba(59, 130, 246, 0.3), inset 0 2px 6px rgba(255, 255, 255, 0.8), inset 0 -2px 6px rgba(0, 0, 0, 0.08), 0 12px 28px rgba(59, 130, 246, 0.12), 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+  border-color: rgba(249, 115, 22, 0.35) !important;
+  box-shadow: inset 0 1px 0 rgba(249, 115, 22, 0.3), inset 0 2px 6px rgba(255, 255, 255, 0.8), inset 0 -2px 6px rgba(0, 0, 0, 0.08), 0 12px 28px rgba(249, 115, 22, 0.12), 0 4px 12px rgba(0, 0, 0, 0.05) !important;
 }
 
 [data-theme='light'] .about-jelly-purple {
@@ -3951,13 +3926,13 @@ html[data-platform="linux"] body {
 }
 
 [data-interface-theme="liquid-glass"] .pro-feature-card-blue {
-  background: radial-gradient(circle at 50% 0%, rgba(96, 165, 250, 0.48) 0%, transparent 75%), linear-gradient(135deg, rgba(59, 130, 246, 0.48) 0%, rgba(37, 99, 235, 0.38) 100%) !important;
-  border: 1px solid rgba(59, 130, 246, 0.28) !important;
-  box-shadow: inset 0 1px 0 rgba(59, 130, 246, 0.55), inset 0 2px 4px rgba(255, 255, 255, 0.15), inset 0 -3px 8px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.12) !important;
+  background: radial-gradient(circle at 50% 0%, rgba(96, 165, 250, 0.48) 0%, transparent 75%), linear-gradient(135deg, rgba(249, 115, 22, 0.48) 0%, rgba(249, 115, 22, 0.38) 100%) !important;
+  border: 1px solid rgba(249, 115, 22, 0.28) !important;
+  box-shadow: inset 0 1px 0 rgba(249, 115, 22, 0.55), inset 0 2px 4px rgba(255, 255, 255, 0.15), inset 0 -3px 8px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.12) !important;
 }
 [data-interface-theme="liquid-glass"] .pro-feature-card-blue:hover {
-  border-color: rgba(59, 130, 246, 0.45) !important;
-  box-shadow: inset 0 1px 0 rgba(59, 130, 246, 0.65), inset 0 2px 6px rgba(255, 255, 255, 0.22), inset 0 -3px 8px rgba(0, 0, 0, 0.35), 0 10px 24px rgba(59, 130, 246, 0.15), 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  border-color: rgba(249, 115, 22, 0.45) !important;
+  box-shadow: inset 0 1px 0 rgba(249, 115, 22, 0.65), inset 0 2px 6px rgba(255, 255, 255, 0.22), inset 0 -3px 8px rgba(0, 0, 0, 0.35), 0 10px 24px rgba(249, 115, 22, 0.15), 0 4px 12px rgba(0, 0, 0, 0.15) !important;
 }
 
 [data-interface-theme="liquid-glass"] .pro-feature-card-rose {
@@ -4032,13 +4007,13 @@ html[data-platform="linux"] body {
 }
 
 [data-interface-theme="modern"] .pro-feature-card-blue {
-  background: radial-gradient(circle at 50% 0%, rgba(96, 165, 250, 0.42) 0%, transparent 75%), linear-gradient(135deg, rgba(59, 130, 246, 0.42) 0%, rgba(29, 78, 216, 0.3) 100%) !important;
-  border: 1px solid rgba(59, 130, 246, 0.24) !important;
-  box-shadow: inset 0 1px 0 rgba(59, 130, 246, 0.4), inset 0 1.5px 3px rgba(255, 255, 255, 0.1), inset 0 -2px 6px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.12) !important;
+  background: radial-gradient(circle at 50% 0%, rgba(96, 165, 250, 0.42) 0%, transparent 75%), linear-gradient(135deg, rgba(249, 115, 22, 0.42) 0%, rgba(194, 65, 12, 0.3) 100%) !important;
+  border: 1px solid rgba(249, 115, 22, 0.24) !important;
+  box-shadow: inset 0 1px 0 rgba(249, 115, 22, 0.4), inset 0 1.5px 3px rgba(255, 255, 255, 0.1), inset 0 -2px 6px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.12) !important;
 }
 [data-interface-theme="modern"] .pro-feature-card-blue:hover {
-  border-color: rgba(59, 130, 246, 0.38) !important;
-  box-shadow: inset 0 1px 0 rgba(59, 130, 246, 0.5), inset 0 1.5px 4.5px rgba(255, 255, 255, 0.15), inset 0 -2px 6px rgba(0, 0, 0, 0.3), 0 8px 20px rgba(59, 130, 246, 0.12), 0 4px 12px rgba(0, 0, 0, 0.12) !important;
+  border-color: rgba(249, 115, 22, 0.38) !important;
+  box-shadow: inset 0 1px 0 rgba(249, 115, 22, 0.5), inset 0 1.5px 4.5px rgba(255, 255, 255, 0.15), inset 0 -2px 6px rgba(0, 0, 0, 0.3), 0 8px 20px rgba(249, 115, 22, 0.12), 0 4px 12px rgba(0, 0, 0, 0.12) !important;
 }
 
 [data-interface-theme="modern"] .pro-feature-card-rose {
@@ -4130,12 +4105,12 @@ html[data-platform="linux"] body {
 }
 
 [data-theme='light'] .pro-feature-card-blue {
-  background: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.15) 0%, transparent 60%), linear-gradient(135deg, rgba(239, 246, 255, 0.8) 0%, rgba(219, 234, 254, 0.85) 100%) !important;
-  border-color: rgba(59, 130, 246, 0.2) !important;
+  background: radial-gradient(circle at 50% 0%, rgba(249, 115, 22, 0.15) 0%, transparent 60%), linear-gradient(135deg, rgba(239, 246, 255, 0.8) 0%, rgba(219, 234, 254, 0.85) 100%) !important;
+  border-color: rgba(249, 115, 22, 0.2) !important;
 }
 [data-theme='light'] .pro-feature-card-blue:hover {
-  border-color: rgba(59, 130, 246, 0.35) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -2px 6px rgba(0, 0, 0, 0.1), 0 10px 24px rgba(59, 130, 246, 0.08), 0 4px 12px rgba(0, 0, 0, 0.06) !important;
+  border-color: rgba(249, 115, 22, 0.35) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -2px 6px rgba(0, 0, 0, 0.1), 0 10px 24px rgba(249, 115, 22, 0.08), 0 4px 12px rgba(0, 0, 0, 0.06) !important;
 }
 
 [data-theme='light'] .pro-feature-card-rose {
@@ -4311,12 +4286,12 @@ html[data-platform="linux"] body {
 [data-theme='light'] .natively-api-selector-pill-max {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.04) 100%),
-    rgba(59, 130, 246, 0.18) !important;
-  border-color: rgba(59, 130, 246, 0.32) !important;
+    rgba(249, 115, 22, 0.18) !important;
+  border-color: rgba(249, 115, 22, 0.32) !important;
   box-shadow:
     inset 0 1.5px 2px rgba(255, 255, 255, 0.8),
     inset 0 -1.5px 2px rgba(0, 0, 0, 0.08),
-    0 4px 12px rgba(59, 130, 246, 0.18) !important;
+    0 4px 12px rgba(249, 115, 22, 0.18) !important;
 }
 
 [data-theme='light'] .natively-api-selector-pill-ultra {
@@ -4338,7 +4313,7 @@ html[data-platform="linux"] body {
 }
 
 [data-theme='light'] .natively-api-price-max {
-  background: linear-gradient(135deg, #0f172a 20%, #1d4ed8 100%) !important;
+  background: linear-gradient(135deg, #0f172a 20%, #c2410c 100%) !important;
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
 }
@@ -4393,10 +4368,10 @@ html[data-platform="linux"] body {
 
 [data-theme='light'] .natively-api-detail-card-max {
   background:
-    radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.15) 0%, transparent 65%),
-    radial-gradient(circle at 100% 100%, rgba(59, 130, 246, 0.18) 0%, transparent 65%),
+    radial-gradient(circle at 50% 0%, rgba(249, 115, 22, 0.15) 0%, transparent 65%),
+    radial-gradient(circle at 100% 100%, rgba(249, 115, 22, 0.18) 0%, transparent 65%),
     linear-gradient(135deg, #ffffff 0%, #eff6ff 100%) !important;
-  border: 1.5px solid rgba(59, 130, 246, 0.36) !important;
+  border: 1.5px solid rgba(249, 115, 22, 0.36) !important;
 }
 
 [data-theme='light'] .natively-api-detail-card-ultra {
@@ -4429,12 +4404,12 @@ html[data-platform="linux"] body {
 }
 
 [data-theme='light'] .natively-api-detail-card-max[data-active="true"] {
-  border-color: rgba(29, 78, 216, 0.75) !important;
+  border-color: rgba(194, 65, 12, 0.75) !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.9),
     inset 0 -2px 5px rgba(0, 0, 0, 0.02),
-    0 0 28px rgba(59, 130, 246, 0.26),
-    0 16px 36px rgba(59, 130, 246, 0.18),
+    0 0 28px rgba(249, 115, 22, 0.26),
+    0 16px 36px rgba(249, 115, 22, 0.18),
     0 6px 14px rgba(0, 0, 0, 0.05) !important;
 }
 
@@ -4475,7 +4450,7 @@ html[data-platform="linux"] body {
   color: #c4b5fd !important;
 }
 .natively-api-badge-text-max {
-  color: #93c5fd !important;
+  color: #fdb582 !important;
 }
 .natively-api-badge-text-ultra {
   color: #fdb582 !important;
@@ -4493,8 +4468,8 @@ html[data-platform="linux"] body {
   filter: drop-shadow(0 0 4.5px rgba(139, 92, 246, 0.55)) !important;
 }
 .natively-api-check-icon-max {
-  color: #60a5fa !important;
-  filter: drop-shadow(0 0 4.5px rgba(59, 130, 246, 0.55)) !important;
+  color: #fb923c !important;
+  filter: drop-shadow(0 0 4.5px rgba(249, 115, 22, 0.55)) !important;
 }
 .natively-api-check-icon-ultra {
   color: #fb923c !important;
@@ -4552,8 +4527,8 @@ html[data-platform="linux"] body {
   filter: drop-shadow(0 0 3px rgba(109, 40, 217, 0.22)) !important;
 }
 [data-theme='light'] .natively-api-check-icon-max {
-  color: #2563eb !important;
-  filter: drop-shadow(0 0 3px rgba(37, 99, 235, 0.22)) !important;
+  color: #ea580c !important;
+  filter: drop-shadow(0 0 3px rgba(249, 115, 22, 0.22)) !important;
 }
 [data-theme='light'] .natively-api-check-icon-ultra {
   color: #ea580c !important;
@@ -4621,9 +4596,9 @@ html[data-platform="linux"] body {
 [data-theme='light'] [data-interface-theme="liquid-glass"] .pricing-card-yearly,
 [data-theme='light'] [data-interface-theme="modern"] .pricing-card-yearly {
   background:
-    radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.14) 0%, transparent 60%),
+    radial-gradient(circle at 50% 0%, rgba(249, 115, 22, 0.14) 0%, transparent 60%),
     linear-gradient(135deg, rgba(239, 246, 255, 0.85) 0%, rgba(219, 234, 254, 0.9) 100%) !important;
-  border-color: rgba(59, 130, 246, 0.22) !important;
+  border-color: rgba(249, 115, 22, 0.22) !important;
   box-shadow:
     inset 0 1.5px 0 rgba(255, 255, 255, 0.8),
     inset 0 3px 6px rgba(255, 255, 255, 0.4),
@@ -4638,12 +4613,12 @@ html[data-platform="linux"] body {
 
 [data-theme='light'] [data-interface-theme="liquid-glass"] .pricing-card-yearly:hover,
 [data-theme='light'] [data-interface-theme="modern"] .pricing-card-yearly:hover {
-  border-color: rgba(59, 130, 246, 0.42) !important;
+  border-color: rgba(249, 115, 22, 0.42) !important;
   box-shadow:
     inset 0 1.5px 0 rgba(255, 255, 255, 0.85),
     inset 0 3px 8px rgba(255, 255, 255, 0.55),
     inset 0 -2.5px 6px rgba(0, 0, 0, 0.06),
-    0 12px 28px rgba(59, 130, 246, 0.12),
+    0 12px 28px rgba(249, 115, 22, 0.12),
     0 4px 12px rgba(15, 23, 42, 0.04) !important;
 }
 
@@ -4694,13 +4669,13 @@ html[data-platform="linux"] body {
 /* 4. Badges and Chips in Light Mode */
 /* 4. Badges and Chips: 3D Specular Jelly Pills */
 .pricing-card-yearly .badge-tier-label {
-  background: linear-gradient(180deg, rgba(59, 130, 246, 0.25) 0%, rgba(37, 99, 235, 0.15) 100%) !important;
-  border: 1px solid rgba(59, 130, 246, 0.38) !important;
-  color: #93c5fd !important;
+  background: linear-gradient(180deg, rgba(249, 115, 22, 0.25) 0%, rgba(249, 115, 22, 0.15) 100%) !important;
+  border: 1px solid rgba(249, 115, 22, 0.38) !important;
+  color: #fdb582 !important;
   box-shadow: 
     inset 0 1.5px 0 rgba(255, 255, 255, 0.22),
     inset 0 -2px 4px rgba(0, 0, 0, 0.25),
-    0 2px 6px rgba(59, 130, 246, 0.15) !important;
+    0 2px 6px rgba(249, 115, 22, 0.15) !important;
 }
 
 .pricing-card-lifetime .badge-tier-label {
@@ -4714,13 +4689,13 @@ html[data-platform="linux"] body {
 }
 
 [data-theme='light'] .pricing-card-yearly .badge-tier-label {
-  background: linear-gradient(180deg, rgba(59, 130, 246, 0.16) 0%, rgba(37, 99, 235, 0.08) 100%) !important;
-  border: 1px solid rgba(59, 130, 246, 0.28) !important;
-  color: #1d4ed8 !important;
+  background: linear-gradient(180deg, rgba(249, 115, 22, 0.16) 0%, rgba(249, 115, 22, 0.08) 100%) !important;
+  border: 1px solid rgba(249, 115, 22, 0.28) !important;
+  color: #c2410c !important;
   box-shadow: 
     inset 0 1.5px 0 rgba(255, 255, 255, 0.85),
-    inset 0 -2px 4px rgba(59, 130, 246, 0.06),
-    0 2px 6px rgba(59, 130, 246, 0.06) !important;
+    inset 0 -2px 4px rgba(249, 115, 22, 0.06),
+    0 2px 6px rgba(249, 115, 22, 0.06) !important;
 }
 
 [data-theme='light'] .pricing-card-lifetime .badge-tier-label {
@@ -4815,11 +4790,11 @@ html[data-platform="linux"] body {
 [data-theme='light'] .pricing-poster-stroke-bright { stroke: rgba(15, 23, 42, 0.60) !important; }
 [data-theme='light'] .pricing-poster-text-muted { fill: rgba(15, 23, 42, 0.48) !important; }
 [data-theme='light'] .pricing-poster-text-bright { fill: rgba(15, 23, 42, 0.75) !important; }
-[data-theme='light'] .pricing-poster-central-ai-text { fill: #1e3a8a !important; }
+[data-theme='light'] .pricing-poster-central-ai-text { fill: #9a3412 !important; }
 [data-theme='light'] .pricing-poster-avatar-bg { fill: rgba(15, 23, 42, 0.14) !important; }
 [data-theme='light'] .pricing-poster-rect-light { fill: rgba(15, 23, 42, 0.18) !important; }
 [data-theme='light'] .pricing-poster-rect-subtle { fill: rgba(15, 23, 42, 0.10) !important; }
 [data-theme='light'] .pricing-poster-check3-bg { fill: rgba(15, 23, 42, 0.05) !important; }
 [data-theme='light'] .pricing-poster-check3-border { stroke: rgba(15, 23, 42, 0.16) !important; }
 [data-theme='light'] .pricing-poster-badge-text-purple { fill: #5b21b6 !important; }
-[data-theme='light'] .pricing-poster-badge-text-blue { fill: #1d4ed8 !important; }
+[data-theme='light'] .pricing-poster-badge-text-blue { fill: #c2410c !important; }

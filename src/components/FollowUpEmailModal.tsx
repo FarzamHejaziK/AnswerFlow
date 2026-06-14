@@ -228,7 +228,7 @@ const FollowUpEmailModal: React.FC<FollowUpEmailModalProps> = ({ isOpen, onClose
                                             <div className="relative">
                                                 <div className="w-10 h-10 border-2 border-[#27272A] border-t-blue-500 rounded-full animate-spin"></div>
                                                 <div className="absolute inset-0 flex items-center justify-center">
-                                                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                                                    <div className="w-2 h-2 bg-accent-primary rounded-full animate-pulse"></div>
                                                 </div>
                                             </div>
                                             <span className="text-xs font-medium text-[#71717A] animate-pulse">Drafting perfect follow-up...</span>

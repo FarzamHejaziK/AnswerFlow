@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { ToggleLeft, ToggleRight, Search, ArrowRight, ArrowLeft, MoreHorizontal, Globe, Clock, ChevronRight, Settings, LayoutGrid, RefreshCw, Ghost, Plus, Mail, Link as LinkIcon, ChevronDown, Trash2, Bell, Check, Download, DownloadCloud, CheckCircle, AlertCircle, User, UserSearch, Sparkles, ArrowUpRight, ArrowUp, Brain, Mic, ShieldCheck, Paperclip, X, Speaker, Pencil } from 'lucide-react';
+import { ToggleLeft, ToggleRight, Search, ArrowRight, ArrowLeft, MoreHorizontal, Globe, Clock, ChevronRight, Settings, RefreshCw, Ghost, Plus, Mail, Link as LinkIcon, ChevronDown, Trash2, Bell, Check, Download, DownloadCloud, CheckCircle, AlertCircle, User, Sparkles, ArrowUpRight, ArrowUp, Brain, Mic, ShieldCheck, Paperclip, X, Speaker, Pencil, KeyRound, Monitor, HelpCircle } from 'lucide-react';
 import { generateMeetingPDF } from '../utils/pdfGenerator';
 import icon from "./icon.png";
 import { ModelSelector } from './ui/ModelSelector';
 import TopSearchPill from './TopSearchPill';
 import GlobalChatOverlay from './GlobalChatOverlay';
+import HelpAssistant from './help/HelpAssistant';
 import { motion, AnimatePresence } from 'framer-motion';
 import { analytics } from '../lib/analytics/analytics.service'; // Added analytics import
 import { useShortcuts } from '../hooks/useShortcuts';
@@ -12,7 +13,6 @@ import { useResolvedTheme } from '../hooks/useResolvedTheme';
 import { useStreamBuffer } from '../hooks/useStreamBuffer';
 import { isMac } from '../utils/platformUtils';
 import WindowControls from './WindowControls';
-import { SHOW_PROMOTIONAL_SURFACES } from '../lib/promoSurfaceFlags';
 import { genMessageId } from '../utils/messageId';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -50,8 +50,6 @@ const isMeetingFinalizing = (meeting?: Meeting | null) =>
 interface LauncherProps {
     onStartMeeting: (metadata?: any) => void;
     onOpenSettings: (tab?: string) => void;
-    onOpenProfile?: () => void;
-    onOpenModes?: () => void;
     onPageChange?: (isMain: boolean) => void;
     ollamaPullStatus?: 'idle' | 'downloading' | 'complete' | 'failed';
     ollamaPullPercent?: number;
@@ -60,6 +58,10 @@ interface LauncherProps {
 
 type PermissionValue = 'granted' | 'denied' | 'not-determined' | 'restricted' | 'unknown';
 type ReadinessStatus = 'ready' | 'warning' | 'missing';
+type PreflightStep = 'providers' | 'permissions';
+type ProviderKeyId = 'openai' | 'claude' | 'gemini';
+type ProviderKeyDrafts = Record<ProviderKeyId, string>;
+type ProviderKeyStatus = Record<ProviderKeyId, boolean>;
 
 interface SessionReadiness {
     aiProvider: string;
@@ -91,6 +93,18 @@ const INITIAL_READINESS: SessionReadiness = {
     loading: true,
 };
 
+const EMPTY_PROVIDER_KEY_DRAFTS: ProviderKeyDrafts = {
+    openai: '',
+    claude: '',
+    gemini: '',
+};
+
+const EMPTY_PROVIDER_KEY_STATUS: ProviderKeyStatus = {
+    openai: false,
+    claude: false,
+    gemini: false,
+};
+
 const providerLabels: Record<string, string> = {
     ollama: 'Ollama',
     gemini: 'Gemini',
@@ -114,6 +128,7 @@ const sttProviderLabels: Record<string, string> = {
     ibmwatson: 'IBM Watson',
     soniox: 'Soniox',
     natively: 'Natively API',
+    'local-whisper': 'Moonshine Base',
 };
 
 const inferProviderLabel = (provider: string | undefined, model: string | undefined) => {
@@ -153,7 +168,7 @@ const hasAnyConfiguredAiProvider = (provider: string | undefined, creds: any) =>
 };
 
 const hasConfiguredStt = (creds: any) => {
-    const provider = creds?.sttProvider || 'none';
+    const provider = creds?.sttProvider || 'local-whisper';
     switch (provider) {
         case 'google': return !!creds?.googleServiceAccountPath;
         case 'groq': return !!creds?.hasSttGroqKey;
@@ -164,6 +179,7 @@ const hasConfiguredStt = (creds: any) => {
         case 'ibmwatson': return !!creds?.hasIbmWatsonKey && !!creds?.ibmWatsonRegion;
         case 'soniox': return !!creds?.hasSonioxKey;
         case 'natively': return !!creds?.hasNativelyKey;
+        case 'local-whisper': return true;
         default: return false;
     }
 };
@@ -664,7 +680,7 @@ const MeetingConversationPanel: React.FC<{ meeting: Meeting; isLight: boolean }>
     const busy = state === 'waiting' || state === 'streaming';
 
     return (
-        <div className={`shrink-0 border-t border-border-subtle px-5 py-4 ${isLight ? 'bg-bg-secondary' : 'bg-[#101011]'}`}>
+        <div className={`shrink-0 border-t border-border-subtle px-5 py-4 ${isLight ? 'bg-bg-secondary' : 'bg-bg-primary'}`}>
             {(messages.length > 0 || errorMessage) && (
                 <div className="max-h-[220px] overflow-y-auto custom-scrollbar mb-3 pr-1 space-y-3">
                     {messages.map((message) => (
@@ -690,7 +706,7 @@ const MeetingConversationPanel: React.FC<{ meeting: Meeting; isLight: boolean }>
                 </div>
             )}
 
-            <div className={`session-chat-composer rounded-2xl border shadow-sm transition-colors ${isLight ? 'bg-white border-border-muted focus-within:border-border-muted' : 'bg-[#2B2B2D] border-white/8 focus-within:border-white/15'} overflow-hidden`}>
+            <div className={`session-chat-composer rounded-2xl border shadow-sm transition-colors ${isLight ? 'bg-white border-border-muted focus-within:border-border-muted' : 'bg-bg-input border-white/8 focus-within:border-white/15'} overflow-hidden`}>
                 <textarea
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
@@ -707,7 +723,7 @@ const MeetingConversationPanel: React.FC<{ meeting: Meeting; isLight: boolean }>
                 />
                 <div className="h-10 px-3 pb-2 flex items-center justify-between">
                     <div className="flex items-center gap-2 text-[11px] text-text-tertiary">
-                        <Sparkles size={13} className="text-blue-500" />
+                        <Sparkles size={13} className="text-accent-primary" />
                         <span>{busy ? 'Thinking' : 'Uses interview transcript'}</span>
                     </div>
                     <button
@@ -816,7 +832,7 @@ const InterviewPrepPanel: React.FC<InterviewPrepPanelProps> = ({
         ? 'Ask about this interview'
         : isMeetingActive
             ? 'Ask while the interview is live'
-            : 'Add prep context for this interview';
+            : 'What should I know about your interview? How should I answer the questions?';
 
     const renderMessageAttachments = (message: PrepMessage) => {
         if (!message.attachments?.length) return null;
@@ -830,7 +846,7 @@ const InterviewPrepPanel: React.FC<InterviewPrepPanelProps> = ({
                         title={`${doc.name} · ${doc.fileType.toUpperCase()} · ${formatBytes(doc.sizeBytes)} · attached ${formatMessageTime(message.createdAt)}`}
                     >
                         <div className={`h-9 px-2.5 flex items-center gap-2 ${isLight ? 'bg-slate-50' : 'bg-black/30'}`}>
-                            <div className={`h-6 w-6 rounded-md shrink-0 flex items-center justify-center ${isLight ? 'bg-blue-50 text-blue-600' : 'bg-blue-500/14 text-blue-300'}`}>
+                            <div className={`h-6 w-6 rounded-md shrink-0 flex items-center justify-center ${isLight ? 'bg-accent-secondary text-accent-primary' : 'bg-accent-secondary text-accent-primary'}`}>
                                 <Paperclip size={13} />
                             </div>
                             <span className="truncate text-[11.5px] font-semibold text-text-primary">{doc.name}</span>
@@ -874,7 +890,7 @@ const InterviewPrepPanel: React.FC<InterviewPrepPanelProps> = ({
                                         ol: ({ node, ...props }: any) => <ol className="list-decimal ml-4 mb-2 space-y-1 last:mb-0" {...props} />,
                                         li: ({ node, ...props }: any) => <li className="pl-1" {...props} />,
                                         strong: ({ node, ...props }: any) => <strong className="font-semibold text-text-primary" {...props} />,
-                                        a: ({ node, ...props }: any) => <a className="text-blue-500 hover:underline" {...props} />,
+                                        a: ({ node, ...props }: any) => <a className="text-accent-primary hover:underline" {...props} />,
                                         code: ({ node, inline, className, children, ...props }: any) => {
                                             const isInline = inline ?? !String(children).includes('\n');
                                             return isInline ? (
@@ -909,7 +925,7 @@ const InterviewPrepPanel: React.FC<InterviewPrepPanelProps> = ({
 
     const renderDivider = (label: string, tone: 'started' | 'finished' | 'finalizing') => {
         const toneClass = tone === 'started'
-            ? isLight ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-blue-500/10 text-blue-300 border-blue-400/20'
+            ? isLight ? 'bg-accent-secondary text-accent-primary border-border-subtle' : 'bg-accent-secondary text-accent-primary border-border-subtle'
             : tone === 'finalizing'
                 ? isLight ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-amber-500/10 text-amber-300 border-amber-400/20'
                 : isLight ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-emerald-500/10 text-emerald-300 border-emerald-400/20';
@@ -946,8 +962,8 @@ const InterviewPrepPanel: React.FC<InterviewPrepPanelProps> = ({
             const Icon = isAi ? Sparkles : isMe ? User : Mic;
             const bubbleTone = isAi
                 ? isLight
-                    ? 'bg-blue-50 border-blue-100 text-slate-900'
-                    : 'bg-blue-500/10 border-blue-400/20 text-blue-50'
+                    ? 'bg-accent-secondary border-border-subtle text-text-primary'
+                    : 'bg-accent-secondary border-border-subtle text-text-primary'
                 : isMe
                     ? isLight
                         ? 'bg-emerald-50 border-emerald-100 text-slate-900'
@@ -956,7 +972,7 @@ const InterviewPrepPanel: React.FC<InterviewPrepPanelProps> = ({
                         ? 'bg-bg-elevated border-border-subtle text-text-primary'
                         : 'bg-bg-secondary border-border-subtle text-text-primary';
             const badgeTone = isAi
-                ? 'text-blue-500'
+                ? 'text-accent-primary'
                 : isMe
                     ? 'text-emerald-500'
                     : 'text-text-secondary';
@@ -994,7 +1010,7 @@ const InterviewPrepPanel: React.FC<InterviewPrepPanelProps> = ({
                 {!meeting && (
                     <button
                         onClick={onStartInterview}
-                        className={`h-9 px-4 rounded-md inline-flex items-center gap-2 text-[13px] font-semibold text-white transition-colors ${isMeetingActive ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-blue-600 hover:bg-blue-500'}`}
+                        className={`h-9 px-4 rounded-md inline-flex items-center gap-2 text-[13px] font-semibold text-white transition-colors ${isMeetingActive ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-accent-primary hover:opacity-90'}`}
                     >
                         {isMeetingActive ? (
                             <>
@@ -1015,35 +1031,38 @@ const InterviewPrepPanel: React.FC<InterviewPrepPanelProps> = ({
             </div>
 
             <div className="flex-1 min-h-0 flex flex-col">
-                <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-6 py-6 space-y-3">
-                    {messages.length === 0 && !hasInterviewStarted ? (
-                        <div className="h-full flex items-center justify-center text-center px-8">
-                            <div className="max-w-[520px]">
-                                <div className={`mx-auto mb-4 h-12 w-12 rounded-xl flex items-center justify-center ${isLight ? 'bg-blue-50 text-blue-600' : 'bg-blue-500/12 text-blue-400'}`}>
-                                    <Sparkles size={22} />
+                <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-6 py-6">
+                    <div className="mx-auto flex min-h-full w-full max-w-[920px] flex-col gap-3">
+                        {messages.length === 0 && !hasInterviewStarted ? (
+                            <div className="flex flex-1 items-center justify-center text-center px-8">
+                                <div className="max-w-[520px]">
+                                    <div className={`mx-auto mb-4 h-12 w-12 rounded-xl flex items-center justify-center ${isLight ? 'bg-accent-secondary text-accent-primary' : 'bg-accent-secondary text-accent-primary'}`}>
+                                        <Sparkles size={22} />
+                                    </div>
+                                    <h3 className="text-[26px] font-semibold tracking-tight text-text-primary">What should I know about your interview?</h3>
+                                    <p className="mt-2 text-[14px] leading-relaxed text-text-secondary">
+                                        Tell me the role, company, interview round, likely topics, stories to use, and how you want answers shaped.
+                                    </p>
                                 </div>
-                                <h3 className="text-[26px] font-semibold tracking-tight text-text-primary">What should I know?</h3>
-                                <p className="mt-2 text-[14px] leading-relaxed text-text-secondary">
-                                    Add the role, company, interview round, likely topics, stories to use, or anything you want the assistant to remember.
-                                </p>
                             </div>
-                        </div>
-                    ) : (
-                        <>
-                            {renderChatMessages(beforeMessages)}
-                            {hasInterviewStarted && renderDivider('Interview started', 'started')}
-                            {renderTranscriptItems()}
-                            {duringMessages.length > 0 && renderChatMessages(duringMessages)}
-                            {hasInterviewFinished && renderDivider(isFinalizing ? 'Finalizing interview' : 'Interview finished', isFinalizing ? 'finalizing' : 'finished')}
-                            {renderChatMessages(afterMessages)}
-                            {errorMessage && <p className="text-[12px] text-red-400">{errorMessage}</p>}
-                        </>
-                    )}
-                    <div ref={messagesEndRef} />
+                        ) : (
+                            <>
+                                {renderChatMessages(beforeMessages)}
+                                {hasInterviewStarted && renderDivider('Interview started', 'started')}
+                                {renderTranscriptItems()}
+                                {duringMessages.length > 0 && renderChatMessages(duringMessages)}
+                                {hasInterviewFinished && renderDivider(isFinalizing ? 'Finalizing interview' : 'Interview finished', isFinalizing ? 'finalizing' : 'finished')}
+                                {renderChatMessages(afterMessages)}
+                                {errorMessage && <p className="text-[12px] text-red-400">{errorMessage}</p>}
+                            </>
+                        )}
+                        <div ref={messagesEndRef} />
+                    </div>
                 </div>
 
-                <div className={`shrink-0 border-t border-border-subtle px-5 py-4 ${isLight ? 'bg-bg-secondary' : 'bg-[#101011]'}`}>
-                    <div className={`session-chat-composer relative rounded-2xl border shadow-sm transition-colors ${isLight ? 'bg-white border-border-muted focus-within:border-border-muted' : 'bg-[#2B2B2D] border-white/8 focus-within:border-white/15'} overflow-visible`}>
+                <div className={`shrink-0 border-t border-border-subtle px-5 py-4 ${isLight ? 'bg-bg-secondary' : 'bg-bg-primary'}`}>
+                    <div className="mx-auto w-full max-w-[920px]">
+                    <div className={`session-chat-composer relative rounded-2xl border shadow-sm transition-colors ${isLight ? 'bg-white border-border-muted focus-within:border-border-muted' : 'bg-bg-input border-white/8 focus-within:border-white/15'} overflow-visible`}>
                         {selectedDocs.length > 0 && (
                             <div className="px-3 pt-3 flex flex-wrap gap-1.5">
                                 {selectedDocs.map(doc => (
@@ -1051,7 +1070,7 @@ const InterviewPrepPanel: React.FC<InterviewPrepPanelProps> = ({
                                         key={doc.id}
                                         className={`max-w-[220px] h-6 rounded-full px-2 inline-flex items-center gap-1.5 text-[11px] ${isLight ? 'bg-slate-100 text-slate-700' : 'bg-white/8 text-text-secondary'}`}
                                     >
-                                        <Paperclip size={11} className="shrink-0 text-blue-500" />
+                                        <Paperclip size={11} className="shrink-0 text-accent-primary" />
                                         {doc.contextKind && <span className="shrink-0 font-semibold">{documentKindLabels[doc.contextKind]}:</span>}
                                         <span className="truncate">{doc.name}</span>
                                         <button
@@ -1116,7 +1135,7 @@ const InterviewPrepPanel: React.FC<InterviewPrepPanelProps> = ({
                                                         return (
                                                             <div
                                                                 key={doc.id}
-                                                                className={`group rounded-lg px-2.5 py-2 transition-colors ${selected ? isLight ? 'bg-blue-50' : 'bg-blue-500/10' : isLight ? 'hover:bg-slate-100' : 'hover:bg-white/8'}`}
+                                                                className={`group rounded-lg px-2.5 py-2 transition-colors ${selected ? isLight ? 'bg-accent-secondary' : 'bg-accent-secondary' : isLight ? 'hover:bg-slate-100' : 'hover:bg-white/8'}`}
                                                             >
                                                                 <div className="flex items-center gap-2">
                                                                     <button
@@ -1124,7 +1143,7 @@ const InterviewPrepPanel: React.FC<InterviewPrepPanelProps> = ({
                                                                             setIsDocMenuOpen(false);
                                                                             onToggleDoc(doc.id);
                                                                         }}
-                                                                        className={`h-4 w-4 shrink-0 rounded border flex items-center justify-center ${selected ? 'bg-blue-500 border-blue-500 text-white' : 'border-border-muted text-transparent'}`}
+                                                                        className={`h-4 w-4 shrink-0 rounded border flex items-center justify-center ${selected ? 'bg-accent-primary border-accent-primary text-white' : 'border-border-muted text-transparent'}`}
                                                                         title={selected ? 'Remove from interview context' : 'Use in interview context'}
                                                                     >
                                                                         <Check size={11} strokeWidth={3} />
@@ -1162,7 +1181,7 @@ const InterviewPrepPanel: React.FC<InterviewPrepPanelProps> = ({
                                     )}
                                 </div>
                                 <div className="min-w-0 flex items-center gap-1.5 text-[11px] text-text-tertiary">
-                                    <Brain size={13} className="shrink-0 text-blue-500" />
+                                    <Brain size={13} className="shrink-0 text-accent-primary" />
                                 <span className="truncate">
                                     {userNoteCount} note{userNoteCount === 1 ? '' : 's'} · {selectedDocs.length} doc{selectedDocs.length === 1 ? '' : 's'}
                                     {preparedCharCount > 0 ? ` · ${preparedCharCount.toLocaleString()} chars prepared` : ''}
@@ -1185,6 +1204,7 @@ const InterviewPrepPanel: React.FC<InterviewPrepPanelProps> = ({
                                 <ArrowUp size={16} strokeWidth={2.4} />
                             </button>
                         </div>
+                    </div>
                     </div>
                 </div>
             </div>
@@ -1251,14 +1271,14 @@ const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
                                 className={`w-full h-10 rounded-md border px-3 flex items-center justify-between gap-2 text-[13px] outline-none transition-colors ${
                                     isLight
                                         ? 'bg-white border-border-muted text-slate-900 hover:bg-slate-50'
-                                        : 'bg-[#101011] border-white/10 text-white hover:bg-white/6'
+                                        : 'bg-bg-primary border-white/10 text-white hover:bg-white/6'
                                 }`}
                             >
                                 <span>{documentKindLabels[contextKind]}</span>
                                 <ChevronDown size={14} className={`shrink-0 text-text-tertiary transition-transform ${isKindMenuOpen ? 'rotate-180' : ''}`} />
                             </button>
                             {isKindMenuOpen && (
-                                <div className={`absolute left-0 right-0 top-[calc(100%+6px)] z-[510] rounded-md border p-1 shadow-xl ${isLight ? 'bg-white border-border-muted' : 'bg-[#101011] border-white/10'}`}>
+                                <div className={`absolute left-0 right-0 top-[calc(100%+6px)] z-[510] rounded-md border p-1 shadow-xl ${isLight ? 'bg-white border-border-muted' : 'bg-bg-primary border-white/10'}`}>
                                     {(['resume', 'project', 'other'] as InterviewContextDocumentKind[]).map(kind => (
                                         <button
                                             key={kind}
@@ -1270,8 +1290,8 @@ const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
                                             className={`w-full h-8 rounded px-2.5 flex items-center justify-between text-left text-[12.5px] transition-colors ${
                                                 contextKind === kind
                                                     ? isLight
-                                                        ? 'bg-blue-50 text-blue-700'
-                                                        : 'bg-blue-500/12 text-blue-300'
+                                                        ? 'bg-accent-secondary text-accent-primary'
+                                                        : 'bg-accent-secondary text-accent-primary'
                                                     : isLight
                                                         ? 'text-slate-700 hover:bg-slate-100'
                                                         : 'text-text-secondary hover:bg-white/8 hover:text-text-primary'
@@ -1294,7 +1314,7 @@ const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
                                 onChange={(event) => setContextDescription(event.target.value)}
                                 rows={3}
                                 placeholder="Example: company notes, job description, portfolio brief..."
-                                className={`w-full resize-none rounded-md border px-3 py-2 text-[13px] leading-5 outline-none ${isLight ? 'bg-white border-border-muted text-slate-900 placeholder:text-slate-400' : 'bg-[#101011] border-white/10 text-white placeholder:text-white/35'}`}
+                                className={`w-full resize-none rounded-md border px-3 py-2 text-[13px] leading-5 outline-none ${isLight ? 'bg-white border-border-muted text-slate-900 placeholder:text-slate-400' : 'bg-bg-primary border-white/10 text-white placeholder:text-white/35'}`}
                             />
                         </label>
                     )}
@@ -1314,7 +1334,7 @@ const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
                         disabled={!canSave}
                         className={`h-9 px-4 rounded-md text-[12px] font-semibold transition-colors ${
                             canSave
-                                ? 'bg-blue-600 text-white hover:bg-blue-500'
+                                ? 'bg-accent-primary text-white hover:opacity-90'
                                 : isLight
                                     ? 'bg-slate-200 text-slate-400 cursor-default'
                                     : 'bg-white/10 text-white/35 cursor-default'
@@ -1419,7 +1439,7 @@ const TranscriptTimeline: React.FC<TranscriptTimelineProps> = ({ meeting, isLigh
                 <div className="flex items-center gap-2 text-[10px] font-semibold">
                     <span className="px-2 py-1 rounded-full bg-slate-500/10 text-text-secondary">Interviewer</span>
                     <span className="px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-500">Me</span>
-                    <span className="px-2 py-1 rounded-full bg-blue-500/10 text-blue-500">AI</span>
+                    <span className="px-2 py-1 rounded-full bg-accent-secondary text-accent-primary">AI</span>
                 </div>
             </div>
 
@@ -1440,8 +1460,8 @@ const TranscriptTimeline: React.FC<TranscriptTimelineProps> = ({ meeting, isLigh
                             const Icon = isAi ? Sparkles : isMe ? User : Mic;
                             const bubbleTone = isAi
                                 ? isLight
-                                    ? 'bg-blue-50 border-blue-100 text-slate-900'
-                                    : 'bg-blue-500/10 border-blue-400/20 text-blue-50'
+                                    ? 'bg-accent-secondary border-border-subtle text-text-primary'
+                                    : 'bg-accent-secondary border-border-subtle text-text-primary'
                                 : isMe
                                     ? isLight
                                         ? 'bg-emerald-50 border-emerald-100 text-slate-900'
@@ -1450,7 +1470,7 @@ const TranscriptTimeline: React.FC<TranscriptTimelineProps> = ({ meeting, isLigh
                                         ? 'bg-bg-elevated border-border-subtle text-text-primary'
                                         : 'bg-bg-secondary border-border-subtle text-text-primary';
                             const badgeTone = isAi
-                                ? 'text-blue-500'
+                                ? 'text-accent-primary'
                                 : isMe
                                     ? 'text-emerald-500'
                                     : 'text-text-secondary';
@@ -1533,7 +1553,7 @@ const formatTime = (dateStr: string) => {
     return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
 };
 
-const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onOpenProfile, onOpenModes, onPageChange, ollamaPullStatus = 'idle', ollamaPullPercent = 0, ollamaPullMessage = '' }) => {
+const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onPageChange, ollamaPullStatus = 'idle', ollamaPullPercent = 0, ollamaPullMessage = '' }) => {
     const [meetings, setMeetings] = useState<Meeting[]>([]);
     const [isDetectable, setIsDetectable] = useState(false);
     const [isMeetingActive, setIsMeetingActive] = useState(false);
@@ -1542,6 +1562,11 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
     const [showNotification, setShowNotification] = useState(false);
     const [readiness, setReadiness] = useState<SessionReadiness>(INITIAL_READINESS);
     const [currentModel, setCurrentModel] = useState('natively');
+    const [preflightStep, setPreflightStep] = useState<PreflightStep>('providers');
+    const [providerKeyDrafts, setProviderKeyDrafts] = useState<ProviderKeyDrafts>(EMPTY_PROVIDER_KEY_DRAFTS);
+    const [providerKeyStatus, setProviderKeyStatus] = useState<ProviderKeyStatus>(EMPTY_PROVIDER_KEY_STATUS);
+    const [providerKeyError, setProviderKeyError] = useState<string | null>(null);
+    const [isSavingProviderKeys, setIsSavingProviderKeys] = useState(false);
     const [interviewDocs, setInterviewDocs] = useState<InterviewContextDocument[]>([]);
     const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
     const [isUploadingDoc, setIsUploadingDoc] = useState(false);
@@ -1582,8 +1607,6 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
     const [isGlobalChatOpen, setIsGlobalChatOpen] = useState(false);
     const [submittedGlobalQuery, setSubmittedGlobalQuery] = useState('');
 
-    const [showModesOnboarding, setShowModesOnboarding] = useState(false);
-    const [showProfileOnboarding, setShowProfileOnboarding] = useState(false);
     const pendingOpenLatestInterviewRef = useRef(false);
     const selectedMeetingRef = useRef<Meeting | null>(null);
     const {
@@ -1869,11 +1892,16 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
         const creds = (credsResult.status === 'fulfilled' ? credsResult.value : null) as any;
         const audio = (audioResult.status === 'fulfilled' ? audioResult.value : null) as any;
         const permissions = (permissionsResult.status === 'fulfilled' ? permissionsResult.value : null) as any;
-        const sttProvider = creds?.sttProvider || 'none';
+        const sttProvider = creds?.sttProvider || 'local-whisper';
         const sttReady = hasConfiguredStt(creds);
         const model = llm?.model || 'natively';
 
         setCurrentModel(model);
+        setProviderKeyStatus({
+            openai: !!creds?.hasOpenaiKey,
+            claude: !!creds?.hasClaudeKey,
+            gemini: !!creds?.hasGeminiKey,
+        });
         setReadiness({
             aiProvider: inferProviderLabel(llm?.provider, llm?.model),
             aiModel: model || 'Choose a model',
@@ -1881,7 +1909,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
             hasAnyProvider: hasAnyConfiguredAiProvider(llm?.provider, creds),
             sttProvider: sttProviderLabels[sttProvider] || sttProvider,
             sttReady,
-            sttHint: sttProvider === 'none' ? 'Choose provider' : sttReady ? 'Configured' : 'Add credentials',
+            sttHint: sttReady ? 'Packaged local model' : 'Unavailable',
             audioReady: audio?.connected !== false,
             micPermission: (permissions?.microphone || 'unknown') as PermissionValue,
             screenPermission: (permissions?.screen || 'unknown') as PermissionValue,
@@ -1919,26 +1947,6 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
         // Seed demo data if needed (safe to call always — runs ONCE on mount)
         if (window.electronAPI && window.electronAPI.seedDemo) {
             window.electronAPI.seedDemo().catch(err => console.error("Failed to seed demo:", err));
-        }
-
-        if (SHOW_PROMOTIONAL_SURFACES) {
-            const hasSeenModesOnboarding = localStorage.getItem('natively_seen_modes_onboarding_v5');
-            if (!hasSeenModesOnboarding) {
-                setTimeout(() => {
-                    if (mounted) setShowModesOnboarding(true);
-                }, 8000);
-            }
-
-            const hasSeenProfileOnboarding = localStorage.getItem('natively_seen_profile_onboarding_v1');
-            if (!hasSeenProfileOnboarding && hasSeenModesOnboarding) {
-                setTimeout(() => {
-                    if (mounted) setShowProfileOnboarding(true);
-                }, 9000);
-            } else if (!hasSeenProfileOnboarding && !hasSeenModesOnboarding) {
-                 setTimeout(() => {
-                    if (mounted) setShowProfileOnboarding(true);
-                }, 18000);
-            }
         }
 
         // Sync initial undetectable state
@@ -2076,10 +2084,13 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
         }
 
         // Listen for background updates (e.g. after meeting processing finishes)
-        const removeMeetingsListener = window.electronAPI.onMeetingsUpdated(() => {
-            console.log("Received meetings-updated event");
-            fetchMeetings();
-        });
+        let removeMeetingsListener: (() => void) | undefined;
+        if (window.electronAPI?.onMeetingsUpdated) {
+            removeMeetingsListener = window.electronAPI.onMeetingsUpdated(() => {
+                console.log("Received meetings-updated event");
+                fetchMeetings();
+            });
+        }
 
         return () => {
             mounted = false;
@@ -2336,6 +2347,115 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
             console.error('[Launcher] Failed to set model:', result?.error);
         }
         refreshReadiness();
+    };
+
+    const handleProviderKeyDraftChange = (provider: ProviderKeyId, value: string) => {
+        setProviderKeyDrafts(prev => ({ ...prev, [provider]: value }));
+        setProviderKeyError(null);
+    };
+
+    const getPreferredPreflightModel = (status: ProviderKeyStatus) => {
+        if (status.openai) return 'chat-latest';
+        if (status.claude) return 'claude-sonnet-4-6';
+        if (status.gemini) return 'gemini-3.5-flash';
+        return null;
+    };
+
+    const handleSaveProviderKeys = async () => {
+        const trimmedDrafts: ProviderKeyDrafts = {
+            openai: providerKeyDrafts.openai.trim(),
+            claude: providerKeyDrafts.claude.trim(),
+            gemini: providerKeyDrafts.gemini.trim(),
+        };
+        const alreadyHasKey = providerKeyStatus.openai || providerKeyStatus.claude || providerKeyStatus.gemini;
+        const hasNewKey = Boolean(trimmedDrafts.openai || trimmedDrafts.claude || trimmedDrafts.gemini);
+
+        if (!alreadyHasKey && !hasNewKey) {
+            setProviderKeyError('Add at least one provider key to continue.');
+            return;
+        }
+
+        if (!hasNewKey) {
+            setPreflightStep('permissions');
+            return;
+        }
+
+        if (!window.electronAPI) {
+            setProviderKeyError('Desktop APIs are not available in this window.');
+            return;
+        }
+
+        setIsSavingProviderKeys(true);
+        setProviderKeyError(null);
+
+        try {
+            const saveTasks: Array<Promise<{ provider: ProviderKeyId; success: boolean; error?: string }>> = [];
+            if (trimmedDrafts.openai) {
+                saveTasks.push(window.electronAPI.setOpenaiApiKey(trimmedDrafts.openai).then(result => ({
+                    provider: 'openai' as const,
+                    success: !!result?.success,
+                    error: result?.error,
+                })));
+            }
+            if (trimmedDrafts.claude) {
+                saveTasks.push(window.electronAPI.setClaudeApiKey(trimmedDrafts.claude).then(result => ({
+                    provider: 'claude' as const,
+                    success: !!result?.success,
+                    error: result?.error,
+                })));
+            }
+            if (trimmedDrafts.gemini) {
+                saveTasks.push(window.electronAPI.setGeminiApiKey(trimmedDrafts.gemini).then(result => ({
+                    provider: 'gemini' as const,
+                    success: !!result?.success,
+                    error: result?.error,
+                })));
+            }
+
+            const results = await Promise.all(saveTasks);
+            const failed = results.find(result => !result.success);
+            if (failed) {
+                setProviderKeyError(failed.error || `Could not save the ${failed.provider} key.`);
+                return;
+            }
+
+            const nextStatus: ProviderKeyStatus = {
+                openai: providerKeyStatus.openai || Boolean(trimmedDrafts.openai),
+                claude: providerKeyStatus.claude || Boolean(trimmedDrafts.claude),
+                gemini: providerKeyStatus.gemini || Boolean(trimmedDrafts.gemini),
+            };
+            const preferredModel = !readiness.aiReady ? getPreferredPreflightModel(nextStatus) : null;
+            if (preferredModel) {
+                setCurrentModel(preferredModel);
+                await window.electronAPI.setModel?.(preferredModel);
+            }
+
+            setProviderKeyDrafts(EMPTY_PROVIDER_KEY_DRAFTS);
+            setProviderKeyStatus(nextStatus);
+            setPreflightStep('permissions');
+            await refreshReadiness();
+        } catch (error) {
+            setProviderKeyError(error instanceof Error ? error.message : 'Could not save provider keys.');
+        } finally {
+            setIsSavingProviderKeys(false);
+        }
+    };
+
+    const handleRequestMicPermission = async () => {
+        await window.electronAPI?.requestMicPermission?.();
+        await refreshReadiness();
+    };
+
+    const openPermissionSettings = async (permission: 'screen' | 'accessibility') => {
+        if (!isMac) {
+            await refreshReadiness();
+            return;
+        }
+
+        const url = permission === 'screen'
+            ? 'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture'
+            : 'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility';
+        await window.electronAPI?.openExternal?.(url);
     };
 
     const handleInputDeviceSelect = (deviceId: string) => {
@@ -2728,6 +2848,11 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
         return `${mm}:00`;
     };
 
+    const hasPreflightLlmKey = providerKeyStatus.openai || providerKeyStatus.claude || providerKeyStatus.gemini;
+    const preflightPermissionsReady = readiness.micPermission === 'granted' &&
+        readiness.screenPermission === 'granted' &&
+        readiness.accessibilityPermission === 'granted';
+    const showPreflight = !hasPreflightLlmKey || !preflightPermissionsReady;
     const permissionsReady = readiness.micPermission === 'granted' && readiness.screenPermission === 'granted';
     const captureReady = readiness.audioReady && permissionsReady;
     const readinessRows: Array<{
@@ -2826,8 +2951,79 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
             : null,
     ].filter(Boolean) as Array<{ key: string; label: string; detail: string; tab: string }>;
 
+    useEffect(() => {
+        if (readiness.loading) return;
+        if (!hasPreflightLlmKey) {
+            setPreflightStep('providers');
+            return;
+        }
+        if (!preflightPermissionsReady) {
+            setPreflightStep('permissions');
+        }
+    }, [hasPreflightLlmKey, preflightPermissionsReady, readiness.loading]);
+
+    const preflightProviderFields: Array<{
+        id: ProviderKeyId;
+        label: string;
+        placeholder: string;
+    }> = [
+        {
+            id: 'openai',
+            label: 'OpenAI',
+            placeholder: 'sk-...',
+        },
+        {
+            id: 'claude',
+            label: 'Claude',
+            placeholder: 'sk-ant-...',
+        },
+        {
+            id: 'gemini',
+            label: 'Google Gemini',
+            placeholder: 'AIza...',
+        },
+    ];
+
+    const preflightPermissionItems: Array<{
+        key: string;
+        label: string;
+        detail: string;
+        status: PermissionValue;
+        icon: any;
+        actionLabel: string;
+        action: () => void | Promise<void>;
+    }> = [
+        {
+            key: 'microphone',
+            label: 'Microphone',
+            detail: 'Capture your voice during the interview.',
+            status: readiness.micPermission,
+            icon: Mic,
+            actionLabel: readiness.micPermission === 'granted' ? 'Granted' : 'Request',
+            action: handleRequestMicPermission,
+        },
+        {
+            key: 'screen',
+            label: 'Screen Recording',
+            detail: 'Read meeting windows and shared screens.',
+            status: readiness.screenPermission,
+            icon: Monitor,
+            actionLabel: readiness.screenPermission === 'granted' ? 'Granted' : 'Open Settings',
+            action: () => openPermissionSettings('screen'),
+        },
+        {
+            key: 'accessibility',
+            label: 'Accessibility',
+            detail: 'Let the app use local shortcuts and window controls.',
+            status: readiness.accessibilityPermission,
+            icon: ShieldCheck,
+            actionLabel: readiness.accessibilityPermission === 'granted' ? 'Granted' : 'Open Settings',
+            action: () => openPermissionSettings('accessibility'),
+        },
+    ];
+
     return (
-        <div className="h-full w-full flex flex-col bg-bg-primary text-text-primary font-sans overflow-hidden selection:bg-accent-secondary/30">
+        <div className="h-full w-full flex flex-col bg-bg-primary text-text-primary font-sans overflow-hidden selection:bg-[var(--accent-muted)]">
             {/* 1. Header (Static) */}
             <header className={`relative w-full h-[40px] shrink-0 flex items-center justify-between pl-0 drag-region select-none ${isLight ? 'bg-bg-primary' : 'bg-bg-secondary'} border-b border-border-subtle z-[200]`}>
                 {/* Left: Spacing for Traffic Lights + Navigation Arrows */}
@@ -2890,204 +3086,21 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
 
                 {/* Right: Actions */}
                 <div className={`flex items-center gap-1 no-drag shrink-0 ${isMac ? 'mr-1' : ''}`}>
-                    <div className="relative group/profile-btn select-none">
-                        <button
-                            onClick={() => {
-                                setShowProfileOnboarding(false);
-                                localStorage.setItem('natively_seen_profile_onboarding_v1', 'true');
-                                onOpenProfile?.();
-                            }}
-                            title="Profile Intelligence"
-                            className={`p-2 text-text-secondary hover:text-text-primary transition-all duration-300 ${isLight ? 'hover:drop-shadow-[0_0_6px_rgba(0,0,0,0.25)]' : 'hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]'}`}
-                        >
-                            <UserSearch size={18} />
-                        </button>
-                        
-                        <AnimatePresence>
-                            {SHOW_PROMOTIONAL_SURFACES && showProfileOnboarding && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 6, scale: 0.96, filter: "blur(4px)" }}
-                                    animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-                                    exit={{ opacity: 0, y: -2, scale: 0.98, filter: "blur(2px)", transition: { duration: 0.15, ease: "easeOut" } }}
-                                    transition={{ type: "spring", stiffness: 350, damping: 25, mass: 1 }}
-                                    className={`absolute top-[38px] right-2 w-[270px] rounded-[20px] p-4 z-[300] origin-top-right backdrop-blur-[40px] saturate-[180%] transform-gpu ${
-                                        isLight 
-                                        ? 'bg-white/70 shadow-[0_8px_30px_rgb(0,0,0,0.12),0_0_0_1px_rgba(0,0,0,0.04)]' 
-                                        : 'bg-[#18181A]/70 shadow-[0_8px_30px_rgb(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.08)]'
-                                    }`}
-                                >
-                                    {/* Triangle Pointer */}
-                                    <div className={`absolute -top-[5px] right-[14px] w-2.5 h-2.5 rotate-45 rounded-tl-[3px] ${
-                                        isLight 
-                                        ? 'bg-white/70 border-t border-l border-black/5 backdrop-blur-[40px]' 
-                                        : 'bg-[#18181A]/70 border-t border-l border-white/5 backdrop-blur-[40px]'
-                                    }`} />
-                                    
-                                    <div className="relative flex gap-3">
-                                        <div className={`w-9 h-9 flex items-center justify-center shrink-0 rounded-full ${
-                                            isLight
-                                            ? 'bg-blue-500 bg-opacity-10 text-blue-500'
-                                            : 'bg-blue-500 bg-opacity-15 text-blue-400'
-                                        }`}>
-                                            <UserSearch size={18} />
-                                        </div>
-                                        <div className="flex-1 pt-[2px]">
-                                            <h3 className="text-[14px] font-semibold tracking-[-0.015em] mb-1 flex items-center gap-2">
-                                                <span className={isLight ? 'text-slate-900' : 'text-slate-100'}>Profile Intel</span>
-                                                <span className={`text-[10px] font-medium px-1.5 py-[1px] rounded-[5px] ${
-                                                    isLight
-                                                    ? 'bg-blue-50 text-blue-600 border border-blue-100/50'
-                                                    : 'bg-blue-500/10 text-blue-400'
-                                                }`}>
-                                                    Beta
-                                                </span>
-                                            </h3>
-                                            <p className={`text-[12px] leading-[1.35] mb-3.5 tracking-[-0.01em] ${
-                                                isLight ? 'text-slate-500' : 'text-slate-400'
-                                            }`}>
-                                                Manage your persona, career history, and active job description.
-                                            </p>
-                                            <div className="flex justify-end gap-1.5 isolate">
-                                                <button 
-                                                    onClick={(e) => { 
-                                                        e.stopPropagation(); 
-                                                        setShowProfileOnboarding(false); 
-                                                        localStorage.setItem('natively_seen_profile_onboarding_v1', 'true'); 
-                                                    }}
-                                                    className={`text-[12px] font-medium px-3.5 py-[6px] rounded-full transition-all active:scale-95 ${
-                                                        isLight
-                                                        ? 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/60'
-                                                        : 'text-slate-400 hover:text-slate-100 hover:bg-white/10'
-                                                    }`}
-                                                >
-                                                    Dismiss
-                                                </button>
-                                                <button 
-                                                    onClick={(e) => { 
-                                                        e.stopPropagation(); 
-                                                        onOpenProfile?.(); 
-                                                        setShowProfileOnboarding(false); 
-                                                        localStorage.setItem('natively_seen_profile_onboarding_v1', 'true'); 
-                                                    }}
-                                                    className={`text-[12px] font-medium px-4 py-[6px] rounded-full transition-all active:scale-95 shadow-sm ${
-                                                        isLight
-                                                        ? 'bg-slate-900 text-white hover:bg-slate-800'
-                                                        : 'bg-slate-100 text-slate-900 hover:bg-white'
-                                                    }`}
-                                                >
-                                                    Try it out
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
-                    <div className="relative group/modes-btn select-none">
-                        <button
-                            onClick={() => {
-                                setShowModesOnboarding(false);
-                                localStorage.setItem('natively_seen_modes_onboarding_v5', 'true');
-                                onOpenModes?.();
-                            }}
-                            title="Modes"
-                            className={`p-2 text-text-secondary hover:text-text-primary transition-all duration-300 ${isLight ? 'hover:drop-shadow-[0_0_6px_rgba(0,0,0,0.25)]' : 'hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]'}`}
-                        >
-                            <svg width={18} height={18} viewBox="0 0 14 14" fill="none">
-                                <rect x="1" y="1" width="5.5" height="5.5" rx="1.5" fill="currentColor" opacity="0.9"/>
-                                <rect x="7.5" y="1" width="5.5" height="5.5" rx="1.5" fill="currentColor" opacity="0.9"/>
-                                <rect x="1" y="7.5" width="5.5" height="5.5" rx="1.5" fill="currentColor" opacity="0.9"/>
-                                <rect x="7.5" y="7.5" width="5.5" height="5.5" rx="1.5" fill="currentColor" opacity="0.35"/>
-                            </svg>
-                        </button>
-                        
-                        <AnimatePresence>
-                            {SHOW_PROMOTIONAL_SURFACES && showModesOnboarding && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 6, scale: 0.96, filter: "blur(4px)" }}
-                                    animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-                                    exit={{ opacity: 0, y: -2, scale: 0.98, filter: "blur(2px)", transition: { duration: 0.15, ease: "easeOut" } }}
-                                    transition={{ type: "spring", stiffness: 350, damping: 25, mass: 1 }}
-                                    className={`absolute top-[38px] right-2 w-[270px] rounded-[20px] p-4 z-[300] origin-top-right backdrop-blur-[40px] saturate-[180%] transform-gpu ${
-                                        isLight 
-                                        ? 'bg-white/70 shadow-[0_8px_30px_rgb(0,0,0,0.12),0_0_0_1px_rgba(0,0,0,0.04)]' 
-                                        : 'bg-[#18181A]/70 shadow-[0_8px_30px_rgb(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.08)]'
-                                    }`}
-                                >
-                                    {/* Triangle Pointer */}
-                                    <div className={`absolute -top-[5px] right-[14px] w-2.5 h-2.5 rotate-45 rounded-tl-[3px] ${
-                                        isLight 
-                                        ? 'bg-white/70 border-t border-l border-black/5 backdrop-blur-[40px]' 
-                                        : 'bg-[#18181A]/70 border-t border-l border-white/5 backdrop-blur-[40px]'
-                                    }`} />
-                                    
-                                    <div className="relative flex gap-3">
-                                        <div className={`w-9 h-9 flex items-center justify-center shrink-0 rounded-full ${
-                                            isLight
-                                            ? 'bg-orange-500 bg-opacity-10 text-orange-500'
-                                            : 'bg-orange-500 bg-opacity-15 text-orange-400'
-                                        }`}>
-                                            <svg width="18" height="18" viewBox="0 0 14 14" fill="none">
-                                                <rect x="1" y="1" width="5.5" height="5.5" rx="1.5" fill="currentColor" opacity="0.9"/>
-                                                <rect x="7.5" y="1" width="5.5" height="5.5" rx="1.5" fill="currentColor" opacity="0.9"/>
-                                                <rect x="1" y="7.5" width="5.5" height="5.5" rx="1.5" fill="currentColor" opacity="0.9"/>
-                                                <rect x="7.5" y="7.5" width="5.5" height="5.5" rx="1.5" fill="currentColor" opacity="0.4"/>
-                                            </svg>
-                                        </div>
-                                        <div className="flex-1 pt-[2px]">
-                                            <h3 className="text-[14px] font-semibold tracking-[-0.015em] mb-1 flex items-center gap-2">
-                                                <span className={isLight ? 'text-slate-900' : 'text-slate-100'}>Modes</span>
-                                                <span className={`text-[10px] font-medium px-1.5 py-[1px] rounded-[5px] ${
-                                                    isLight
-                                                    ? 'bg-orange-50 text-orange-600 border border-orange-100/50'
-                                                    : 'bg-orange-500/10 text-orange-400'
-                                                }`}>
-                                                    Beta
-                                                </span>
-                                            </h3>
-                                            <p className={`text-[12px] leading-[1.35] mb-3.5 tracking-[-0.01em] ${
-                                                isLight ? 'text-slate-500' : 'text-slate-400'
-                                            }`}>
-                                                Custom instructions and formulas designed for different meeting contexts.
-                                            </p>
-                                            <div className="flex justify-end gap-1.5 isolate">
-                                                <button 
-                                                    onClick={(e) => { 
-                                                        e.stopPropagation(); 
-                                                        setShowModesOnboarding(false); 
-                                                        localStorage.setItem('natively_seen_modes_onboarding_v5', 'true'); 
-                                                    }}
-                                                    className={`text-[12px] font-medium px-3.5 py-[6px] rounded-full transition-all active:scale-95 ${
-                                                        isLight
-                                                        ? 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/60'
-                                                        : 'text-slate-400 hover:text-slate-100 hover:bg-white/10'
-                                                    }`}
-                                                >
-                                                    Dismiss
-                                                </button>
-                                                <button 
-                                                    onClick={(e) => { 
-                                                        e.stopPropagation(); 
-                                                        onOpenModes?.(); 
-                                                        setShowModesOnboarding(false); 
-                                                        localStorage.setItem('natively_seen_modes_onboarding_v5', 'true'); 
-                                                    }}
-                                                    className={`text-[12px] font-medium px-4 py-[6px] rounded-full transition-all active:scale-95 shadow-sm ${
-                                                        isLight
-                                                        ? 'bg-slate-900 text-white hover:bg-slate-800'
-                                                        : 'bg-slate-100 text-slate-900 hover:bg-white'
-                                                    }`}
-                                                >
-                                                    Try it out
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
+                    <button
+                        onClick={() => {
+                            try {
+                                localStorage.removeItem('natively_help_assistant_dismissed_v1');
+                            } catch {
+                                /* localStorage can fail in constrained environments */
+                            }
+                            window.dispatchEvent(new CustomEvent('natively-help-assistant-show', { detail: { open: true } }));
+                        }}
+                        title="Help"
+                        className={`p-2 text-text-secondary hover:text-text-primary transition-all duration-300 ${isLight ? 'hover:drop-shadow-[0_0_6px_rgba(0,0,0,0.25)]' : 'hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]'}`}
+                        aria-label="Open help"
+                    >
+                        <HelpCircle size={18} />
+                    </button>
                     <button
                         onClick={() => {
                             onOpenSettings();
@@ -3105,7 +3118,195 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
                 {!isDetectable && (
                     <div className={`absolute inset-1 border-2 border-dashed rounded-2xl pointer-events-none z-[100] ${isLight ? 'border-black/15' : 'border-white/20'}`} />
                 )}
-                <motion.div
+                {showPreflight ? (
+                    <motion.div
+                        key="preflight"
+                        className={`flex-1 overflow-y-auto custom-scrollbar ${isLight ? 'bg-bg-primary' : 'bg-bg-primary'}`}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15 }}
+                    >
+                        <main className="min-h-full px-6 py-8 flex items-center justify-center">
+                            <div className="w-full max-w-[980px]">
+                                <div className="mb-5 flex items-center gap-2 text-[12px] font-semibold text-text-tertiary">
+                                    <span className={`rounded-full px-3 py-1.5 ${preflightStep === 'providers' ? 'bg-accent-secondary text-accent-primary' : hasPreflightLlmKey ? 'bg-emerald-500/12 text-emerald-400' : 'bg-bg-secondary text-text-tertiary'}`}>
+                                        1. Model keys
+                                    </span>
+                                    <ChevronRight size={14} />
+                                    <span className={`rounded-full px-3 py-1.5 ${preflightStep === 'permissions' ? 'bg-accent-secondary text-accent-primary' : 'bg-bg-secondary text-text-tertiary'}`}>
+                                        2. Permissions
+                                    </span>
+                                </div>
+
+                                <section className={`rounded-xl border ${isLight ? 'bg-white border-border-muted shadow-sm' : 'bg-bg-primary border-border-subtle'} overflow-hidden`}>
+                                    {preflightStep === 'providers' ? (
+                                        <div className="grid min-h-[520px] grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] max-lg:grid-cols-1">
+                                            <div className={`p-8 flex flex-col justify-between border-r max-lg:border-r-0 max-lg:border-b ${isLight ? 'border-border-muted bg-bg-secondary/60' : 'border-border-subtle bg-bg-secondary/40'}`}>
+                                                <div>
+                                                    <div className="h-12 w-12 rounded-xl bg-accent-secondary text-accent-primary flex items-center justify-center mb-6">
+                                                        <KeyRound size={24} />
+                                                    </div>
+                                                    <h1 className="text-[28px] leading-tight font-semibold text-text-primary">Set up model keys</h1>
+                                                    <p className="mt-3 text-[15px] leading-relaxed text-text-secondary">
+                                                        Save at least one LLM key before starting interviews.
+                                                    </p>
+                                                </div>
+                                                <p className="text-[12px] leading-relaxed text-text-tertiary">
+                                                    Keys are stored in local encrypted app data. The app does not need macOS Keychain for this setup.
+                                                </p>
+                                            </div>
+
+                                            <div className="p-8 flex flex-col justify-center gap-4">
+                                                {preflightProviderFields.map(field => {
+                                                    const saved = providerKeyStatus[field.id];
+                                                    return (
+                                                        <div
+                                                            key={field.id}
+                                                            className={`rounded-lg border p-3.5 ${isLight ? 'bg-bg-secondary/70 border-border-muted' : 'bg-bg-secondary border-border-subtle'}`}
+                                                        >
+                                                            <div className="mb-2 flex items-center justify-between gap-3">
+                                                                <label className="text-[13px] font-semibold text-text-primary" htmlFor={`preflight-${field.id}`}>
+                                                                    {field.label}
+                                                                </label>
+                                                                {saved && (
+                                                                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/12 px-2 py-0.5 text-[11px] font-semibold text-emerald-400">
+                                                                        <Check size={12} />
+                                                                        Saved
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <input
+                                                                id={`preflight-${field.id}`}
+                                                                type="password"
+                                                                autoComplete="off"
+                                                                spellCheck={false}
+                                                                value={providerKeyDrafts[field.id]}
+                                                                onChange={(event) => handleProviderKeyDraftChange(field.id, event.target.value)}
+                                                                placeholder={saved ? 'Saved. Paste a new key to replace it.' : field.placeholder}
+                                                                className={`h-11 w-full rounded-md border px-3 text-[13px] outline-none transition-colors ${isLight ? 'bg-white border-border-muted text-text-primary placeholder:text-text-tertiary focus:border-accent-primary' : 'bg-bg-input border-border-subtle text-text-primary placeholder:text-text-tertiary focus:border-accent-primary'}`}
+                                                            />
+                                                        </div>
+                                                    );
+                                                })}
+
+                                                {providerKeyError && (
+                                                    <div className="rounded-md border border-red-500/25 bg-red-500/10 px-3 py-2 text-[12px] text-red-300">
+                                                        {providerKeyError}
+                                                    </div>
+                                                )}
+
+                                                <div className="flex items-center justify-between gap-3 pt-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => onOpenSettings('ai-providers')}
+                                                        className="text-[12px] font-medium text-text-tertiary hover:text-text-primary transition-colors"
+                                                    >
+                                                        Advanced provider settings
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleSaveProviderKeys}
+                                                        disabled={isSavingProviderKeys}
+                                                        className="h-10 rounded-md bg-accent-primary px-4 text-[13px] font-semibold text-white inline-flex items-center gap-2 hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                                                    >
+                                                        {isSavingProviderKeys ? (
+                                                            <>
+                                                                <RefreshCw size={14} className="animate-spin" />
+                                                                Saving
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                {hasPreflightLlmKey && !Object.values(providerKeyDrafts).some(Boolean) ? 'Continue' : 'Save and continue'}
+                                                                <ArrowRight size={14} />
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="grid min-h-[520px] grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] max-lg:grid-cols-1">
+                                            <div className={`p-8 flex flex-col justify-between border-r max-lg:border-r-0 max-lg:border-b ${isLight ? 'border-border-muted bg-bg-secondary/60' : 'border-border-subtle bg-bg-secondary/40'}`}>
+                                                <div>
+                                                    <div className="h-12 w-12 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center mb-6">
+                                                        <ShieldCheck size={24} />
+                                                    </div>
+                                                    <h1 className="text-[28px] leading-tight font-semibold text-text-primary">Grant permissions</h1>
+                                                    <p className="mt-3 text-[15px] leading-relaxed text-text-secondary">
+                                                        These are needed before the assistant can listen and follow the interview.
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={refreshReadiness}
+                                                    className="self-start inline-flex items-center gap-2 text-[12px] font-semibold text-text-secondary hover:text-text-primary transition-colors"
+                                                >
+                                                    <RefreshCw size={13} className={readiness.loading ? 'animate-spin' : ''} />
+                                                    Refresh status
+                                                </button>
+                                            </div>
+
+                                            <div className="p-8 flex flex-col justify-center gap-3">
+                                                {preflightPermissionItems.map(item => {
+                                                    const Icon = item.icon;
+                                                    const granted = item.status === 'granted';
+                                                    return (
+                                                        <div
+                                                            key={item.key}
+                                                            className={`rounded-lg border p-4 flex items-center gap-4 ${granted ? 'border-emerald-500/25 bg-emerald-500/8' : isLight ? 'bg-bg-secondary/70 border-border-muted' : 'bg-bg-secondary border-border-subtle'}`}
+                                                        >
+                                                            <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${granted ? 'bg-emerald-500/15 text-emerald-400' : 'bg-accent-secondary text-accent-primary'}`}>
+                                                                <Icon size={20} />
+                                                            </div>
+                                                            <div className="min-w-0 flex-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <h3 className="text-[14px] font-semibold text-text-primary">{item.label}</h3>
+                                                                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${granted ? 'bg-emerald-500/12 text-emerald-400' : 'bg-amber-500/12 text-amber-400'}`}>
+                                                                        {permissionLabel(item.status)}
+                                                                    </span>
+                                                                </div>
+                                                                <p className="mt-1 text-[12px] leading-relaxed text-text-secondary">{item.detail}</p>
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={item.action}
+                                                                disabled={granted}
+                                                                className={`h-9 shrink-0 rounded-md px-3 text-[12px] font-semibold transition-colors ${granted ? 'text-emerald-400 cursor-default' : 'bg-accent-primary text-white hover:opacity-90'}`}
+                                                            >
+                                                                {item.actionLabel}
+                                                            </button>
+                                                        </div>
+                                                    );
+                                                })}
+
+                                                <div className="flex justify-between items-center pt-3 gap-3">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setPreflightStep('providers')}
+                                                        className="text-[12px] font-medium text-text-tertiary hover:text-text-primary transition-colors"
+                                                    >
+                                                        Back to keys
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={refreshReadiness}
+                                                        disabled={!preflightPermissionsReady}
+                                                        className="h-10 rounded-md bg-accent-primary px-4 text-[13px] font-semibold text-white inline-flex items-center gap-2 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                    >
+                                                        Continue to app
+                                                        <ArrowRight size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </section>
+                            </div>
+                        </main>
+                    </motion.div>
+                ) : (
+                    <motion.div
                     key="launcher"
                     className="flex-1 flex flex-col overflow-hidden"
                     initial={{ opacity: 0 }}
@@ -3114,7 +3315,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
                     transition={{ duration: 0.15 }}
                 >
 
-                            <div className={`h-full min-h-0 grid grid-cols-[300px_minmax(0,1fr)_360px] ${isLight ? 'bg-bg-primary' : 'bg-[#101011]'}`}>
+                            <div className={`h-full min-h-0 grid grid-cols-[300px_minmax(0,1fr)_360px] ${isLight ? 'bg-bg-primary' : 'bg-bg-primary'}`}>
                                 <aside className={`min-h-0 border-r border-border-subtle flex flex-col ${isLight ? 'bg-bg-secondary' : 'bg-bg-primary'}`}>
                                     <div className="shrink-0 px-3 py-3 border-b border-border-subtle">
                                         <button
@@ -3141,7 +3342,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
                                             title="Refresh interviews"
                                             className={`h-8 w-8 rounded-md flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors ${isLight ? 'hover:bg-black/8' : 'hover:bg-white/10'}`}
                                         >
-                                            <RefreshCw size={15} className={isRefreshing ? 'animate-spin text-blue-400' : ''} />
+                                            <RefreshCw size={15} className={isRefreshing ? 'animate-spin text-accent-primary' : ''} />
                                         </button>
                                     </div>
                                     <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-2 py-3">
@@ -3192,7 +3393,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
                                                                             onFocus={(event) => event.currentTarget.select()}
                                                                             disabled={isSavingRename}
                                                                             autoFocus
-                                                                            className={`h-7 min-w-0 flex-1 rounded-md border px-2 text-[13px] font-medium outline-none ${isLight ? 'bg-white border-border-muted text-text-primary focus:border-blue-400' : 'bg-bg-input border-border-subtle text-text-primary focus:border-blue-400'}`}
+                                                                            className={`h-7 min-w-0 flex-1 rounded-md border px-2 text-[13px] font-medium outline-none ${isLight ? 'bg-white border-border-muted text-text-primary focus:border-accent-primary' : 'bg-bg-input border-border-subtle text-text-primary focus:border-accent-primary'}`}
                                                                         />
                                                                         <button
                                                                             type="button"
@@ -3221,7 +3422,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
                                                                     </div>
                                                                 ) : (
                                                                     <>
-                                                                        <p className={`min-w-0 flex-1 truncate text-[13px] font-medium ${rowFinalizing ? 'text-blue-400 italic animate-pulse' : 'text-text-primary'}`}>
+                                                                        <p className={`min-w-0 flex-1 truncate text-[13px] font-medium ${rowFinalizing ? 'text-accent-primary italic animate-pulse' : 'text-text-primary'}`}>
                                                                             {m.title}
                                                                         </p>
                                                                         <button
@@ -3241,7 +3442,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
                                                                     <span className="truncate text-red-400">{renameError}</span>
                                                                 ) : rowFinalizing ? (
                                                                     <>
-                                                                        <RefreshCw size={11} className="animate-spin text-blue-500" />
+                                                                        <RefreshCw size={11} className="animate-spin text-accent-primary" />
                                                                         <span>Finalizing</span>
                                                                     </>
                                                                 ) : (
@@ -3354,7 +3555,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
                                                             onFocus={(event) => event.currentTarget.select()}
                                                             disabled={isSavingRename}
                                                             autoFocus
-                                                            className={`h-8 min-w-0 flex-1 rounded-md border px-2.5 text-[14px] font-semibold outline-none transition-colors ${isLight ? 'bg-white border-border-muted text-text-primary focus:border-blue-400' : 'bg-bg-input border-border-subtle text-text-primary focus:border-blue-400'}`}
+                                                            className={`h-8 min-w-0 flex-1 rounded-md border px-2.5 text-[14px] font-semibold outline-none transition-colors ${isLight ? 'bg-white border-border-muted text-text-primary focus:border-accent-primary' : 'bg-bg-input border-border-subtle text-text-primary focus:border-accent-primary'}`}
                                                         />
                                                         <button
                                                             type="button"
@@ -3402,7 +3603,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
 	                                                </p>
                                                 )}
 		                                        </div>
-	                                        <div className="flex items-center gap-2">
+		                                        <div className="flex items-center gap-2">
                                                 {selectedMeeting ? (
                                                     <button
                                                         onClick={handleBack}
@@ -3410,24 +3611,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
                                                     >
                                                         Clear
                                                     </button>
-                                                ) : (
-                                                    <>
-                                                        <button
-                                                            onClick={() => onOpenProfile?.()}
-                                                            className={`h-8 px-2.5 rounded-md flex items-center gap-1.5 text-[12px] font-medium text-text-secondary hover:text-text-primary transition-colors ${isLight ? 'hover:bg-black/8' : 'hover:bg-white/10'}`}
-                                                        >
-                                                            <UserSearch size={14} />
-                                                            Profile
-                                                        </button>
-                                                        <button
-                                                            onClick={() => onOpenModes?.()}
-                                                            className={`h-8 px-2.5 rounded-md flex items-center gap-1.5 text-[12px] font-medium text-text-secondary hover:text-text-primary transition-colors ${isLight ? 'hover:bg-black/8' : 'hover:bg-white/10'}`}
-                                                        >
-                                                            <LayoutGrid size={14} />
-                                                            Modes
-                                                        </button>
-                                                    </>
-                                                )}
+                                                ) : null}
 	                                        </div>
 	                                    </div>
 			                                    <div className="flex-1 min-h-0 p-5 overflow-hidden">
@@ -3491,7 +3675,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
                                                     title="Refresh model"
                                                     className={`h-7 w-7 shrink-0 rounded-md flex items-center justify-center text-text-tertiary hover:text-text-primary ${isLight ? 'hover:bg-black/8' : 'hover:bg-white/10'}`}
                                                 >
-                                                    <RefreshCw size={12} className={readiness.loading ? 'animate-spin text-blue-400' : ''} />
+                                                    <RefreshCw size={12} className={readiness.loading ? 'animate-spin text-accent-primary' : ''} />
                                                 </button>
                                             </div>
                                             <ModelSelector
@@ -3513,7 +3697,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
                                                     title="Refresh audio devices"
                                                     className={`h-7 w-7 shrink-0 rounded-md flex items-center justify-center text-text-tertiary hover:text-text-primary ${isLight ? 'hover:bg-black/8' : 'hover:bg-white/10'}`}
                                                 >
-                                                    <RefreshCw size={12} className={audioDevicesLoading ? 'animate-spin text-blue-400' : ''} />
+                                                    <RefreshCw size={12} className={audioDevicesLoading ? 'animate-spin text-accent-primary' : ''} />
                                                 </button>
                                             </div>
                                             {deviceFallbackNotice && (
@@ -3574,7 +3758,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
                                                     </div>
                                                     <div className="h-1.5 bg-bg-input rounded-full overflow-hidden">
                                                         <div
-                                                            className="h-full bg-blue-500 transition-all duration-100 ease-out"
+                                                            className="h-full bg-accent-primary transition-all duration-100 ease-out"
                                                             style={{ width: `${systemAudioLevel}%` }}
                                                         />
                                                     </div>
@@ -3590,7 +3774,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
                                         </section>
 
                                         <section className={`rounded-lg border border-border-subtle ${isLight ? 'bg-bg-elevated' : 'bg-bg-secondary'} p-3`}>
-                                            <div className={`rounded-xl p-4 border border-border-subtle flex items-center justify-between gap-3 transition-all ${isLight ? 'bg-bg-card' : 'bg-bg-item-surface'} ${!isDetectable ? 'shadow-lg shadow-blue-500/10' : ''}`}>
+                                            <div className={`rounded-xl p-4 border border-border-subtle flex items-center justify-between gap-3 transition-all ${isLight ? 'bg-bg-card' : 'bg-bg-item-surface'} ${!isDetectable ? 'shadow-lg shadow-[0_0_24px_rgba(249,115,22,0.12)]' : ''}`}>
                                                 <div className="min-w-0 flex flex-col gap-1">
                                                     <div className="flex items-center gap-2">
                                                         <Ghost size={16} className="shrink-0 text-text-primary" />
@@ -3599,7 +3783,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
                                                         </h3>
                                                     </div>
                                                     <p className="text-[11px] leading-relaxed text-text-secondary">
-                                                        Natively is currently {isDetectable ? 'detectable' : 'undetectable'} by screen sharing.
+                                                        AnswerFlow is currently {isDetectable ? 'detectable' : 'undetectable'} by screen sharing.
                                                     </p>
                                                 </div>
                                                 <button
@@ -3608,7 +3792,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
                                                     aria-checked={!isDetectable}
                                                     aria-label={isDetectable ? 'Turn on undetectable mode' : 'Turn off undetectable mode'}
                                                     onClick={toggleDetectable}
-                                                    className={`w-11 h-6 rounded-full relative shrink-0 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70 ${!isDetectable ? 'bg-accent-primary' : 'bg-bg-toggle-switch border border-border-muted'}`}
+                                                    className={`w-11 h-6 rounded-full relative shrink-0 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary ${!isDetectable ? 'bg-accent-primary' : 'bg-bg-toggle-switch border border-border-muted'}`}
                                                 >
                                                     <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${!isDetectable ? 'translate-x-5' : 'translate-x-0'}`} />
                                                 </button>
@@ -3619,7 +3803,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
                                             <section className={`rounded-lg border border-border-subtle ${isLight ? 'bg-bg-elevated' : 'bg-bg-secondary'} p-3`}>
                                                 <div className="flex items-center gap-2">
                                                     {ollamaPullStatus === 'downloading' ? (
-                                                        <DownloadCloud size={14} className="text-blue-400 animate-pulse shrink-0" />
+                                                        <DownloadCloud size={14} className="text-accent-primary animate-pulse shrink-0" />
                                                     ) : ollamaPullStatus === 'complete' ? (
                                                         <CheckCircle size={14} className="text-emerald-400 shrink-0" />
                                                     ) : (
@@ -3631,7 +3815,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
                                                 </div>
                                                 {ollamaPullStatus === 'downloading' && (
                                                     <div className="w-full h-[3px] bg-white/10 rounded-full mt-2 overflow-hidden">
-                                                        <div className="h-full bg-blue-500 rounded-full transition-all duration-300" style={{ width: `${ollamaPullPercent}%` }} />
+                                                        <div className="h-full bg-accent-primary rounded-full transition-all duration-300" style={{ width: `${ollamaPullPercent}%` }} />
                                                     </div>
                                                 )}
                                             </section>
@@ -3639,7 +3823,8 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
                                     </div>
                                 </aside>
                             </div>
-                </motion.div>
+                    </motion.div>
+                )}
             </div>
 
 
@@ -3655,9 +3840,9 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
                         className={`fixed bottom-10 right-10 z-[2000] flex items-center gap-4 pl-4 pr-6 py-3.5 rounded-[18px] backdrop-blur-xl saturate-[180%] ring-1 ring-black/10 ${isLight ? 'bg-bg-elevated/90 border border-border-muted shadow-[0_8px_32px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.9)]' : 'bg-[#2A2A2E]/40 border border-white/10 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.3),inset_0_-1px_0_rgba(255,255,255,0.05)]'}`}
                     >
                         {/* Liquid Icon Orb */}
-                        <div className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-b from-blue-400/20 to-blue-600/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] border border-white/5">
-                            <div className="absolute inset-0 rounded-full bg-blue-500/20 blur-md" />
-                            <RefreshCw size={15} className="text-blue-300 animate-[spin_2s_linear_infinite] drop-shadow-[0_0_5px_rgba(59,130,246,0.6)]" />
+                        <div className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-b from-orange-400/20 to-orange-600/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] border border-white/5">
+                            <div className="absolute inset-0 rounded-full bg-orange-500/20 blur-md" />
+                            <RefreshCw size={15} className="text-orange-300 animate-[spin_2s_linear_infinite] drop-shadow-[0_0_5px_rgba(249,115,22,0.6)]" />
                         </div>
 
                         {/* Text Content */}
@@ -3680,6 +3865,8 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onO
                 onClose={cancelDocDetails}
                 onSave={saveDocDetails}
             />
+
+            <HelpAssistant />
 
             {/* Global Chat Overlay */}
             <GlobalChatOverlay

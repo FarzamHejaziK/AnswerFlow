@@ -108,8 +108,8 @@ const NativelyInterfaceCard = ({ className = "", isMobile = false, isStatic = fa
           {/* "What should I answer?" bubble */}
           {!hideMessages && (
             <div className="px-4 pt-4 pb-2 flex justify-end">
-              <div className="relative px-4 py-2 rounded-full text-white text-[13px] font-semibold shadow-[0_8px_20px_rgba(37,99,235,0.35)] border border-white/20"
-                style={{ background: "linear-gradient(160deg, #5B8EF0 0%, #3B6FE8 50%, #2D5FD4 100%)" }}>
+              <div className="relative px-4 py-2 rounded-full text-white text-[13px] font-semibold shadow-[0_8px_20px_rgba(249,115,22,0.30)] border border-white/20"
+                style={{ background: "linear-gradient(160deg, #fb923c 0%, #f97316 50%, #ea580c 100%)" }}>
                 <div className="absolute top-0.5 left-2 right-2 h-[45%] rounded-full bg-gradient-to-b from-white/70 to-white/5 blur-[0.5px] pointer-events-none" />
                 <span className="relative drop-shadow-sm">What should I answer?</span>
               </div>
@@ -195,7 +195,7 @@ const NativelyInterfaceCard = ({ className = "", isMobile = false, isStatic = fa
                 <svg width="8" height="8" viewBox="0 0 10 10" fill="none"><path d="M3 4l2 2 2-2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /></svg>
               </button>
               <button className="w-[26px] h-[26px] rounded-full flex items-center justify-center relative overflow-hidden border border-white/20"
-                style={{ background: "linear-gradient(160deg, #5B8EF0 0%, #3B6FE8 50%, #2D5FD4 100%)", boxShadow: "0 8px 20px rgba(37,99,235,0.35)" }}>
+                style={{ background: "linear-gradient(160deg, #fb923c 0%, #f97316 50%, #ea580c 100%)", boxShadow: "0 8px 20px rgba(249,115,22,0.30)" }}>
                 <div className="absolute top-0.5 left-1 right-1 h-[45%] rounded-full bg-gradient-to-b from-white/70 to-white/5 blur-[0.5px] pointer-events-none" />
                 <svg width="10" height="10" viewBox="0 0 11 11" fill="none"><path d="M2.5 5.5H8.5M6 3l2.5 2.5L6 8" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </button>

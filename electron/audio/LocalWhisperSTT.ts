@@ -753,7 +753,7 @@ export class LocalWhisperSTT extends EventEmitter {
                 }
                 if (msg.message.includes('Failed to load model')) {
                     this.emit('error', new Error(
-                        'Local Whisper model not found. Please download a model in Settings → Audio.'
+                        'Packaged Moonshine Base transcription model not found. Reinstall the app or rebuild the package with resources/models included.'
                     ));
                 }
             }

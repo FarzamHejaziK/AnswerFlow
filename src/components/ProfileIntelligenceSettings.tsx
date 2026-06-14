@@ -250,8 +250,8 @@ const PI_CSS = `
     }
     /* Accent tinting via data-accent */
     .pi-upload-pill[data-accent='blue'] {
-        --pi-upload-sweep: rgba(59,130,246,0.45);
-        --pi-upload-tint: rgba(59,130,246,0.08);
+        --pi-upload-sweep: rgba(249,115,22,0.42);
+        --pi-upload-tint: rgba(249,115,22,0.10);
     }
     .pi-upload-pill[data-accent='emerald'] {
         --pi-upload-sweep: rgba(16,185,129,0.45);
@@ -715,7 +715,7 @@ export function ProfileIntelligenceSettings({ onClose }: { onClose: () => void }
                                                     <div className="flex flex-col items-center justify-center flex-1">
                                                         <span className="text-[20px] font-bold text-text-primary tracking-tight leading-none mb-1">{profileData?.projectCount || 0}</span>
                                                         <div className="flex items-center gap-1.5">
-                                                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.4)]" />
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-accent-primary shadow-[0_0_8px_rgba(249,115,22,0.28)]" />
                                                             <span className="text-[10px] font-semibold text-text-secondary uppercase tracking-widest">Projects</span>
                                                         </div>
                                                     </div>
@@ -776,7 +776,7 @@ export function ProfileIntelligenceSettings({ onClose }: { onClose: () => void }
                                                     style={{ marginTop: 'auto' }}
                                                     onClick={async () => {
                                                         if (!hasProfileAccess) {
-                                                            openPremiumModal();
+                                                            if (SHOW_PROMOTIONAL_SURFACES) setIsPremiumModalOpen(true);
                                                             return;
                                                         }
                                                         setProfileError('');
@@ -848,7 +848,7 @@ export function ProfileIntelligenceSettings({ onClose }: { onClose: () => void }
                                                         </h4>
                                                         {profileData?.hasActiveJD ? (
                                                             <div className="flex items-center gap-3 mt-1 flex-wrap">
-                                                                <span className="text-[9px] font-bold text-blue-500 px-1.5 py-0.5 bg-blue-500/10 rounded uppercase tracking-wide border border-blue-500/20">
+                                                                <span className="text-[9px] font-bold text-accent-primary px-1.5 py-0.5 bg-accent-secondary rounded uppercase tracking-wide border border-border-muted">
                                                                     {profileData.activeJD?.level || 'mid'}-level
                                                                 </span>
                                                                 <div className="flex gap-1.5 flex-wrap">
@@ -885,7 +885,7 @@ export function ProfileIntelligenceSettings({ onClose }: { onClose: () => void }
                                                     style={{ marginTop: 'auto' }}
                                                     onClick={async () => {
                                                         if (!hasProfileAccess) {
-                                                            openPremiumModal();
+                                                            if (SHOW_PROMOTIONAL_SURFACES) setIsPremiumModalOpen(true);
                                                             return;
                                                         }
                                                         setJdError('');
@@ -964,7 +964,7 @@ export function ProfileIntelligenceSettings({ onClose }: { onClose: () => void }
                                                         type="button"
                                                         onClick={handleImportMarkdownContext}
                                                         disabled={customNotesImporting}
-                                                        className="shrink-0 h-8 px-2.5 rounded-lg bg-bg-input border border-border-subtle text-[11px] font-semibold text-text-secondary hover:text-text-primary hover:border-accent-primary/40 transition-colors flex items-center gap-1.5 disabled:opacity-60"
+                                                        className="shrink-0 h-8 px-2.5 rounded-lg bg-bg-input border border-border-subtle text-[11px] font-semibold text-text-secondary hover:text-text-primary hover:border-[var(--accent-border)] transition-colors flex items-center gap-1.5 disabled:opacity-60"
                                                         aria-busy={customNotesImporting}
                                                         aria-label={customNotesImporting ? 'Importing Markdown context' : 'Import Markdown context'}
                                                         title="Import Markdown context"
@@ -994,7 +994,7 @@ export function ProfileIntelligenceSettings({ onClose }: { onClose: () => void }
                                                         }}
                                                         placeholder={`Examples:\n• Q4 ARR was $2.1M, grew 40% YoY — use when pitching growth story\n• Solved LRU Cache (LeetCode 146) with O(1) get/put using HashMap + doubly linked list\n• I prefer concise, direct answers without filler phrases\n• My target salary is $180k base — don't go below $160k`}
                                                         rows={6}
-                                                        className="w-full bg-bg-input border border-border-subtle rounded-lg px-3 py-2.5 text-xs text-text-primary placeholder-text-tertiary focus:outline-none focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20 transition-all resize-none leading-relaxed"
+                                                        className="w-full bg-bg-input border border-border-subtle rounded-lg px-3 py-2.5 text-xs text-text-primary placeholder-text-tertiary focus:outline-none focus:border-[var(--accent-border)] focus:ring-1 focus:ring-[var(--accent-ring)] transition-all resize-none leading-relaxed"
                                                     />
                                                     {customNotesImportError && (
                                                         <div className="px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-[11px] text-red-500 font-medium">
@@ -1023,7 +1023,7 @@ export function ProfileIntelligenceSettings({ onClose }: { onClose: () => void }
                                                         <div className="flex items-center gap-2">
                                                             <h4 className="text-sm font-bold text-text-primary">AI Persona</h4>
                                                             {!hasProfileAccess && (
-                                                                <span className="text-[9px] font-bold text-accent-primary px-1.5 py-0.5 bg-accent-primary/10 rounded-full border border-accent-primary/20 uppercase tracking-wide">Pro Only</span>
+                                                                <span className="text-[9px] font-bold text-accent-primary px-1.5 py-0.5 bg-accent-secondary rounded-full border border-border-muted uppercase tracking-wide">Pro Only</span>
                                                             )}
                                                             {personaSaved && hasProfileAccess && (
                                                                 <span className="text-[9px] font-bold text-emerald-500 px-1.5 py-0.5 bg-emerald-500/10 rounded-full border border-emerald-500/20 uppercase tracking-wide flex items-center gap-1">
@@ -1066,7 +1066,7 @@ export function ProfileIntelligenceSettings({ onClose }: { onClose: () => void }
                                                     placeholder="Example: You are a senior hiring manager. Keep answers concise and ask one focused follow-up when needed."
                                                     rows={5}
                                                     disabled={!hasProfileAccess}
-                                                    className={`w-full bg-bg-input border border-border-subtle rounded-lg px-3 py-2.5 text-xs text-text-primary placeholder-text-tertiary focus:outline-none focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20 transition-all resize-none leading-relaxed ${!hasProfileAccess ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                                    className={`w-full bg-bg-input border border-border-subtle rounded-lg px-3 py-2.5 text-xs text-text-primary placeholder-text-tertiary focus:outline-none focus:border-[var(--accent-border)] focus:ring-1 focus:ring-[var(--accent-ring)] transition-all resize-none leading-relaxed ${!hasProfileAccess ? 'opacity-60 cursor-not-allowed' : ''}`}
                                                 />
                                                 <div className="flex items-center justify-between px-0.5 mt-3">
                                                     <p className="text-[10px] text-text-tertiary">
@@ -1117,7 +1117,7 @@ export function ProfileIntelligenceSettings({ onClose }: { onClose: () => void }
                                                             value={tavilyApiKey}
                                                             onChange={(e) => { setTavilyApiKey(e.target.value); setTavilyError(''); }}
                                                             placeholder={hasStoredTavilyKey ? '••••••••••••' : 'Enter Tavily API key (tvly-...)'}
-                                                            className="w-full bg-bg-input border border-border-subtle rounded-lg px-3 py-2 text-xs text-text-primary placeholder-text-tertiary focus:outline-none focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20 transition-all"
+                                                            className="w-full bg-bg-input border border-border-subtle rounded-lg px-3 py-2 text-xs text-text-primary placeholder-text-tertiary focus:outline-none focus:border-[var(--accent-border)] focus:ring-1 focus:ring-[var(--accent-ring)] transition-all"
                                                         />
                                                     </div>
                                                     {tavilyError && (
@@ -1595,9 +1595,9 @@ export function ProfileIntelligenceSettings({ onClose }: { onClose: () => void }
                                                                     label: 'Justify Your Ask',
                                                                     sublabel: 'Link your track record to the number',
                                                                     content: negotiationScript.justification,
-                                                                    accent: '#60a5fa',
-                                                                    accentBg: 'rgba(96,165,250,0.07)',
-                                                                    accentBorder: 'rgba(96,165,250,0.2)',
+                                                                    accent: 'var(--accent-primary)',
+                                                                    accentBg: 'var(--accent-muted)',
+                                                                    accentBorder: 'var(--accent-ring)',
                                                                     quote: false,
                                                                 },
                                                                 {

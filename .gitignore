@@ -34,6 +34,11 @@ tmp
 .cursorrules
 .windsurfrules
 change.md
+
+# Generated packaged ASR models. Build scripts download these into
+# resources/models before electron-builder packages the app.
+/resources/models/onnx-community/
+
 # nativelyapi is a separate git repo — exclude from parent repo tracking
 /nativelyapi
 

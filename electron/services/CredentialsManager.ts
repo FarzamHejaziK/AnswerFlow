@@ -132,16 +132,12 @@ export class CredentialsManager {
 
     public getSttProvider(): 'none' | 'google' | 'groq' | 'openai' | 'deepgram' | 'elevenlabs' | 'azure' | 'ibmwatson' | 'soniox' | 'natively' | 'local-whisper' {
         const provider = this.credentials.sttProvider || 'none';
-        // Self-heal: if provider is 'none' but a Natively key exists, the user is in a
-        // broken state (key cleared then re-entered via a path that skipped auto-promote,
-        // or credentials restored from backup). Silently restore to 'natively' so STT works.
-        if (provider === 'none' && this.credentials.nativelyApiKey) {
-            this.credentials.sttProvider = 'natively';
+        if (provider !== 'local-whisper') {
+            this.credentials.sttProvider = 'local-whisper';
             this.saveCredentials();
-            console.log('[CredentialsManager] Self-healed sttProvider: none→natively (Natively key present)');
-            return 'natively';
+            console.log(`[CredentialsManager] Forced STT provider ${provider}→local-whisper (Moonshine Base)`);
         }
-        return provider;
+        return 'local-whisper';
     }
 
     public getDeepgramApiKey(): string | undefined {
@@ -288,10 +284,10 @@ export class CredentialsManager {
         console.log('[CredentialsManager] Google Service Account path updated');
     }
 
-    public setSttProvider(provider: 'none' | 'google' | 'groq' | 'openai' | 'deepgram' | 'elevenlabs' | 'azure' | 'ibmwatson' | 'soniox' | 'natively' | 'local-whisper'): void {
-        this.credentials.sttProvider = provider;
+    public setSttProvider(_provider: 'none' | 'google' | 'groq' | 'openai' | 'deepgram' | 'elevenlabs' | 'azure' | 'ibmwatson' | 'soniox' | 'natively' | 'local-whisper'): void {
+        this.credentials.sttProvider = 'local-whisper';
         this.saveCredentials();
-        console.log(`[CredentialsManager] STT Provider set to: ${provider}`);
+        console.log('[CredentialsManager] STT Provider set to: local-whisper (Moonshine Base)');
     }
 
     public setDeepgramApiKey(key: string): void {
@@ -406,10 +402,10 @@ export class CredentialsManager {
                 console.log('[CredentialsManager] Auto-set default model to natively');
             }
 
-            // Auto-promote natively STT if still on 'none' or the default Google STT
-            if (!this.credentials.sttProvider || this.credentials.sttProvider === 'none' || this.credentials.sttProvider === 'google') {
-                this.credentials.sttProvider = 'natively';
-                console.log('[CredentialsManager] Auto-set STT provider to natively');
+            // STT is local-only: keep Moonshine Base selected regardless of API keys.
+            if (this.credentials.sttProvider !== 'local-whisper') {
+                this.credentials.sttProvider = 'local-whisper';
+                console.log('[CredentialsManager] Auto-set STT provider to local-whisper');
             }
         } else {
             // Key cleared — revert natively-auto-set defaults back to safe fallbacks
@@ -417,9 +413,9 @@ export class CredentialsManager {
                 this.credentials.defaultModel = 'gemini-3.5-flash';
                 console.log('[CredentialsManager] Natively key cleared — reset default model to Gemini Flash');
             }
-            if (this.credentials.sttProvider === 'natively') {
-                this.credentials.sttProvider = 'none';
-                console.log('[CredentialsManager] Natively key cleared — reset STT provider to none');
+            if (this.credentials.sttProvider !== 'local-whisper') {
+                this.credentials.sttProvider = 'local-whisper';
+                console.log('[CredentialsManager] Natively key cleared — kept local-whisper STT provider');
             }
         }
 

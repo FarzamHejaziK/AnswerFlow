@@ -238,9 +238,9 @@ const Cropper: React.FC = () => {
                     >
                         <div
                             className="flex items-center justify-center w-7 h-7 rounded-lg"
-                            style={{ background: 'rgba(59, 130, 246, 0.15)' }}
+                            style={{ background: 'var(--accent-muted)' }}
                         >
-                            <Crosshair className="w-4 h-4" style={{ color: '#3b82f6' }} />
+                            <Crosshair className="w-4 h-4" style={{ color: 'var(--accent-primary)' }} />
                         </div>
 
                         <span
