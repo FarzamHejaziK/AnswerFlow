@@ -64,8 +64,8 @@
         "to": "assets/"
       },
       {
-        "from": "assets/natively.icns",
-        "to": "natively.icns"
+        "from": "assets/answerflow/answerflow.icns",
+        "to": "answerflow.icns"
       },
       {
         "from": "resources/models/",
@@ -90,7 +90,7 @@
           ]
         }
       ],
-      "icon": "assets/natively.icns",
+      "icon": "assets/answerflow/answerflow.icns",
       "identity": null,
       "hardenedRuntime": false,
       "extendInfo": {
@@ -146,8 +146,8 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "Natively-AI-assistant",
-        "repo": "natively-cluely-ai-assistant",
+        "owner": "FarzamHejaziK",
+        "repo": "AnswerFlow",
         "releaseType": "release"
       }
     ]

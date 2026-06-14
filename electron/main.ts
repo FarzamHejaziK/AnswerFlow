@@ -4652,8 +4652,8 @@ export class AppState {
         appName = "AnswerFlow";
         if (isMac) {
           iconPath = app.isPackaged
-            ? path.join(process.resourcesPath, "natively.icns")
-            : path.join(app.getAppPath(), "assets/natively.icns");
+            ? path.join(process.resourcesPath, "answerflow.icns")
+            : path.join(app.getAppPath(), "assets/answerflow/answerflow.icns");
         } else if (isWin) {
           iconPath = app.isPackaged
             ? path.join(process.resourcesPath, "assets/icons/win/icon.ico")

@@ -40,10 +40,10 @@ If you’re looking for a hosted desktop recording API, consider checking out [R
 <br/>
 
 [![License](https://img.shields.io/badge/License-AGPL--3.0-blue?style=flat-square)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-blueviolet?style=flat-square)](https://github.com/Natively-AI-assistant/natively-cluely-ai-assistant/releases)
-[![Downloads](https://img.shields.io/github/downloads/evinjohnn/natively-cluely-ai-assistant/total?style=flat-square&color=success)](https://github.com/Natively-AI-assistant/natively-cluely-ai-assistant/releases)
+[![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-blueviolet?style=flat-square)](https://github.com/FarzamHejaziK/AnswerFlow/releases)
+[![Downloads](https://img.shields.io/github/downloads/FarzamHejaziK/AnswerFlow/total?style=flat-square&color=success)](https://github.com/FarzamHejaziK/AnswerFlow/releases)
 ![Repo Views](https://img.shields.io/badge/Views-341k-orange?style=flat-square)
-[![Stars](https://img.shields.io/github/stars/evinjohnn/natively-cluely-ai-assistant?style=flat-square&color=gold)](https://github.com/Natively-AI-assistant/natively-cluely-ai-assistant)
+[![Stars](https://img.shields.io/github/stars/FarzamHejaziK/AnswerFlow?style=flat-square&color=gold)](https://github.com/FarzamHejaziK/AnswerFlow)
 ![Status](https://img.shields.io/badge/Status-active-success?style=flat-square)
 [![X Community](https://img.shields.io/badge/Community-black?style=flat-square&logo=x&logoColor=white)](https://x.com/i/communities/2031398735515693507)
 
@@ -56,10 +56,10 @@ If you’re looking for a hosted desktop recording API, consider checking out [R
 </p>
 
 <p align="center">
-  <a href="https://github.com/Natively-AI-assistant/natively-cluely-ai-assistant/releases/latest">
+  <a href="https://github.com/FarzamHejaziK/AnswerFlow/releases/latest">
     <img src="https://img.shields.io/badge/Download-macOS-007AFF?style=for-the-badge&logo=apple&logoColor=white" />
   </a>
-  <a href="https://github.com/Natively-AI-assistant/natively-cluely-ai-assistant/releases/latest">
+  <a href="https://github.com/FarzamHejaziK/AnswerFlow/releases/latest">
     <img src="https://img.shields.io/badge/Download-Windows-0078D4?style=for-the-badge&logo=windows&logoColor=white" />
   </a>
 </p>
@@ -127,7 +127,7 @@ While other tools act as simple API wrappers, Natively is a complete, native int
 
 Every star pushes Natively higher in GitHub search, helping developers and job seekers find a free, private alternative instead of paying $149/month for tools that store their data on someone else's server.
 
-[![Star Natively](https://img.shields.io/github/stars/evinjohnn/natively-cluely-ai-assistant?style=for-the-badge&color=gold&label=Star%20on%20GitHub)](https://github.com/Natively-AI-assistant/natively-cluely-ai-assistant)
+[![Star Natively](https://img.shields.io/github/stars/FarzamHejaziK/AnswerFlow?style=for-the-badge&color=gold&label=Star%20on%20GitHub)](https://github.com/FarzamHejaziK/AnswerFlow)
 
 </div>
 
@@ -569,8 +569,8 @@ Setup Summary:
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/Natively-AI-assistant/natively-cluely-ai-assistant.git
-cd natively-cluely-ai-assistant
+git clone https://github.com/FarzamHejaziK/AnswerFlow.git
+cd AnswerFlow
 ```
 
 ### Install Dependencies
@@ -964,11 +964,11 @@ Natively is a free, open-source alternative to:
 
 ## Star History
 
-<a href="https://star-history.com/#evinjohnn/natively-cluely-ai-assistant&Date">
+<a href="https://star-history.com/#FarzamHejaziK/AnswerFlow&Date">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=evinjohnn/natively-cluely-ai-assistant&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=evinjohnn/natively-cluely-ai-assistant&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=evinjohnn/natively-cluely-ai-assistant&type=Date" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=FarzamHejaziK/AnswerFlow&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=FarzamHejaziK/AnswerFlow&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=FarzamHejaziK/AnswerFlow&type=Date" />
  </picture>
 </a>
 

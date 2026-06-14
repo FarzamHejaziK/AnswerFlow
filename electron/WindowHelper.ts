@@ -259,8 +259,8 @@ export class WindowHelper {
         if (mode === 'none') {
           if (isMac) {
             return app.isPackaged
-              ? path.join(process.resourcesPath, 'natively.icns')
-              : path.resolve(__dirname, '../../assets/natively.icns');
+              ? path.join(process.resourcesPath, 'answerflow.icns')
+              : path.resolve(__dirname, '../../assets/answerflow/answerflow.icns');
           } else if (isWin) {
             return app.isPackaged
               ? path.join(process.resourcesPath, 'assets/icons/win/icon.ico')

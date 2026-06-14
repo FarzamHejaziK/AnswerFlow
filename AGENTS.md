@@ -2,7 +2,7 @@
 
 ## Git Workflow
 
-- This checkout tracks the public fork at `origin`: `https://github.com/FarzamHejaziK/natively-cluely-ai-assistant.git`.
+- This checkout tracks the public fork at `origin`: `https://github.com/FarzamHejaziK/AnswerFlow.git`.
 - The original project is configured as `upstream`: `https://github.com/Natively-AI-assistant/natively-cluely-ai-assistant.git`.
 - Push local work to `origin`, not `upstream`.
 - Keep the local `upstream` push URL disabled unless the user explicitly asks to change it.

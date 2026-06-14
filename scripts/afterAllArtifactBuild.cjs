@@ -38,9 +38,9 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 
-const VOLNAME = 'Natively';
+const VOLNAME = 'AnswerFlow';
 const BACKGROUND = path.resolve(__dirname, '..', 'assets', 'dmg-background.png');
-const VOLICON = path.resolve(__dirname, '..', 'assets', 'natively.icns');
+const VOLICON = path.resolve(__dirname, '..', 'assets', 'answerflow', 'answerflow.icns');
 
 function sha512base64(file) {
   return crypto.createHash('sha512').update(fs.readFileSync(file)).digest('base64');
