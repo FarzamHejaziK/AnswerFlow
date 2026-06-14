@@ -1,4 +1,4 @@
-# Cluely Parity — E2E / Manual Scenario Results
+# legacy overlay Parity — E2E / Manual Scenario Results
 
 **Pass:** 2026-05-15
 **Test runner:** `node --test` over `electron/services/__tests__/**`,
@@ -150,7 +150,7 @@ Suggested commit-by-commit plan once Playwright is bootstrapped:
 3. Create `e2e/sales-dynamic-action.spec.ts`:
    * launch Electron in test mode with `--no-system-audio --fake-stt`
    * call `test-inject-transcript` IPC (already exists for QA) with
-     `"This is too expensive compared to Cluely"`
+     `"This is too expensive compared to legacy overlay"`
    * assert a `[data-testid="dynamic-action-card-action_…"]` appears
      within 1 s
    * click it, assert an answer streams into the chat area

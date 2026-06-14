@@ -110,7 +110,7 @@ const providerLabels: Record<string, string> = {
     gemini: 'Gemini',
     custom: 'Custom',
     'codex-cli': 'Codex CLI',
-    natively: 'Natively API',
+    natively: 'AnswerFlow API',
     groq: 'Groq',
     openai: 'OpenAI',
     claude: 'Claude',
@@ -127,13 +127,13 @@ const sttProviderLabels: Record<string, string> = {
     azure: 'Azure Speech',
     ibmwatson: 'IBM Watson',
     soniox: 'Soniox',
-    natively: 'Natively API',
+    natively: 'AnswerFlow API',
     'local-whisper': 'Moonshine Base',
 };
 
 const inferProviderLabel = (provider: string | undefined, model: string | undefined) => {
     const modelId = (model || '').toLowerCase();
-    if (modelId === 'natively') return 'Natively API';
+    if (modelId === 'natively') return 'AnswerFlow API';
     if (modelId.includes('gpt') || modelId.includes('openai')) return 'OpenAI';
     if (modelId.includes('claude')) return 'Claude';
     if (modelId.includes('deepseek')) return 'DeepSeek';
@@ -1647,8 +1647,8 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
     }, [resetWorkspaceStreamBuffer]);
 
     const hydrateDraftWorkspace = useCallback(async () => {
-        const draftId = localStorage.getItem('natively_current_interview_workspace_id') || genMessageId();
-        localStorage.setItem('natively_current_interview_workspace_id', draftId);
+        const draftId = localStorage.getItem('answerflow_current_interview_workspace_id') || genMessageId();
+        localStorage.setItem('answerflow_current_interview_workspace_id', draftId);
         setWorkspaceStateId(draftId);
         setWorkspaceConversationState('idle');
         setWorkspaceErrorMessage(null);
@@ -1814,9 +1814,9 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
     ]);
 
     useEffect(() => {
-        const savedDraftId = localStorage.getItem('natively_current_interview_workspace_id');
+        const savedDraftId = localStorage.getItem('answerflow_current_interview_workspace_id');
         if (!savedDraftId) {
-            localStorage.setItem('natively_current_interview_workspace_id', workspaceStateId);
+            localStorage.setItem('answerflow_current_interview_workspace_id', workspaceStateId);
             return;
         }
 
@@ -1894,7 +1894,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
         const permissions = (permissionsResult.status === 'fulfilled' ? permissionsResult.value : null) as any;
         const sttProvider = creds?.sttProvider || 'local-whisper';
         const sttReady = hasConfiguredStt(creds);
-        const model = llm?.model || 'natively';
+        const model = llm?.model || 'answerflow';
 
         setCurrentModel(model);
         setProviderKeyStatus({
@@ -2316,7 +2316,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
 
     const handleNewInterview = () => {
         const nextWorkspaceId = genMessageId();
-        localStorage.setItem('natively_current_interview_workspace_id', nextWorkspaceId);
+        localStorage.setItem('answerflow_current_interview_workspace_id', nextWorkspaceId);
         setWorkspaceStateId(nextWorkspaceId);
         selectMeeting(null);
         setForwardMeeting(null);
@@ -3089,11 +3089,11 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
                     <button
                         onClick={() => {
                             try {
-                                localStorage.removeItem('natively_help_assistant_dismissed_v1');
+                                localStorage.removeItem('answerflow_help_assistant_dismissed_v1');
                             } catch {
                                 /* localStorage can fail in constrained environments */
                             }
-                            window.dispatchEvent(new CustomEvent('natively-help-assistant-show', { detail: { open: true } }));
+                            window.dispatchEvent(new CustomEvent('answerflow-help-assistant-show', { detail: { open: true } }));
                         }}
                         title="Help"
                         className={`p-2 text-text-secondary hover:text-text-primary transition-all duration-300 ${isLight ? 'hover:drop-shadow-[0_0_6px_rgba(0,0,0,0.25)]' : 'hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]'}`}

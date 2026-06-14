@@ -1,19 +1,19 @@
-# Natively → Cluely Parity — Final Integration Report
+# AnswerFlow → legacy overlay Parity — Final Integration Report
 
 **Pass:** 2026-05-15 (continuation of prior parity passes)
-**Repo:** /Users/evin/natively-cluely-ai-assistant
+**Repo:** /Users/evin/AnswerFlow
 **Branch:** `main` (commit `43ae233` baseline)
 **Final test result:** `npm test` → **349 tests / 34 suites / 0 fail / ~1.0s**
 
 This report covers what was wired into the **running app** in this pass — not
 isolated backend modules — and is the source of truth for the user-facing
-Cluely-parity status.
+legacy overlay-parity status.
 
 Companion docs:
-* `NATIVELY_CLUELY_PARITY_FIX_LOG.md` — change-by-change evidence log
-* `NATIVELY_CLUELY_PARITY_ROADMAP.md` — concrete next-step tickets
+* `ANSWERFLOW_PARITY_FIX_LOG.md` — change-by-change evidence log
+* `ANSWERFLOW_PARITY_ROADMAP.md` — concrete next-step tickets
 * `LOCAL_DB_ENCRYPTION_DESIGN.md` — design for at-rest DB encryption (not yet shipped)
-* `../testing/CLUEly_PARITY_E2E_RESULTS.md` — manual/E2E scenarios run
+* `../testing/ANSWERFLOW_PARITY_E2E_RESULTS.md` — manual/E2E scenarios run
 
 ---
 
@@ -28,7 +28,7 @@ biggest **wiring** gaps:
 |---|---|---|
 | 4 — Hybrid RAG | New async `buildRetrievedActiveModeContextBlockHybrid` on `ModesManager` + `WhatToAnswerLLM` prefers it; lexical sync remains as 2nd-line fallback. Telemetry: `rag_query` / `rag_hit` / `rag_lexical_fallback` / `rag_miss`. | Hybrid is now the default path for live answer generation. |
 | 6 — Telemetry | `TelemetryService.configure()` runtime API; init in `app.whenReady`; emission sites at `app_start`, `meeting_start`, `meeting_stop`, `mode_switched`, `dynamic_action_detected/accepted/dismissed`, `post_call_summary_started/completed/failed`, `rag_*`. | First production observability stream — local JSONL with sanitization. |
-| 7 — Post-call workflow UI | `MeetingDetails.tsx` now renders `actionItemsStructured` (with owner/deadline), `coachingInsights` (severity-tinted cards), and `followUpDraft` (with Copy button). Backend integration was already in place from the prior pass. | Cluely-style post-call view is live. |
+| 7 — Post-call workflow UI | `MeetingDetails.tsx` now renders `actionItemsStructured` (with owner/deadline), `coachingInsights` (severity-tinted cards), and `followUpDraft` (with Copy button). Backend integration was already in place from the prior pass. | legacy overlay-style post-call view is live. |
 | 9 — Retention/privacy foundation | `meetingRetention` setting (`forever \| 7d \| 30d \| never`), per-meeting `doNotPersist` metadata flag honored in `stopMeeting()` — short-circuits before any DB write or summary. | Privacy contract shipped at the persistence boundary. |
 | 9 — DB encryption design | `LOCAL_DB_ENCRYPTION_DESIGN.md` written: SQLCipher recommended over envelope encryption, with key plumbing / migration / rotation / rollback plan. | Implementation deferred but unblocked. |
 | 11 — Test surface | +2 source-level wiring suites (`TelemetryEmissionSites.test.mjs`, `RetentionAndHybridRag.test.mjs`) with 15 tests — all pass. | Net regression: **325 → 349 tests, all green**. |
@@ -88,9 +88,9 @@ Items marked **(this pass)** were not reachable in the running app before this s
 | `electron/services/__tests__/TelemetryEmissionSites.test.mjs` | new (8 tests) |
 | `electron/services/__tests__/RetentionAndHybridRag.test.mjs` | new (7 tests) |
 | `docs/engineering/LOCAL_DB_ENCRYPTION_DESIGN.md` | new |
-| `docs/engineering/NATIVELY_CLUELY_PARITY_FIX_LOG.md` | updated |
-| `docs/engineering/CLUEly_PARITY_FINAL_INTEGRATION_REPORT.md` | this file |
-| `docs/testing/CLUEly_PARITY_E2E_RESULTS.md` | new |
+| `docs/engineering/ANSWERFLOW_PARITY_FIX_LOG.md` | updated |
+| `docs/engineering/ANSWERFLOW_PARITY_FINAL_INTEGRATION_REPORT.md` | this file |
+| `docs/testing/ANSWERFLOW_PARITY_E2E_RESULTS.md` | new |
 
 ---
 
@@ -139,7 +139,7 @@ new code paths). Hard typecheck cleanup remains a roadmap item.
 
 ## 7. Manual / E2E scenarios
 
-See `docs/testing/CLUEly_PARITY_E2E_RESULTS.md` for the full matrix.
+See `docs/testing/ANSWERFLOW_PARITY_E2E_RESULTS.md` for the full matrix.
 
 The renderer-level scenarios from `promptfix.md` Phase 10 (real Electron
 click-through, Playwright E2E) were **not** run this pass. Reasons:
@@ -157,13 +157,13 @@ substitute for live click-through.
 
 ---
 
-## 8. Remaining gaps vs Cluely (individual tier)
+## 8. Remaining gaps vs legacy overlay (individual tier)
 
 * **Phase 2 — Screen/OCR pipeline integration.** `ScreenContextService`
   exists with tests but is not consumed by `WhatToAnswerLLM` /
   `PromptAssembler`. Vision-aware "Use current screen" still routes to
   the old screenshot-attachment path. Concrete next step in
-  `NATIVELY_CLUELY_PARITY_ROADMAP.md` §4.
+  `ANSWERFLOW_PARITY_ROADMAP.md` §4.
 * **Phase 3 — PromptAssembler hot-path migration.** All prompt
   construction outside `PromptAssembler` is still ad-hoc string
   concatenation. The trust-level guard rails do not yet apply on the
@@ -183,17 +183,17 @@ substitute for live click-through.
 ## 9. Remaining gaps vs Final Round AI (interview-specific)
 
 * No "auto-answer" pre-fill that types into the actual interview
-  application's question field — Final Round AI does this; Natively
+  application's question field — Final Round AI does this; AnswerFlow
   shows answers in its own overlay, which is the deliberate stealth
   posture but loses the auto-paste convenience for solo prep.
 * No coding-IDE-aware overlay positioning. Final Round AI repositions
-  near the active code editor; Natively pins to a fixed corner.
+  near the active code editor; AnswerFlow pins to a fixed corner.
 * No interview replay/review with synced screenshot timeline.
 
 These are deliberate trade-offs (privacy, simplicity) — not bugs — but
 worth tracking.
 
-## 10. Remaining gaps vs Cluely (enterprise tier)
+## 10. Remaining gaps vs legacy overlay (enterprise tier)
 
 * No CRM/ATS integration (HubSpot, Salesforce, Greenhouse, Lever).
 * No team prompts / shared KB / role-based prompt assignment.
@@ -268,21 +268,21 @@ In priority order:
 
 ## 14. Final verdict
 
-**Is Natively now individual-user Cluely parity?**
-For the **answer / mode / dynamic action** loop, yes — the Cluely-style
+**Is AnswerFlow now individual-user legacy overlay parity?**
+For the **answer / mode / dynamic action** loop, yes — the legacy overlay-style
 backend wiring is in place and visible in the running app. For the
 **setup / settings / onboarding** loop, no — UX polish is still
 roadmap §10 work. A power user who can tolerate a developer-feel
-settings page and configure providers themselves will get a Cluely-
+settings page and configure providers themselves will get a legacy overlay-
 equivalent meeting experience today.
 
-**Is Natively better than Final Round AI for interview use?**
+**Is AnswerFlow better than Final Round AI for interview use?**
 On the answer-quality and prompt-safety axes (post-injection guards,
 mode trust levels, hallucination tests in `QA_REPORT.md`) — yes,
 based on the 313 unit tests + 15 wiring tests passing today. On
 quality-of-life (auto-paste, IDE-aware overlay placement) — no.
 
-**Is Natively still behind Cluely enterprise?**
+**Is AnswerFlow still behind legacy overlay enterprise?**
 Yes, materially. CRM/ATS/team prompts/shared KB/admin controls/pre-call
 briefs are all not started. This is a multi-month build, not a sprint
 fix.

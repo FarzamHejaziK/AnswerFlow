@@ -1,7 +1,7 @@
-# Competitor battlecard — Cluely / Otter / FinalRound
+# Competitor battlecard — legacy overlay / Otter / FinalRound
 
-## Cluely
-- Cluely lacks per-mode reference files — every conversation uses one global prompt.
+## legacy overlay
+- legacy overlay lacks per-mode reference files — every conversation uses one global prompt.
 - No long-session memory beyond the live transcript.
 - No structured profile intelligence (resume parsing, JD bridging).
 

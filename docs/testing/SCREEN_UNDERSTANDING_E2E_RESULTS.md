@@ -81,4 +81,4 @@ The service and routing layers are substantially stronger and proven by
 deterministic automated tests including a real Tesseract integration. The
 product should be described as **screen-understanding service is
 production-ready and routing-correct; live answer-pipeline integration is
-pending**, not Cluely-level complete.
+pending**, not legacy overlay-level complete.

@@ -1,6 +1,6 @@
-# Natively → Cluely Parity Roadmap
+# AnswerFlow → legacy overlay Parity Roadmap
 
-**Companion to:** `NATIVELY_CLUELY_PARITY_FIX_LOG.md`
+**Companion to:** `ANSWERFLOW_PARITY_FIX_LOG.md`
 **Purpose:** track everything *not* completed in the current pass with concrete
 next-step instructions a follow-up engineer can execute without re-reading the
 audit.
@@ -80,7 +80,7 @@ Each item: **owner-style ticket** — file paths, exact next step, test target,
   * Effort: 1–2 days.
 
 * **3.2 UI cards (DynamicActionBar / DynamicActionCard / ActionEvidencePopover)**
-  * Files: create `src/components/dynamic-actions/{DynamicActionBar,DynamicActionCard,ActionEvidencePopover}.tsx`; mount above answer area in `NativelyInterface.tsx`.
+  * Files: create `src/components/dynamic-actions/{DynamicActionBar,DynamicActionCard,ActionEvidencePopover}.tsx`; mount above answer area in `AnswerFlowInterface.tsx`.
   * Constraints: max 3 visible, dismiss button, primary card via Tab, evidence popover shows transcript snippet + speaker + timestamp.
   * DoD: cards render, accept triggers `WhatToAnswerLLM` with `promptInstruction`, streamed answer appears in chat.
   * Effort: 2 days.
@@ -100,7 +100,7 @@ Each item: **owner-style ticket** — file paths, exact next step, test target,
   * Remaining: no automatic background screen capture, no OCR progress streaming, no provider-specific non-vision image stripping, and no live Electron click-through yet.
 
 * **4.2 UI indicator**
-  * Files: `src/components/NativelyInterface.tsx`.
+  * Files: `src/components/AnswerFlowInterface.tsx`.
   * Next step: small chip "Screen context: available / stale / unavailable / permission-missing"; manual "Use current screen" button.
   * Effort: 0.5 day.
 
@@ -185,7 +185,7 @@ declaring Phase 11 done.
 
 ## Risks called out
 
-* **Submodules `natively-api` and `premium`:** modified on entry, untouched here.
+* **Submodules `answerflow-api` and `premium`:** modified on entry, untouched here.
   Any parity work that touches the hosted API contract will need a coordinated
   submodule bump.
 * **macOS-only assumptions** in screen/audio paths — Windows parity will need
@@ -193,4 +193,4 @@ declaring Phase 11 done.
 * **DB encryption** deferred to a design doc; do not declare full Phase 1 done
   until that doc exists and is reviewed.
 * **Trigger packs** are partially-supervised regex; LLM-classified triggers
-  (Cluely-style) remain a follow-up.
+  (legacy overlay-style) remain a follow-up.

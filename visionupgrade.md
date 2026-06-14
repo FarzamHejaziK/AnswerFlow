@@ -1,23 +1,23 @@
-You are now the lead senior Electron engineer, AI vision engineer, OCR engineer, desktop automation architect, security reviewer, QA lead, and product engineer for Natively.
+You are now the lead senior Electron engineer, AI vision engineer, OCR engineer, desktop automation architect, security reviewer, QA lead, and product engineer for AnswerFlow.
 
 Repository:
- /Users/evin/natively-cluely-ai-assistant
+ /Users/evin/AnswerFlow
 
 Use these skills heavily:
 
 @"test-engineer (agent)"
-@/Users/evin/natively-cluely-ai-assistant/.claude/skills/software-architecture/
-@/Users/evin/natively-cluely-ai-assistant/.claude/skills/senior-architect/
-@/Users/evin/natively-cluely-ai-assistant/.claude/skills/senior-backend/
-@/Users/evin/natively-cluely-ai-assistant/.claude/skills/code-reviewer/
+@/Users/evin/AnswerFlow/.claude/skills/software-architecture/
+@/Users/evin/AnswerFlow/.claude/skills/senior-architect/
+@/Users/evin/AnswerFlow/.claude/skills/senior-backend/
+@/Users/evin/AnswerFlow/.claude/skills/code-reviewer/
 
 Use Context7 and official documentation whenever needed.
 
 Mission:
-Build a professional, production-ready screen understanding system for Natively.
+Build a professional, production-ready screen understanding system for AnswerFlow.
 
 This must not be a toy OCR patch.
-This must become a robust Cluely/Final Round AI-level screen understanding pipeline for live meetings, coding interviews, sales calls, lectures, debugging, dashboards, documents, and custom modes.
+This must become a robust legacy overlay/Final Round AI-level screen understanding pipeline for live meetings, coding interviews, sales calls, lectures, debugging, dashboards, documents, and custom modes.
 
 Important product decision:
 For Technical Interview mode and coding-related screen actions, prioritize DIRECT VISION LLM analysis over OCR-only extraction.
@@ -102,7 +102,7 @@ make a clone of these repo in a temp file and index and analyse these projects t
    - https://www.electronjs.org/docs/latest/api/desktop-capturer
    - Use official docs for screen/window capture constraints and permissions.
 
-Current known Natively state from previous audits:
+Current known AnswerFlow state from previous audits:
 - Screenshot capture exists through ScreenshotHelper and desktopCapturer.
 - Cropper exists.
 - Tesseract.js OCR exists in ScreenContextService.
@@ -135,11 +135,11 @@ docs/engineering/SCREENSHOT_ANALYSIS_CALL_GRAPH.md
 docs/engineering/SCREENSHOT_ANALYSIS_SECURITY_AUDIT.md
 docs/engineering/SCREENSHOT_ANALYSIS_PROVIDER_MATRIX.md
 docs/engineering/SCREENSHOT_ANALYSIS_UX_AUDIT.md
-docs/engineering/NATIVELY_CLUELY_PARITY_FIX_LOG.md
-docs/engineering/NATIVELY_CLUELY_PARITY_ROADMAP.md
+docs/engineering/ANSWERFLOW_PARITY_FIX_LOG.md
+docs/engineering/ANSWERFLOW_PARITY_ROADMAP.md
 docs/engineering/FINAL_INDIVIDUAL_USER_PARITY_REPORT.md
 docs/testing/SCREEN_OCR_E2E_RESULTS.md
-docs/testing/CLUEly_PARITY_E2E_RESULTS.md
+docs/testing/ANSWERFLOW_PARITY_E2E_RESULTS.md
 
 Create if useful:
 docs/engineering/SCREEN_UNDERSTANDING_IMPLEMENTATION_REPORT.md
@@ -170,7 +170,7 @@ Run and record:
 4. npm run typecheck:electron if available
 5. npm run test:e2e if available
 6. npm run test:screen-context if available
-7. npm run test:individual-cluely-parity if available
+7. npm run test:individual-legacy-overlay-parity if available
 
 Inspect deeply:
 - electron/ScreenshotHelper.ts
@@ -190,7 +190,7 @@ Inspect deeply:
 - electron/main.ts
 - electron/utils/curlUtils.ts
 - src/types/electron.d.ts
-- src/components/NativelyInterface.tsx
+- src/components/AnswerFlowInterface.tsx
 - src/components/dynamic-actions/*
 - settings and diagnostics UI
 - all screen/screenshot tests
@@ -754,7 +754,7 @@ Update:
 
 Final report must answer:
 
-1. Does Natively now have reliable screen analysis?
+1. Does AnswerFlow now have reliable screen analysis?
 2. Does Technical Interview mode use direct vision by default?
 3. Does OCR still work as fallback?
 4. Does “Use current screen” work?
@@ -763,7 +763,7 @@ Final report must answer:
 7. Are screenshots cleaned up?
 8. Are local-only/privacy settings respected?
 9. Which providers support direct vision?
-10. What still remains below Cluely/Final Round quality?
+10. What still remains below legacy overlay/Final Round quality?
 
 Definition of done:
 
@@ -781,4 +781,4 @@ Definition of done:
 - E2E tests prove the live UI flow.
 - Reports are updated honestly.
 
-Be brutally honest. Do not claim Cluely-level screen understanding until the live UI and E2E tests prove it.
+Be brutally honest. Do not claim legacy overlay-level screen understanding until the live UI and E2E tests prove it.

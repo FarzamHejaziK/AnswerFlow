@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { BookOpen, Check, HelpCircle, MessageCircle, Send, Trash2, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import helpGuideMarkdown from '../../content/natively-help-guide.md?raw';
+import helpGuideMarkdown from '../../content/answerflow-help-guide.md?raw';
 import { useStreamBuffer } from '../../hooks/useStreamBuffer';
 import { genMessageId } from '../../utils/messageId';
 
@@ -17,9 +17,9 @@ type HelpMessage = {
 type HelpState = 'idle' | 'waiting' | 'streaming' | 'error';
 type HelpView = 'chat' | 'guide';
 
-const STORAGE_KEY = 'natively_help_assistant_messages_v1';
-const DISMISSED_STORAGE_KEY = 'natively_help_assistant_dismissed_v1';
-const SHOW_HELP_ASSISTANT_EVENT = 'natively-help-assistant-show';
+const STORAGE_KEY = 'answerflow_help_assistant_messages_v1';
+const DISMISSED_STORAGE_KEY = 'answerflow_help_assistant_dismissed_v1';
+const SHOW_HELP_ASSISTANT_EVENT = 'answerflow-help-assistant-show';
 const MAX_STORED_MESSAGES = 80;
 
 const HELP_ASSISTANT_SYSTEM_PROMPT = `You are the AnswerFlow Help Assistant.
@@ -110,9 +110,9 @@ const buildHelpContext = (history: HelpMessage[]) => {
         .join('\n\n');
 
     return [
-        '<natively_help_guide>',
+        '<answerflow_help_guide>',
         helpGuideMarkdown,
-        '</natively_help_guide>',
+        '</answerflow_help_guide>',
         recentHistory ? '<recent_help_chat>' : '',
         recentHistory,
         recentHistory ? '</recent_help_chat>' : '',

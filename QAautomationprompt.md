@@ -1,22 +1,22 @@
-You are now the autonomous QA architect, senior test engineer, product engineer, and code reviewer for Natively.
+You are now the autonomous QA architect, senior test engineer, product engineer, and code reviewer for AnswerFlow.
 
 Repository:
- /Users/evin/natively-cluely-ai-assistant
+ /Users/evin/AnswerFlow
 
 Use these skills heavily:
 
 @"test-engineer (agent)"
-@/Users/evin/natively-cluely-ai-assistant/.claude/skills/software-architecture/
-@/Users/evin/natively-cluely-ai-assistant/.claude/skills/senior-architect/
-@/Users/evin/natively-cluely-ai-assistant/.claude/skills/senior-backend/
-@/Users/evin/natively-cluely-ai-assistant/.claude/skills/code-reviewer/
+@/Users/evin/AnswerFlow/.claude/skills/software-architecture/
+@/Users/evin/AnswerFlow/.claude/skills/senior-architect/
+@/Users/evin/AnswerFlow/.claude/skills/senior-backend/
+@/Users/evin/AnswerFlow/.claude/skills/code-reviewer/
 
 Use Context7 and official documentation when needed.
 
 Mission:
-Natively currently fixes reported bugs, but the testing is not deep enough. I want you to build a real automated mode/profile-intelligence test system that simulates real users, real resumes, real job descriptions, custom prompts, negotiation contexts, reference files, and long meeting/interview scenarios.
+AnswerFlow currently fixes reported bugs, but the testing is not deep enough. I want you to build a real automated mode/profile-intelligence test system that simulates real users, real resumes, real job descriptions, custom prompts, negotiation contexts, reference files, and long meeting/interview scenarios.
 
-This should test whether each Natively mode actually works like a real product, not just whether functions compile.
+This should test whether each AnswerFlow mode actually works like a real product, not just whether functions compile.
 
 The core features to test:
 
@@ -34,7 +34,7 @@ The core features to test:
 12. Mode bleeding prevention
 13. Long-session context behavior
 14. Hallucination/refusal behavior
-15. Natively API integration if configured
+15. AnswerFlow API integration if configured
 16. UI/IPC flow if possible
 
 Do not only write unit tests.
@@ -46,7 +46,7 @@ Important:
 - Do not just create mock tests that prove nothing.
 - Do not assume features work because a UI label exists.
 - Do not expose API keys in logs or reports.
-- If real Natively API credentials are configured locally, use them safely.
+- If real AnswerFlow API credentials are configured locally, use them safely.
 - If real API testing is unavailable, create deterministic mocked provider tests and clearly mark real API tests as skipped.
 - If any file format cannot be parsed, that is a bug to report/fix.
 - If a test reveals a bug, fix the bug, then rerun the test.
@@ -112,7 +112,7 @@ Before writing tests:
    - injecting transcript
    - generating answers
    - running post-call notes
-   - calling Natively API
+   - calling AnswerFlow API
 
 3. Do not invent APIs.
    Use the app’s actual service functions, IPC handlers, or test utilities.
@@ -168,13 +168,13 @@ Every fixture must contain unique sentinel facts so tests can verify whether the
 Examples:
 
 Sales mode sentinel:
-"Natively Pro annual enterprise discount floor is 17 percent for Acme test accounts."
+"AnswerFlow Pro annual enterprise discount floor is 17 percent for Acme test accounts."
 
 Recruiting mode sentinel:
 "The Backend Platform role requires Kafka, PostgreSQL, and incident response ownership."
 
 Interview mode sentinel:
-"The candidate built PriceX, a price comparison website, and scaled Natively to 10k users."
+"The candidate built PriceX, a price comparison website, and scaled AnswerFlow to 10k users."
 
 Lecture mode sentinel:
 "The professor emphasized Green's function as a likely 12-mark exam topic."
@@ -273,7 +273,7 @@ Use realistic sales/business files such as:
 
 Required fixture examples:
 - sales_playbook.md
-- competitor_battlecard_cluely_otter_finalround.pdf
+- competitor_battlecard_legacy_overlay_otter_finalround.pdf
 - pricing_policy.json
 - sales_pipeline_report.csv
 - quarterly_sales_report.xml
@@ -283,7 +283,7 @@ Required fixture examples:
 
 Important sales tests:
 - Pricing objection should retrieve pricing_policy.json and enterprise_discount_rules.txt.
-- Competitor objection should retrieve competitor_battlecard_cluely_otter_finalround.pdf.
+- Competitor objection should retrieve competitor_battlecard_legacy_overlay_otter_finalround.pdf.
 - Sales performance question should retrieve sales_pipeline_report.csv or quarterly_sales_report.xml.
 - Security question should retrieve security_faq.html.
 - The assistant must not invent discounts or customer logos absent from files.
@@ -366,7 +366,7 @@ Important interview tests:
 - Recruiter screen answers must use JD + resume.
 - Salary negotiation must use salary_negotiation_context.xml.
 - Assistant must not invent FAANG experience, degrees, awards, or metrics absent from resume.
-- If the resume says PriceX/Natively, answers can use those facts only if present in fixture.
+- If the resume says PriceX/AnswerFlow, answers can use those facts only if present in fixture.
 
 TECHNICAL INTERVIEW MODE:
 Use realistic technical files such as:
@@ -527,7 +527,7 @@ Files:
 - security_faq.html
 
 Transcript:
-Prospect: "Your product sounds useful, but compared to Cluely this feels expensive. Also, what did your last quarter sales report show about enterprise adoption?"
+Prospect: "Your product sounds useful, but compared to legacy overlay this feels expensive. Also, what did your last quarter sales report show about enterprise adoption?"
 
 Expected:
 - dynamic action: competitor/pricing objection
@@ -645,7 +645,7 @@ SALES MODE — 5 users:
    - Expected: handle objection, ask discovery question, use correct discount floor
 
 2. Competitor objection
-   - Prospect compares to Cluely/Otter/Final Round
+   - Prospect compares to legacy overlay/Otter/Final Round
    - Reference: competitor battlecard
    - Expected: compare without hallucinating
 
@@ -713,7 +713,7 @@ TEAM MEETING MODE — 5 users:
 LOOKING FOR WORK / INTERVIEW MODE — 5 users:
 
 1. Behavioral interview
-   - Resume: PriceX, Natively, open-source
+   - Resume: PriceX, AnswerFlow, open-source
    - JD: SWE role
    - Expected: STAR answer using resume facts
 
@@ -1024,9 +1024,9 @@ Test:
 
 If full UI E2E is blocked, document exactly why and create a near-E2E service-level test instead.
 
-Phase 9: Real Natively API testing
+Phase 9: Real AnswerFlow API testing
 
-If real Natively API is configured locally:
+If real AnswerFlow API is configured locally:
 
 1. Do not print key.
 2. Do not commit key.
@@ -1040,7 +1040,7 @@ If real Natively API is configured locally:
    - retry/fallback
    - streaming behavior if available
 
-If real Natively API is not configured:
+If real AnswerFlow API is not configured:
 - Skip real API tests cleanly.
 - Run mocked provider tests.
 - Document what environment variables/settings are needed.
@@ -1069,7 +1069,7 @@ Final report must include:
 12. Profile intelligence results.
 13. Dynamic action results.
 14. Long-session results.
-15. Real Natively API results if run.
+15. Real AnswerFlow API results if run.
 16. UI/E2E results.
 17. Build/typecheck/lint/test results.
 18. Remaining risks.
@@ -1084,13 +1084,13 @@ Also produce a concise final verdict:
 - Is there mode bleeding?
 - Which mode is strongest?
 - Which mode is weakest?
-- Which mode would fail against Cluely/Final Round?
+- Which mode would fail against legacy overlay/Final Round?
 - What are the top 10 fixes still needed?
 
 Important quality bar:
 
 This should not be a small test file.
-This should become a real Natively QA system.
+This should become a real AnswerFlow QA system.
 
 The goal is that after this work, whenever I fix a reported issue, I can run this suite and know whether I accidentally broke:
 - modes
@@ -1100,7 +1100,7 @@ The goal is that after this work, whenever I fix a reported issue, I can run thi
 - reference files
 - RAG
 - dynamic actions
-- Natively API behavior
+- AnswerFlow API behavior
 - mode isolation
 - long session behavior
 

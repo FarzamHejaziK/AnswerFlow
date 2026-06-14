@@ -65,7 +65,7 @@ Every deletion-cleanup test verifies that its chosen probe sentinel is uniquely 
 | # | Scenario | Expected retrieval | Result |
 |---|---|---|---|
 | 1 | Current ARR / MRR | `investor_metrics.json` ($480k ARR) | PASS |
-| 2 | Why beat Cluely | `investor_competitor_landscape.xml` (Cluely lacks per-mode reference files) | PASS |
+| 2 | Why beat legacy overlay | `investor_competitor_landscape.xml` (legacy overlay lacks per-mode reference files) | PASS |
 | 3 | Churn / NRR | `investor_metrics.json` (monthly churn rate) | PASS |
 | 4 | Moat argument | `investor_pitch_deck_notes.md` (per-mode + hybrid retrieval) | PASS |
 | 5 | 12-month plan / Q4 ARR | `investor_financial_model.csv` (Q4 2026 $1.8M) | PASS |
@@ -83,7 +83,7 @@ Every deletion-cleanup test verifies that its chosen probe sentinel is uniquely 
 | # | Scenario | Expected retrieval | Result |
 |---|---|---|---|
 | 1 | Runtime TypeError on streamChat | `debug_error_log.txt` | PASS |
-| 2 | API auth/stream contract | `debug_api_contract.xml` (x-natively-stream) | PASS |
+| 2 | API auth/stream contract | `debug_api_contract.xml` (x-answerflow-stream) | PASS |
 | 3 | Failing retriever test 5000ms | `debug_test_results.json` (EmbeddingPipeline mock) | PASS |
 | 4 | Performance regression on mode hot-swap | `debug_architecture_notes.md` (ownership rules) | PASS |
 | 5 | Unsafe undefined handling review | `debug_code_snippet.ts` (modePromptSuffix can be undefined) | PASS |
@@ -92,7 +92,7 @@ Every deletion-cleanup test verifies that its chosen probe sentinel is uniquely 
 | # | Scenario | Expected retrieval | Result |
 |---|---|---|---|
 | 1 | Pricing — Pro tier | `demo_pricing_policy.json` ($24/user/mo annual) | PASS |
-| 2 | Comparison to Cluely | `demo_feature_matrix.csv` (per_mode_reference_files YES/NO/NO/NO) | PASS |
+| 2 | Comparison to legacy overlay | `demo_feature_matrix.csv` (per_mode_reference_files YES/NO/NO/NO) | PASS |
 | 3 | SOC2 / API keys | `demo_security_faq.xml` (no SOC2 Type 2 today; Type 1 Q3) | PASS |
 | 4 | Roadmap Q3 2026 | `demo_roadmap.md` (first-class custom modes + Playwright E2E) | PASS |
 | 5 | Case study / quantified proof | `demo_case_study.txt` (Halo Labs 40% faster) | PASS |

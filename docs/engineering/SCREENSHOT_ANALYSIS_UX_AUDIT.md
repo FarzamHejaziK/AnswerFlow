@@ -2,7 +2,7 @@
 
 **Audit date:** 2026-05-15
 **Commit:** `43ae233d7148`
-**Surface inspected:** `src/components/NativelyInterface.tsx`,
+**Surface inspected:** `src/components/AnswerFlowInterface.tsx`,
 `src/components/Queue/`, `src/_pages/`, `src/hooks/useShortcuts.ts`,
 `src/components/SettingsOverlay.tsx`, `src/components/SettingsPopup.tsx`.
 
@@ -27,7 +27,7 @@ the live question" without a prior screenshot step.
 
 **Yes — partial.**
 
-`NativelyInterface.tsx:3101-3104` renders a `Monitor`-icon pill with four states:
+`AnswerFlowInterface.tsx:3101-3104` renders a `Monitor`-icon pill with four states:
 
 | `screenContextStatus` | Visible label | Color tone |
 |---|---|---|
@@ -63,7 +63,7 @@ The `<screen_context>` block is purely backend evidence.
 
 **Yes — for one error class.**
 
-`NativelyInterface.tsx:3111-3143` shows a Screen Recording warning banner
+`AnswerFlowInterface.tsx:3111-3143` shows a Screen Recording warning banner
 with an "Open Settings" button that deep-links to
 `x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture`.
 
@@ -103,7 +103,7 @@ bubble up as console errors and a generic system message in chat.
 ```
 
 When this chip surfaces in `DynamicActionBar` and the user accepts it:
-- `NativelyInterface.tsx:3185` calls
+- `AnswerFlowInterface.tsx:3185` calls
   `handleWhatToSay(action.promptInstruction)`.
 - `handleWhatToSay` runs **without any attached screenshot** (it consults
   `attachedContext`, which is empty unless the user already took one).
@@ -130,13 +130,13 @@ does not provide.
 **Mixed.**
 
 - The chip wording "OCR attached" / "OCR unavailable" assumes the user
-  knows what OCR is. Cluely uses "Reading your screen" / "Couldn't read
+  knows what OCR is. legacy overlay uses "Reading your screen" / "Couldn't read
   screen" — friendlier.
 - The action verbs are abstract: "What should I say", "Code Hint",
-  "Brainstorm". None of them say "look at the screen". The cluely-style
+  "Brainstorm". None of them say "look at the screen". The legacy-overlay-style
   prompt "Solve what I'm looking at" doesn't exist.
 - The screenshot preview in the attachment area
-  (`NativelyInterface.tsx:3311-3329`) does communicate "yes, the AI will
+  (`AnswerFlowInterface.tsx:3311-3329`) does communicate "yes, the AI will
   see this", but only once you have already taken a screenshot manually.
 
 ---

@@ -56,7 +56,7 @@ Companion docs:
    `PromptAssembler.test.mjs:147-163` confirms the assembled block has the
    right trust tag.
 6. **Vision providers exist.** Gemini, OpenAI, Claude, Groq Llama-4-Scout,
-   Natively, Codex CLI, Ollama vision families, and custom cURL all have
+   AnswerFlow, Codex CLI, Ollama vision families, and custom cURL all have
    working multimodal builders (`LLMHelper.ts:1698, 1786, 1907, 2160, 480,
    413, 1830`).
 7. **Privacy gates are wired.** `assertProviderDataScopes` runs before every
@@ -64,7 +64,7 @@ Companion docs:
    to Ollama (`ProviderRouter.ts:280-286`).
 8. **Permission UX is partial but exists.** Screen Recording denied surfaces
    a banner with an "Open Settings" deep link
-   (`NativelyInterface.tsx:3111-3143`).
+   (`AnswerFlowInterface.tsx:3111-3143`).
 
 ---
 
@@ -89,16 +89,16 @@ Companion docs:
    assertProviderDataScopes integration.
 8. **No symlink resolution.** STATUS: **FIXED** (2026-05-15) — `validateImagePath`
    now uses `fs.realpathSync` for symlink escape detection.
-9. **No image size cap for cloud providers other than Natively.** Still pending —
+9. **No image size cap for cloud providers other than AnswerFlow.** Still pending —
    Sharp resize needs to be applied for all providers.
 
 ---
 
-## What is missing for Cluely-level screen analysis
+## What is missing for legacy overlay-level screen analysis
 
 1. **A reliable "Use current screen" button.** Single top-level action that
    takes a screenshot, runs OCR, and asks the model what to say about the
-   live scene. Cluely's most distinctive interaction.
+   live scene. legacy overlay's most distinctive interaction.
 2. **OCR/vision extraction that survives in production.** Fix
    `validateImagePath`; remove the `/Users/` deny so userData paths flow
    through.
@@ -134,7 +134,7 @@ Companion docs:
 
 ## Recommended implementation plan
 
-A sequenced plan to reach Cluely parity. Each item lists the files to touch,
+A sequenced plan to reach legacy overlay parity. Each item lists the files to touch,
 the modules to add, and the tests to write. Do **not** implement until I
 sign off — this section is the spec.
 
@@ -179,7 +179,7 @@ Tests to add:
 ### Step 2 — Wire "Answer from screen" to actually capture (P0; ~half a day)
 
 Files to edit:
-- `src/components/NativelyInterface.tsx:3184-3187` — when the chip type is
+- `src/components/AnswerFlowInterface.tsx:3184-3187` — when the chip type is
   `screen_coding_problem` (or any future screen-* type), call
   `window.electronAPI.takeScreenshot()` first, then pass that path into
   `generateWhatToSay`.
@@ -196,7 +196,7 @@ Tests to add:
 ### Step 3 — Add a top-level "Use current screen" button (P0; ~1 day)
 
 Files to add / edit:
-- `src/components/NativelyInterface.tsx` — new pill in the action row that
+- `src/components/AnswerFlowInterface.tsx` — new pill in the action row that
   triggers `takeScreenshot` → wait for path → `generateWhatToSay(undefined, [path])`.
   Update the screen-context chip to show "Looking at screen…" during the
   in-flight period.
@@ -229,7 +229,7 @@ Files to edit:
   rather than silently dropping the image.
 - `electron/LLMHelper.ts:2160-2190` — same for `generateWithGroqMultimodal`
   if the user-selected Groq model is not Scout.
-- `src/components/NativelyInterface.tsx` — render the
+- `src/components/AnswerFlowInterface.tsx` — render the
   `VisionUnsupportedError` as a non-blocking banner: "Active model doesn't
   see images. Switch to Gemini / GPT-4o / Claude?"
 
@@ -254,7 +254,7 @@ Files to edit:
 
 Files to add:
 - `electron/llm/__tests__/ProviderImagePayload.test.mjs` — for each of
-  Gemini / OpenAI / Claude / Groq / Ollama / Natively / custom cURL, build
+  Gemini / OpenAI / Claude / Groq / Ollama / AnswerFlow / custom cURL, build
   a mock fetch / SDK and assert the body shape produced when given a
   fixture image. Snapshots are fine, but lock in the wire format.
 
@@ -263,7 +263,7 @@ Files to add:
 - Wire `assertOutboundScopes('custom', ...)` into `chatWithCurl`.
 - Add `escapePromptInjection` to `buildScreenContextBlock`.
 - Apply Sharp resize universally before sending to any cloud provider, not
-  just Natively.
+  just AnswerFlow.
 - Clean stale screenshot files from `userData/screenshots/` on startup
   (older than 7 days).
 
@@ -271,24 +271,24 @@ Files to add:
 
 ## Final verdict
 
-1. **Is Natively currently doing OCR?**
+1. **Is AnswerFlow currently doing OCR?**
    **Yes** — real Tesseract.js, with a perceptual-hash cache. But the
    pipeline is only invoked from one IPC handler (`generate-what-to-say`),
    and on macOS the path is silently blocked by the `validateImagePath` bug
    whenever the renderer supplies `imagePaths` — which is the only way the
    UI ever calls it.
 
-2. **Is Natively currently using vision LLMs for OCR?**
+2. **Is AnswerFlow currently using vision LLMs for OCR?**
    **No.** Vision LLMs receive the raw image *alongside* the Tesseract OCR
    text (for "What should I say") or alone (for Code Hint / Brainstorm).
    No code path treats a vision LLM as the OCR engine.
 
-3. **Is Natively sending screenshots directly to LLMs?**
+3. **Is AnswerFlow sending screenshots directly to LLMs?**
    **Yes.** When the multimodal path runs, the raw PNG bytes go to Gemini /
-   OpenAI / Claude / Groq Scout / Ollama / cURL (resized for Natively
+   OpenAI / Claude / Groq Scout / Ollama / cURL (resized for AnswerFlow
    only). The OCR text rides alongside in the prompt, not as a substitute.
 
-4. **Is Natively screen analysis Cluely-level?**
+4. **Is AnswerFlow screen analysis legacy overlay-level?**
    **No.** Three gaps disqualify it:
    - The marquee "Answer from screen" chip is theatrical — it does not
      capture the screen.
@@ -296,14 +296,14 @@ Files to add:
    - The primary OCR path is broken on macOS for the renderer-supplied
      flow.
 
-5. **What is the fastest path to Cluely-level?**
+5. **What is the fastest path to legacy overlay-level?**
    Steps 1–3 of the recommended plan above. Roughly **two engineering
    days** of work to:
    1. Fix `validateImagePath` so the existing pipeline works on macOS.
    2. Make the dynamic-action chip take a screenshot before answering.
    3. Surface a top-level "Use current screen" button.
    With those three changes the existing Tesseract + multimodal stack
-   becomes a Cluely-equivalent surface. Everything past Step 3 deepens the
+   becomes a legacy overlay-equivalent surface. Everything past Step 3 deepens the
    feature (structured context, provider transparency, E2E confidence) but
    is not required for parity.
 
@@ -325,8 +325,8 @@ node --test \
 
 node -e "
 const { validateImagePath } = require('./dist-electron/electron/utils/curlUtils.js');
-const userData = '/Users/evin/Library/Application Support/Natively';
-console.log(validateImagePath('/Users/evin/Library/Application Support/Natively/screenshots/abc.png', userData));
+const userData = '/Users/evin/Library/Application Support/AnswerFlow';
+console.log(validateImagePath('/Users/evin/Library/Application Support/AnswerFlow/screenshots/abc.png', userData));
 "
 # { isValid: false, reason: 'Paths outside app directory are not allowed' }
 ```

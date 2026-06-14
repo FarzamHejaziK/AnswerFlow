@@ -1,4 +1,4 @@
-# Natively Roadmap
+# AnswerFlow Roadmap
 
 ## Vision
 
@@ -43,7 +43,7 @@ Create an AI-powered system design generation tool that produces visual diagrams
 **Status:** Planned  
 **Priority:** Medium
 
-Allow users to select AI personas that specialize in different professional contexts, changing how Natively analyzes and responds to meeting content.
+Allow users to select AI personas that specialize in different professional contexts, changing how AnswerFlow analyzes and responds to meeting content.
 
 **Predefined Personas:**
 
@@ -71,7 +71,7 @@ Allow users to select AI personas that specialize in different professional cont
 
 ---
 
-### 3. Natively Token & Pro Access
+### 3. AnswerFlow Token & Pro Access
 
 **Status:** Planned  
 **Priority:** Medium-High
@@ -80,7 +80,7 @@ Implement a token-based rewards system that provides free premium access to comm
 
 **Token Benefits:**
 
-- **1 Month Free Pro**: Upon acquiring Natively token
+- **1 Month Free Pro**: Upon acquiring AnswerFlow token
 - **Continuous Pro Access**: As long as token is held
 - **Early Feature Access**: Beta features for token holders
 - **Governance Rights**: Vote on feature priorities (future consideration)

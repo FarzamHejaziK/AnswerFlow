@@ -17,7 +17,7 @@ In CI the suite uses `synthetic_fallback` content unless `RUN_INTERNET_FIXTURE_C
 | File | Type | Source | Sentinel facts | Retrieval queries | Answer must include | Answer must NOT include |
 |---|---|---|---|---|---|---|
 | `general_meeting_agenda.md` | md | synthetic_fallback | "Investor sync set for May 22 with Hyperion Partners" | "when is the investor sync" | the May 22 date | "next Tuesday" if not provided |
-| `general_metrics_sheet.csv` | csv | synthetic_fallback | "Q1 ARR run-rate $480k for Natively pilot" | "what is the Q1 ARR" | $480k figure | invented MRR numbers |
+| `general_metrics_sheet.csv` | csv | synthetic_fallback | "Q1 ARR run-rate $480k for AnswerFlow pilot" | "what is the Q1 ARR" | $480k figure | invented MRR numbers |
 | `general_roadmap.json` | json | synthetic_fallback | "Q2 priority: multi-modal copilot beta" | "what is the Q2 priority" | multi-modal copilot beta | unrelated roadmap items |
 | `general_onboarding_checklist.txt` | txt | synthetic_fallback | "Step 4 requires audio device approval" | "how do I configure audio" | step 4 audio approval | OS-specific steps not in file |
 | `general_project_brief.html` | html-as-text | synthetic_fallback | "Project codename: Halcyon" | "what is the project codename" | Halcyon | other codenames |
@@ -27,7 +27,7 @@ In CI the suite uses `synthetic_fallback` content unless `RUN_INTERNET_FIXTURE_C
 | File | Type | Source | Sentinel facts | Retrieval queries | Answer must include | Answer must NOT include |
 |---|---|---|---|---|---|---|
 | `sales_pricing_policy.json` | json | synthetic_fallback | "Acme enterprise discount floor is 17 percent" | "what discount can we offer Acme" | 17 percent floor | discounts below 17% |
-| `sales_competitor_battlecard.md` | md | synthetic_fallback | "Cluely lacks per-mode reference files" | "how do we compare to Cluely" | per-mode reference file advantage | fabricated Cluely features |
+| `sales_competitor_battlecard.md` | md | synthetic_fallback | "legacy overlay lacks per-mode reference files" | "how do we compare to legacy overlay" | per-mode reference file advantage | fabricated legacy overlay features |
 | `sales_security_faq.html` | html-as-text | synthetic_fallback | "API keys stored via Electron safeStorage" | "where are API keys stored" | safeStorage | SOC2 unless explicitly listed |
 | `sales_playbook.txt` | txt | synthetic_fallback | "Buying signal: ask about annual seats" | "what's the next step after buying signal" | annual seat conversation | invented case studies |
 | `sales_pipeline_report.csv` | csv | synthetic_fallback | "Enterprise pilot conversion 28% in Q1" | "how was enterprise pilot conversion" | 28% Q1 enterprise conversion | invented customer logos |
@@ -56,7 +56,7 @@ In CI the suite uses `synthetic_fallback` content unless `RUN_INTERNET_FIXTURE_C
 
 | File | Type | Source | Sentinel facts | Retrieval queries | Answer must include | Answer must NOT include |
 |---|---|---|---|---|---|---|
-| `lfw_resume.txt` | txt | synthetic_fallback | "Built PriceX, a price-comparison website; scaled Natively to 10k users" | "tell me about a project you scaled" | PriceX or Natively scale | invented FAANG roles |
+| `lfw_resume.txt` | txt | synthetic_fallback | "Built PriceX, a price-comparison website; scaled AnswerFlow to 10k users" | "tell me about a project you scaled" | PriceX or AnswerFlow scale | invented FAANG roles |
 | `lfw_jd.md` | md | synthetic_fallback | "Role: AI Product Engineer at Helio Labs, hybrid SF" | "tell me about the role you're applying for" | AI Product Engineer at Helio Labs | invented job titles |
 | `lfw_star_stories.json` | json | synthetic_fallback | "Conflict story: chargeback escalation with payments vendor" | "tell me about a conflict you resolved" | chargeback escalation | invented conflicts |
 | `lfw_negotiation_context.xml` | xml-as-text | synthetic_fallback | "Target base $185k; BATNA competing offer at $180k" | "what should I counter with" | $185k target | offers below BATNA |

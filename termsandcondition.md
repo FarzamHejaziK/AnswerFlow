@@ -2,11 +2,11 @@
 
 _Last updated: April 25th 2026_
 
-These Terms &amp; Conditions ("**Terms**") govern your use of **Natively** — including the Natively desktop application, the **Natively Pro** licensed features, and the **Natively API** managed service (together, the "**Service**").
+These Terms &amp; Conditions ("**Terms**") govern your use of **AnswerFlow** — including the AnswerFlow desktop application, the **AnswerFlow Pro** licensed features, and the **AnswerFlow API** managed service (together, the "**Service**").
 
-By installing the app, clicking "Continue" on the startup screen, activating a Pro license, saving a Natively API key, or otherwise using the Service, you **agree to these Terms** and to the [Refund Policy](https://natively.software/refundpolicy) and [Privacy Policy](https://natively.software/privacy), each of which is incorporated by reference. If you don't agree to all of them, please don't use the Service.
+By installing the app, clicking "Continue" on the startup screen, activating a Pro license, saving a AnswerFlow API key, or otherwise using the Service, you **agree to these Terms** and to the [Refund Policy](https://github.com/FarzamHejaziK/AnswerFlow/refundpolicy) and [Privacy Policy](https://github.com/FarzamHejaziK/AnswerFlow/privacy), each of which is incorporated by reference. If you don't agree to all of them, please don't use the Service.
 
-The Service is built and operated by a single developer ("**Natively**", "**we**", "**us**"). We've tried to write these Terms in plain English. If anything is unclear, email **natively.contact@gmail.com**. We aim to reply within **24–72 hours on weekdays**. We may not respond on weekends or Indian public holidays.
+The Service is built and operated by a single developer ("**AnswerFlow**", "**we**", "**us**"). We've tried to write these Terms in plain English. If anything is unclear, email **answerflow.contact@gmail.com**. We aim to reply within **24–72 hours on weekdays**. We may not respond on weekends or Indian public holidays.
 
 > **Please read sections 11 (AI outputs), 12 (honest feedback vs. defamation), 14 (disclaimers), 16 (limitation of liability), and 20 (governing law &amp; dispute resolution) carefully — they limit our liability, restrict the kind of statements you can make about us, and require disputes to be resolved in a specific way.**
 
@@ -14,20 +14,20 @@ The Service is built and operated by a single developer ("**Natively**", "**we**
 
 ## 1. About the Service
 
-### 1.1 What Natively is
+### 1.1 What AnswerFlow is
 
-Natively is a desktop assistant that captures audio and screen content on your device, processes it through AI models, and presents helpful responses in real time. The app integrates a wide range of third-party services — AI providers, speech-to-text engines, search APIs, payment processors, and OS-level audio &amp; screen-capture frameworks — to deliver these features.
+AnswerFlow is a desktop assistant that captures audio and screen content on your device, processes it through AI models, and presents helpful responses in real time. The app integrates a wide range of third-party services — AI providers, speech-to-text engines, search APIs, payment processors, and OS-level audio &amp; screen-capture frameworks — to deliver these features.
 
 ### 1.2 The two paid products
 
-- **Natively Pro** — a per-user license that unlocks premium features inside the desktop app (such as Profile Engine, Resume Intelligence, Context Intelligence, Negotiation Coaching, JD Intelligence, and Company Research). Sold as a one-time purchase or a subscription, depending on the plan.
-- **Natively API** — a managed service that provides AI, speech-to-text, and search quotas through a single Natively-issued API key. Billed as a recurring subscription.
+- **AnswerFlow Pro** — a per-user license that unlocks premium features inside the desktop app (such as Profile Engine, Resume Intelligence, Context Intelligence, Negotiation Coaching, JD Intelligence, and Company Research). Sold as a one-time purchase or a subscription, depending on the plan.
+- **AnswerFlow API** — a managed service that provides AI, speech-to-text, and search quotas through a single AnswerFlow-issued API key. Billed as a recurring subscription.
 
 You may use the desktop app with your own provider keys (BYOK) without buying either of the paid products.
 
 ### 1.3 Heads-up on reliability
 
-Because Natively integrates many third-party services, the surface area is wider than a typical closed-source product, and once in a while something may not behave exactly as expected. We treat reports as a priority and ship fixes regularly, often in the next update. **Please report bugs at `natively.contact@gmail.com` rather than opening a payment dispute or publicly characterising a bug as misconduct** — see section 12 (honest feedback vs. defamation) and the [Refund Policy](https://natively.software/refundpolicy) for more.
+Because AnswerFlow integrates many third-party services, the surface area is wider than a typical closed-source product, and once in a while something may not behave exactly as expected. We treat reports as a priority and ship fixes regularly, often in the next update. **Please report bugs at `answerflow.contact@gmail.com` rather than opening a payment dispute or publicly characterising a bug as misconduct** — see section 12 (honest feedback vs. defamation) and the [Refund Policy](https://github.com/FarzamHejaziK/AnswerFlow/refundpolicy) for more.
 
 ### 1.4 Beta &amp; preview features
 
@@ -46,7 +46,7 @@ Marketing materials, roadmaps, demo videos, social-media posts, blog content, sc
 We hope this never happens, but you deserve to know what would. If we decide to **discontinue** the Service:
 
 - We'll give at least **30 days' advance notice** by in-app notice and/or email to your account address before access is turned off.
-- For users on **active paid subscriptions** (Pro Yearly, Natively API monthly), we'll either continue access through the end of your current paid term, **or** issue a pro-rata refund for the unused remainder, at our choice.
+- For users on **active paid subscriptions** (Pro Yearly, AnswerFlow API monthly), we'll either continue access through the end of your current paid term, **or** issue a pro-rata refund for the unused remainder, at our choice.
 - For users who bought a **lifetime / one-time Pro license**, we'll provide reasonable continued access where technically feasible (for example, by releasing a final build with the license-server check disabled, or by issuing a perpetual offline-validatable license file). Where that isn't feasible, we may offer a partial credit at our discretion.
 - After sunset, sections of these Terms that by their nature should survive (data, IP, disclaimers, liability, indemnity, governing law) will continue to apply.
 
@@ -58,7 +58,7 @@ This section is not a guarantee of indefinite operation; it sets out what we'd d
 
 ### 2.1 You must be old enough to enter into a contract
 
-You must be at least the age required to form a binding contract where you live, and in any case **at least 18 years old** to purchase Natively Pro or a Natively API subscription. Use of the Service by minors is not permitted.
+You must be at least the age required to form a binding contract where you live, and in any case **at least 18 years old** to purchase AnswerFlow Pro or a AnswerFlow API subscription. Use of the Service by minors is not permitted.
 
 If you're using the Service on behalf of a company or other organisation, you confirm you have authority to bind that organisation to these Terms.
 
@@ -79,16 +79,16 @@ You represent that you are not such a person and will not use the Service in vio
 
 ---
 
-## 3. Natively Pro — license
+## 3. AnswerFlow Pro — license
 
 ### 3.1 What we're granting you
 
-When you purchase a Pro license, we grant you a **limited, non-exclusive, non-transferable, non-sublicensable, revocable** licence to install and use the Pro features of the Natively desktop application:
+When you purchase a Pro license, we grant you a **limited, non-exclusive, non-transferable, non-sublicensable, revocable** licence to install and use the Pro features of the AnswerFlow desktop application:
 
 - For your **personal, single-user** use; and
 - On a small, reasonable number of devices that **you personally own or control**.
 
-All rights not expressly granted to you are reserved by Natively.
+All rights not expressly granted to you are reserved by AnswerFlow.
 
 ### 3.2 What you may not do with the license
 
@@ -102,7 +102,7 @@ You may not:
 
 ### 3.3 Moving devices
 
-If you're moving to a new computer, deactivate the license on the old one in **Settings → Natively Pro** before activating it on the new one. Within the device limit, this is fully supported and unlimited.
+If you're moving to a new computer, deactivate the license on the old one in **Settings → AnswerFlow Pro** before activating it on the new one. Within the device limit, this is fully supported and unlimited.
 
 ### 3.4 We may revoke a license that's clearly abused
 
@@ -112,25 +112,25 @@ If a license is being shared, resold, or used outside the limits in section 3.2,
 
 You **own the outputs** you generate using the Service (resume drafts, prepared answers, generated text, exported notes, etc.), subject to: (a) the terms of the underlying AI provider that produced the output (their terms cascade through us to you); (b) any third-party rights in the inputs you provided (e.g., copyrighted source material); and (c) the rest of these Terms.
 
-Natively does not claim any ownership of your outputs, does not use your outputs to train any model, and does not sell them.
+AnswerFlow does not claim any ownership of your outputs, does not use your outputs to train any model, and does not sell them.
 
 ### 3.6 Bulk, team, or educational licensing
 
-Bulk, team, multi-seat, classroom, bootcamp, or institutional licensing is not provided through the standard checkout. If you'd like to license Pro for more than one person — for example, for a small team, a hiring agency, a coaching practice, a bootcamp cohort, or a university course — please email **natively.contact@gmail.com** and we'll set up a separate written arrangement. Standard single-user licenses purchased through the website may not be deployed to multiple individuals.
+Bulk, team, multi-seat, classroom, bootcamp, or institutional licensing is not provided through the standard checkout. If you'd like to license Pro for more than one person — for example, for a small team, a hiring agency, a coaching practice, a bootcamp cohort, or a university course — please email **answerflow.contact@gmail.com** and we'll set up a separate written arrangement. Standard single-user licenses purchased through the website may not be deployed to multiple individuals.
 
 ---
 
-## 4. Natively API — service
+## 4. AnswerFlow API — service
 
 ### 4.1 What you're paying for
 
-A Natively API subscription gives you a monthly quota across our integrated AI, speech-to-text, and search providers, accessed through a single Natively-issued API key. Quotas, plans, and prices are listed in-app and on our website.
+A AnswerFlow API subscription gives you a monthly quota across our integrated AI, speech-to-text, and search providers, accessed through a single AnswerFlow-issued API key. Quotas, plans, and prices are listed in-app and on our website.
 
 ### 4.2 Acceptable use
 
 You agree not to:
 
-- **Resell, repackage, or proxy** the Natively API to third parties without a written agreement with us.
+- **Resell, repackage, or proxy** the AnswerFlow API to third parties without a written agreement with us.
 - **Use the API to build a directly competing product**, or to scrape our outputs at scale to train another model.
 - Use the API to **send unlawful, harmful, or abusive content**, or content that violates the policies of our underlying providers.
 - **Share your API key** with others, or use a single key across multiple end-users without our consent.
@@ -141,7 +141,7 @@ Quotas reset on the cadence shown in your plan. Burst usage that exceeds plan li
 
 ### 4.4 Provider availability
 
-The Natively API is a thin layer over multiple third-party providers. If a provider has an outage or changes its terms in a way that affects what we can offer, we'll do our best to route around it, but we **do not guarantee** that any specific underlying model, vendor, latency, accuracy, or feature will always be available. Material changes will be communicated.
+The AnswerFlow API is a thin layer over multiple third-party providers. If a provider has an outage or changes its terms in a way that affects what we can offer, we'll do our best to route around it, but we **do not guarantee** that any specific underlying model, vendor, latency, accuracy, or feature will always be available. Material changes will be communicated.
 
 ### 4.5 Mid-cycle plan changes
 
@@ -190,7 +190,7 @@ We may **screen, delay, hold, or decline** any order that our systems or process
 
 ### 6.6 Purchases through third-party app marketplaces
 
-If you purchased Natively or a Natively subscription through a **third-party marketplace** (for example, Apple's App Store / Mac App Store, the Microsoft Store, Google Play, or Setapp), that store's terms apply to the **purchase, billing, renewal, and refund** of that order. We don't have visibility into those orders the way we do into orders made directly through our checkout, and we cannot issue refunds for a charge that the store collected. Refund requests for those purchases must go through the relevant store's flow — see the [Refund Policy](https://natively.software/refundpolicy) for direct links.
+If you purchased AnswerFlow or a AnswerFlow subscription through a **third-party marketplace** (for example, Apple's App Store / Mac App Store, the Microsoft Store, Google Play, or Setapp), that store's terms apply to the **purchase, billing, renewal, and refund** of that order. We don't have visibility into those orders the way we do into orders made directly through our checkout, and we cannot issue refunds for a charge that the store collected. Refund requests for those purchases must go through the relevant store's flow — see the [Refund Policy](https://github.com/FarzamHejaziK/AnswerFlow/refundpolicy) for direct links.
 
 ### 6.7 Right to compete
 
@@ -200,12 +200,12 @@ These Terms do not prevent us from developing or releasing similar products, ser
 
 ## 7. Refunds
 
-Refunds are governed by our **[Refund Policy](https://natively.software/refundpolicy)**, which forms part of these Terms by reference.
+Refunds are governed by our **[Refund Policy](https://github.com/FarzamHejaziK/AnswerFlow/refundpolicy)**, which forms part of these Terms by reference.
 
 In short:
 
-- **Natively Pro** is generally non-refundable, with a 1-hour pre-activation grace window for honest mistakes (case-by-case).
-- **Natively API** is refundable within 24 hours of the **first purchase only** (renewals are not refundable), and one refund per customer.
+- **AnswerFlow Pro** is generally non-refundable, with a 1-hour pre-activation grace window for honest mistakes (case-by-case).
+- **AnswerFlow API** is refundable within 24 hours of the **first purchase only** (renewals are not refundable), and one refund per customer.
 - **All voucher / promo-code / limited-time-offer purchases are final sale** for both products.
 - **App-store purchases** are governed by the store's refund flow, not ours.
 
@@ -217,7 +217,7 @@ Please read the full Refund Policy before purchasing.
 
 ### 8.1 Local-first
 
-Natively is local-first wherever possible. Audio capture, screen capture, and most processing happen on your device. Data is sent to a third-party provider (or to the Natively API) only to the extent necessary to fulfil the feature you're using. Meeting history, transcripts, and notes are stored in a local SQLite database; configuration is stored locally via `electron-store`; **none of this content is sent to a Natively-operated server.**
+AnswerFlow is local-first wherever possible. Audio capture, screen capture, and most processing happen on your device. Data is sent to a third-party provider (or to the AnswerFlow API) only to the extent necessary to fulfil the feature you're using. Meeting history, transcripts, and notes are stored in a local SQLite database; configuration is stored locally via `electron-store`; **none of this content is sent to a AnswerFlow-operated server.**
 
 ### 8.2 What we store on our side
 
@@ -225,19 +225,19 @@ For paid products we store the minimum needed to operate them — for example, y
 
 ### 8.3 Your content stays yours
 
-You retain all rights to the content you create and the data you bring into Natively (resumes, notes, custom context files, etc.). We don't use your content to train models, and we don't sell it.
+You retain all rights to the content you create and the data you bring into AnswerFlow (resumes, notes, custom context files, etc.). We don't use your content to train models, and we don't sell it.
 
 ### 8.4 Privacy details
 
-Full details — including which third-party providers your data may flow through depending on the features you use — live in the Privacy Policy at **natively.software/privacy**, which is incorporated into these Terms by reference.
+Full details — including which third-party providers your data may flow through depending on the features you use — live in the Privacy Policy at **github.com/FarzamHejaziK/AnswerFlow/privacy**, which is incorporated into these Terms by reference.
 
 ### 8.5 Backup is your responsibility
 
-Because Natively is local-first, **backing up your local Natively data (database, transcripts, notes, settings, exported files, custom context) is solely your responsibility**. We have no copy of your local data and cannot restore it if your device fails, your operating system reinstalls, you delete a file, your local database becomes corrupted, or you uninstall the application. We accept no liability for any loss of local data.
+Because AnswerFlow is local-first, **backing up your local AnswerFlow data (database, transcripts, notes, settings, exported files, custom context) is solely your responsibility**. We have no copy of your local data and cannot restore it if your device fails, your operating system reinstalls, you delete a file, your local database becomes corrupted, or you uninstall the application. We accept no liability for any loss of local data.
 
 ### 8.6 Security &amp; vulnerability reporting
 
-Please do **not** report security vulnerabilities through public GitHub issues or social media. Send security reports to **natively.contact@gmail.com** following the disclosure process described in our [Security Policy](https://github.com/evinjohnn/natively-cluely-ai-assistant/blob/main/SECURITY.md). We acknowledge security reports within 72 hours and treat them as a priority.
+Please do **not** report security vulnerabilities through public GitHub issues or social media. Send security reports to **answerflow.contact@gmail.com** following the disclosure process described in our [Security Policy](https://github.com/FarzamHejaziK/AnswerFlow/blob/main/SECURITY.md). We acknowledge security reports within 72 hours and treat them as a priority.
 
 ### 8.7 Communications from us
 
@@ -268,23 +268,23 @@ We may suspend access for serious or repeated violations.
 
 ### 10.1 Recording, capture, and consent — your responsibility
 
-Natively captures audio and screen content from your device. **You are solely responsible for ensuring that your use of the Service complies with all applicable recording, wiretapping, surveillance, workplace-monitoring, and privacy laws** in every jurisdiction relevant to the call, conversation, meeting, screen, or other content you capture. Many jurisdictions (including a number of US states, the European Union, and the United Kingdom) require **all-party consent** before a conversation may be recorded; obtaining that consent is your obligation, not ours.
+AnswerFlow captures audio and screen content from your device. **You are solely responsible for ensuring that your use of the Service complies with all applicable recording, wiretapping, surveillance, workplace-monitoring, and privacy laws** in every jurisdiction relevant to the call, conversation, meeting, screen, or other content you capture. Many jurisdictions (including a number of US states, the European Union, and the United Kingdom) require **all-party consent** before a conversation may be recorded; obtaining that consent is your obligation, not ours.
 
 You also represent that your use of the Service does not violate the **terms or policies of any third-party platform** on which you use it (for example, a video-conferencing tool, an interview platform, an examination provider, or an employer's IT policy). Many platforms and employers prohibit AI assistance during calls, interviews, or assessments — compliance with their rules is on you.
 
-You agree to indemnify Natively against any claim arising from your failure to obtain the consents or comply with the laws and policies described in this section.
+You agree to indemnify AnswerFlow against any claim arising from your failure to obtain the consents or comply with the laws and policies described in this section.
 
 ### 10.2 No circumvention
 
 You may not modify, reverse-engineer, spoof, or interfere with any technical measure used to enforce these Terms — including the hardware-identifier mechanism that binds a Pro license to a device, license-server validation, rate limits, telemetry signals used to detect abuse, or the activation flow.
 
-### 10.3 No impersonation or misrepresentation of Natively
+### 10.3 No impersonation or misrepresentation of AnswerFlow
 
 You may not:
 
-- **Impersonate Natively or any of our employees, contractors, or partners**, including by setting up accounts, websites, social-media profiles, or email addresses designed to suggest an affiliation that does not exist.
-- **Falsely claim**, in any forum, that Natively has made statements, given advice, granted permissions, made commitments, or engaged in conduct that we have not actually made, given, granted, or engaged in.
-- **Modify, fabricate, or tamper with screenshots, transcripts, AI outputs, support emails, log files, or product UI** in a way that misrepresents what Natively did, said, or produced — and then publish, share, or rely on that fabricated content.
+- **Impersonate AnswerFlow or any of our employees, contractors, or partners**, including by setting up accounts, websites, social-media profiles, or email addresses designed to suggest an affiliation that does not exist.
+- **Falsely claim**, in any forum, that AnswerFlow has made statements, given advice, granted permissions, made commitments, or engaged in conduct that we have not actually made, given, granted, or engaged in.
+- **Modify, fabricate, or tamper with screenshots, transcripts, AI outputs, support emails, log files, or product UI** in a way that misrepresents what AnswerFlow did, said, or produced — and then publish, share, or rely on that fabricated content.
 
 ---
 
@@ -292,7 +292,7 @@ You may not:
 
 ### 11.1 AI is fallible
 
-Natively presents responses generated by third-party AI models. Those models may produce outputs that are **inaccurate, incomplete, biased, outdated, fabricated ("hallucinated"), or inappropriate** for the context. AI outputs are provided **as a tool to assist you**, not as advice or a finished work product.
+AnswerFlow presents responses generated by third-party AI models. Those models may produce outputs that are **inaccurate, incomplete, biased, outdated, fabricated ("hallucinated"), or inappropriate** for the context. AI outputs are provided **as a tool to assist you**, not as advice or a finished work product.
 
 ### 11.2 You alone are responsible for what you do with the output
 
@@ -304,15 +304,15 @@ You are solely responsible for:
 
 ### 11.3 Not professional advice
 
-Natively is **not a substitute for professional advice**. Outputs related to legal, medical, mental-health, financial, tax, or any other regulated subject are not legal, medical, financial, tax, or other professional advice, and must not be relied on as such. Always consult a qualified professional for matters that require professional advice.
+AnswerFlow is **not a substitute for professional advice**. Outputs related to legal, medical, mental-health, financial, tax, or any other regulated subject are not legal, medical, financial, tax, or other professional advice, and must not be relied on as such. Always consult a qualified professional for matters that require professional advice.
 
 ### 11.4 Interview, examination, and assessment use
 
-Natively may be used in contexts where AI assistance is restricted or prohibited (for example, live interviews, certifications, examinations, regulated assessments). Many platforms, employers, schools, certifying bodies, and jurisdictions prohibit such use. **Use of the Service in those contexts is at your own risk.** Natively does not encourage or endorse use of the Service in any way that violates a platform's terms, an employer's policy, an academic-integrity rule, or applicable law, and we accept no responsibility for the consequences of such use, including loss of opportunity, employment, qualification, or reputation.
+AnswerFlow may be used in contexts where AI assistance is restricted or prohibited (for example, live interviews, certifications, examinations, regulated assessments). Many platforms, employers, schools, certifying bodies, and jurisdictions prohibit such use. **Use of the Service in those contexts is at your own risk.** AnswerFlow does not encourage or endorse use of the Service in any way that violates a platform's terms, an employer's policy, an academic-integrity rule, or applicable law, and we accept no responsibility for the consequences of such use, including loss of opportunity, employment, qualification, or reputation.
 
 ### 11.5 Consequential outcomes
 
-Without limiting section 16, Natively shall **not be liable** for any outcome, decision, loss, missed opportunity, or damage that results, in whole or in part, from your reliance on or use of any AI output produced through the Service.
+Without limiting section 16, AnswerFlow shall **not be liable** for any outcome, decision, loss, missed opportunity, or damage that results, in whole or in part, from your reliance on or use of any AI output produced through the Service.
 
 ### 11.6 Output ownership and prompt content
 
@@ -328,21 +328,21 @@ Subject to section 3.5, the underlying AI provider's terms, and any third-party 
 
 ### 12.1 Honest feedback is welcome and protected
 
-We welcome honest feedback, reviews, criticism, and bug reports — they make the Service better, and **nothing in these Terms restricts your right to share truthful opinions and accurate factual statements about Natively**, including unfavourable ones, in any forum.
+We welcome honest feedback, reviews, criticism, and bug reports — they make the Service better, and **nothing in these Terms restricts your right to share truthful opinions and accurate factual statements about AnswerFlow**, including unfavourable ones, in any forum.
 
 If a feature didn't work for you, an output disappointed you, support was slower than you'd hoped, or the app crashed — please feel free to say so publicly, post a review, file a GitHub issue, or write about it on social media. That's not what this section is about.
 
 ### 12.2 What this section does prohibit
 
-What is not protected, and what may give rise to legal action under the **defamation, libel, slander, trade-libel, "passing off", or related laws** of the applicable jurisdiction, is conduct that is **knowingly false** or made with **reckless disregard for the truth** and that causes — or is reasonably likely to cause — material harm to Natively's reputation, commercial interests, or the developer's personal reputation. Examples include (without limitation):
+What is not protected, and what may give rise to legal action under the **defamation, libel, slander, trade-libel, "passing off", or related laws** of the applicable jurisdiction, is conduct that is **knowingly false** or made with **reckless disregard for the truth** and that causes — or is reasonably likely to cause — material harm to AnswerFlow's reputation, commercial interests, or the developer's personal reputation. Examples include (without limitation):
 
-- Publicly attributing to Natively conduct, statements, features, data-handling practices, security incidents, scams, or harms that **did not occur** or that you have not made any reasonable effort to verify.
+- Publicly attributing to AnswerFlow conduct, statements, features, data-handling practices, security incidents, scams, or harms that **did not occur** or that you have not made any reasonable effort to verify.
 - Mischaracterising **a known bug, a feature limitation, an unfamiliarity with how the app works, or an honest mistake** on our part as deliberate misconduct, fraud, malware, spyware, or malicious intent, where you have no reasonable basis to do so.
-- Distributing **fabricated screenshots, log files, transcripts, support emails, AI outputs, or product UI** that you misrepresent as having come from the Service or from Natively.
-- Continuing to repeat statements about Natively in public after we have, in good faith and with evidence, **brought to your attention that they are false**, and you have no reasonable basis to continue.
+- Distributing **fabricated screenshots, log files, transcripts, support emails, AI outputs, or product UI** that you misrepresent as having come from the Service or from AnswerFlow.
+- Continuing to repeat statements about AnswerFlow in public after we have, in good faith and with evidence, **brought to your attention that they are false**, and you have no reasonable basis to continue.
 - Coordinated brigading, mass-reporting, or organised harassment campaigns against the Service or the developer based on knowingly false claims.
 
-**Important clarification:** A small bug, a confusing UI, a feature you couldn't figure out, or a result that disappointed you is not, on its own, evidence of misconduct on our part. We'd genuinely rather hear about it at `natively.contact@gmail.com` and fix it than read a public accusation that we acted in bad faith. Please give us that chance.
+**Important clarification:** A small bug, a confusing UI, a feature you couldn't figure out, or a result that disappointed you is not, on its own, evidence of misconduct on our part. We'd genuinely rather hear about it at `answerflow.contact@gmail.com` and fix it than read a public accusation that we acted in bad faith. Please give us that chance.
 
 ### 12.3 Remedies
 
@@ -350,7 +350,7 @@ Where conduct of the kind described in section 12.2 causes us reputational, comm
 
 ### 12.4 Takedown procedure
 
-If you believe content posted about Natively is false, please email **natively.contact@gmail.com** with a description of the content, where it is posted, and the basis on which you believe it is inaccurate. We will respond within 24–72 hours on weekdays.
+If you believe content posted about AnswerFlow is false, please email **answerflow.contact@gmail.com** with a description of the content, where it is posted, and the basis on which you believe it is inaccurate. We will respond within 24–72 hours on weekdays.
 
 ---
 
@@ -358,7 +358,7 @@ If you believe content posted about Natively is false, please email **natively.c
 
 ### 13.1 Our IP
 
-Natively, the Natively name and logos, the desktop application, the website, the Natively API, the documentation, and any related materials are owned by us or our licensors and are protected by copyright and other intellectual-property laws. Nothing in these Terms transfers ownership to you.
+AnswerFlow, the AnswerFlow name and logos, the desktop application, the website, the AnswerFlow API, the documentation, and any related materials are owned by us or our licensors and are protected by copyright and other intellectual-property laws. Nothing in these Terms transfers ownership to you.
 
 ### 13.2 Feedback
 
@@ -366,13 +366,13 @@ If you send us feedback, suggestions, or bug reports, you grant us a non-exclusi
 
 ### 13.3 Trademarks &amp; branding
 
-"**Natively**", the Natively logo, "**Natively Pro**", and "**Natively API**" are trademarks of the developer of Natively. You may not, without prior written permission:
+"**AnswerFlow**", the AnswerFlow logo, "**AnswerFlow Pro**", and "**AnswerFlow API**" are trademarks of the developer of AnswerFlow. You may not, without prior written permission:
 
-- Use the Natively name or logo in a way that suggests endorsement, affiliation, sponsorship, or partnership that does not exist;
-- Incorporate the Natively name or logo into a product name, service name, domain name, social-media handle, or company name;
+- Use the AnswerFlow name or logo in a way that suggests endorsement, affiliation, sponsorship, or partnership that does not exist;
+- Incorporate the AnswerFlow name or logo into a product name, service name, domain name, social-media handle, or company name;
 - Use the marks in advertising, marketing, or promotional materials for any product or service other than honest factual references (such as an honest review or a comparison post).
 
-Honest, non-misleading editorial and review uses (e.g., naming Natively in an article, video, or comparison) are fine and don't require permission.
+Honest, non-misleading editorial and review uses (e.g., naming AnswerFlow in an article, video, or comparison) are fine and don't require permission.
 
 ### 13.4 Open-source components
 
@@ -380,7 +380,7 @@ The desktop application incorporates open-source components, each licensed under
 
 ### 13.5 Reservation of rights
 
-All rights, title, and interest in and to the Service that are not expressly granted to you in these Terms are **reserved** by Natively. No implied licences are granted.
+All rights, title, and interest in and to the Service that are not expressly granted to you in these Terms are **reserved** by AnswerFlow. No implied licences are granted.
 
 ---
 
@@ -431,14 +431,14 @@ During such an event we will use reasonable efforts to restore the Service, but 
 To the maximum extent permitted by law:
 
 - We will **not be liable** for any **indirect, incidental, special, consequential, exemplary, or punitive damages**, or for **lost profits, lost revenue, lost data, lost savings, lost business, lost opportunity, lost goodwill, lost interview / examination / employment / contract outcomes, or reputational harm**, arising out of or related to the Service or these Terms, regardless of the legal theory and even if we have been advised of the possibility of such damages.
-- Our **total aggregate liability** for any and all claims arising out of or related to the Service or these Terms is limited to the **amount you actually paid to Natively for the product giving rise to the claim in the 12 months immediately preceding the event giving rise to the claim**, with a **hard ceiling of US$100** (one hundred US dollars). For users who have not paid Natively any amount, our aggregate liability is **zero**.
+- Our **total aggregate liability** for any and all claims arising out of or related to the Service or these Terms is limited to the **amount you actually paid to AnswerFlow for the product giving rise to the claim in the 12 months immediately preceding the event giving rise to the claim**, with a **hard ceiling of US$100** (one hundred US dollars). For users who have not paid AnswerFlow any amount, our aggregate liability is **zero**.
 - The limitations in this section apply to the **fullest extent permitted by law**, and survive termination of these Terms.
 
 ---
 
 ## 17. Indemnity
 
-You agree to defend, indemnify, and hold harmless Natively (and its officers, employees, contractors, and agents) from and against any and all claims, demands, losses, liabilities, damages, fines, penalties, costs, and expenses (including reasonable legal fees) arising out of or related to:
+You agree to defend, indemnify, and hold harmless AnswerFlow (and its officers, employees, contractors, and agents) from and against any and all claims, demands, losses, liabilities, damages, fines, penalties, costs, and expenses (including reasonable legal fees) arising out of or related to:
 
 - Your **breach** of these Terms or the Refund Policy;
 - Your **misuse** of the Service;
@@ -446,7 +446,7 @@ You agree to defend, indemnify, and hold harmless Natively (and its officers, em
 - Your failure to obtain **recording or capture consents** as required by section 10.1;
 - Your failure to comply with **platform terms, employer policies, or academic-integrity rules** as referenced in sections 10.1 and 11.4;
 - Any **decision or action** taken by you (or anyone acting on your behalf) on the basis of an AI output, including any consequences in interview, examination, assessment, employment, contractual, or regulatory contexts;
-- Any **defamatory or knowingly false statement** you make about Natively as described in section 12.
+- Any **defamatory or knowingly false statement** you make about AnswerFlow as described in section 12.
 
 ---
 
@@ -474,11 +474,11 @@ After termination, your right to use the Service ends. Your **local data** (tran
 
 ### 19.1 Notices to you
 
-We may give you legal notice by emailing the address associated with your Natively account or your most recent purchase, by posting a notice in-app, or by posting a notice on **natively.software**. Notice is deemed given on the date sent.
+We may give you legal notice by emailing the address associated with your AnswerFlow account or your most recent purchase, by posting a notice in-app, or by posting a notice on **github.com/FarzamHejaziK/AnswerFlow**. Notice is deemed given on the date sent.
 
 ### 19.2 Notices to us
 
-You must give us legal notice in writing by email to **natively.contact@gmail.com**, with a clear subject line indicating that the message is a legal notice. Notice is deemed given when we acknowledge receipt by reply. Email is the **exclusive** channel for valid legal notice — service through social media, GitHub issues, comments, third-party platforms, or any other channel does not constitute valid notice.
+You must give us legal notice in writing by email to **answerflow.contact@gmail.com**, with a clear subject line indicating that the message is a legal notice. Notice is deemed given when we acknowledge receipt by reply. Email is the **exclusive** channel for valid legal notice — service through social media, GitHub issues, comments, third-party platforms, or any other channel does not constitute valid notice.
 
 ---
 
@@ -490,7 +490,7 @@ These Terms, the Refund Policy, the Privacy Policy, and any dispute, claim, or c
 
 ### 20.2 Step 1 — try to resolve it directly
 
-Before commencing any formal dispute-resolution process, you agree to **first contact us at `natively.contact@gmail.com`** with a written description of the dispute and a proposed resolution, and to allow us **at least thirty (30) days** to respond and attempt to resolve the dispute in good faith. We agree to do the same if we have a dispute with you.
+Before commencing any formal dispute-resolution process, you agree to **first contact us at `answerflow.contact@gmail.com`** with a written description of the dispute and a proposed resolution, and to allow us **at least thirty (30) days** to respond and attempt to resolve the dispute in good faith. We agree to do the same if we have a dispute with you.
 
 ### 20.3 Step 2 — exclusive forum / arbitration
 
@@ -501,7 +501,7 @@ If the dispute is not resolved under section 20.2:
 
 ### 20.4 No class actions
 
-You and Natively each agree that any dispute will be brought in **your or our individual capacity only**, and **not** as a plaintiff or class member in any purported class, collective, consolidated, or representative proceeding. The arbitrator (or court, where applicable) has no authority to consolidate claims or to preside over any form of class or representative proceeding.
+You and AnswerFlow each agree that any dispute will be brought in **your or our individual capacity only**, and **not** as a plaintiff or class member in any purported class, collective, consolidated, or representative proceeding. The arbitrator (or court, where applicable) has no authority to consolidate claims or to preside over any form of class or representative proceeding.
 
 ### 20.5 Equitable relief carve-out
 
@@ -521,7 +521,7 @@ If for any reason a court of competent jurisdiction holds that the binding arbit
 
 ### 21.1 Entire agreement
 
-These Terms, together with the **Refund Policy** and the **Privacy Policy**, constitute the **entire agreement** between you and Natively concerning the Service, and supersede all prior or contemporaneous communications, proposals, marketing statements, or agreements (oral or written) on the same subject. No oral statement, demo, sales pitch, or social-media post creates any binding obligation on Natively beyond what is set out in these documents.
+These Terms, together with the **Refund Policy** and the **Privacy Policy**, constitute the **entire agreement** between you and AnswerFlow concerning the Service, and supersede all prior or contemporaneous communications, proposals, marketing statements, or agreements (oral or written) on the same subject. No oral statement, demo, sales pitch, or social-media post creates any binding obligation on AnswerFlow beyond what is set out in these documents.
 
 ### 21.2 Severability
 
@@ -529,7 +529,7 @@ If any provision of these Terms is held to be invalid, illegal, or unenforceable
 
 ### 21.3 No waiver
 
-A failure or delay by Natively to enforce any provision of these Terms is **not a waiver** of that provision or of any other provision, and does not prevent us from enforcing it later.
+A failure or delay by AnswerFlow to enforce any provision of these Terms is **not a waiver** of that provision or of any other provision, and does not prevent us from enforcing it later.
 
 ### 21.4 Assignment
 
@@ -537,7 +537,7 @@ You may not assign or transfer these Terms or any of your rights under them with
 
 ### 21.5 No agency
 
-Nothing in these Terms creates any partnership, joint venture, agency, employment, or fiduciary relationship between you and Natively.
+Nothing in these Terms creates any partnership, joint venture, agency, employment, or fiduciary relationship between you and AnswerFlow.
 
 ### 21.6 Headings
 
@@ -553,7 +553,7 @@ These Terms are written in English. The English version is the **binding version
 
 ### 21.9 Electronic acceptance
 
-You agree that your acceptance of these Terms — including by clicking "Continue" on the startup screen, activating a Pro license, saving a Natively API key, or otherwise using the Service — has the **same legal effect as a handwritten signature** and is enforceable accordingly.
+You agree that your acceptance of these Terms — including by clicking "Continue" on the startup screen, activating a Pro license, saving a AnswerFlow API key, or otherwise using the Service — has the **same legal effect as a handwritten signature** and is enforceable accordingly.
 
 ---
 
@@ -567,10 +567,10 @@ We may update the Service and these Terms over time as the product evolves. Mate
 
 For anything to do with these Terms, refunds, billing, abuse reports, defamation concerns, security disclosures, legal notices, or general questions:
 
-**Email:** natively.contact@gmail.com
+**Email:** answerflow.contact@gmail.com
 
 We aim to reply within **24–72 hours on weekdays**. We may not respond on weekends or Indian public holidays — if you write in over a weekend, please expect a reply early the following week.
 
 ---
 
-Thanks for using Natively. We're a small team, we read every email, and we're genuinely trying to build something useful for you.
+Thanks for using AnswerFlow. We're a small team, we read every email, and we're genuinely trying to build something useful for you.

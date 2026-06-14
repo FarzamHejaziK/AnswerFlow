@@ -66,7 +66,7 @@ Evidence:
   (`WhatToAnswerLLM.ts:163`).
 - `LLMHelper.streamChat` dispatches to provider-specific multimodal builders
   (e.g. `streamWithOpenaiMultimodal` `LLMHelper.ts:2519`,
-  `streamWithClaudeMultimodal` `:2526`, `streamWithNatively` `:2513`,
+  `streamWithClaudeMultimodal` `:2526`, `streamWithAnswerFlow` `:2513`,
   `callOllama` with `imagePaths?.[0]` `:2484`).
 - For `runCodeHint` and `runBrainstorm`, `imagePaths` are forwarded the same
   way **but without** a `screenContext` — so it is image-only, not

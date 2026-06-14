@@ -2,7 +2,7 @@
 
 ## Update Channels
 
-Natively supports two update channels:
+AnswerFlow supports two update channels:
 
 | Channel | File | Description |
 |---------|------|-------------|
@@ -44,11 +44,11 @@ npm run dist
 
 # 3. Upload to GitHub Release
 # - Tag: v2.0.8-beta.1
-# - Title: Natively v2.0.8-beta.1
+# - Title: AnswerFlow v2.0.8-beta.1
 # - Mark as "Pre-release"
 # - Upload files from release/:
-#   - Natively Setup 2.0.8-beta.1.exe
-#   - Natively.2.0.8-beta.1.exe
+#   - AnswerFlow Setup 2.0.8-beta.1.exe
+#   - AnswerFlow.2.0.8-beta.1.exe
 #   - beta-latest.yml  <-- important!
 #   - *.blockmap files
 ```
@@ -64,10 +64,10 @@ npm run dist
 
 # 3. Upload to GitHub Release
 # - Tag: v2.0.8
-# - Title: Natively v2.0.8
+# - Title: AnswerFlow v2.0.8
 # - Upload files from release/:
-#   - Natively Setup 2.0.8.exe
-#   - Natively.2.0.8.exe
+#   - AnswerFlow Setup 2.0.8.exe
+#   - AnswerFlow.2.0.8.exe
 #   - latest.yml  <-- important!
 #   - *.blockmap files
 ```

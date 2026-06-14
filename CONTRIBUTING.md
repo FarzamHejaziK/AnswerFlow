@@ -1,114 +1,87 @@
-# Contributing to Natively
+# Contributing to AnswerFlow
 
-First off, thank you for considering contributing to Natively! It's people like you that make Natively such a great tool.
+Thank you for helping improve AnswerFlow. This fork is focused on a clean interview-assistant experience: prep chat, reusable document context, live transcript, AI answer generation, and post-interview follow-up chat.
 
-Following these guidelines helps to communicate that you respect the time of the developers managing and developing this open source project. In return, they should reciprocate that respect in addressing your issue, assessing changes, and helping you finalize your pull requests.
+## Before You Start
 
-## Table of Contents
+- Open issues and pull requests against `https://github.com/FarzamHejaziK/AnswerFlow`.
+- Keep changes focused and easy to review.
+- Preserve AGPL-3.0 license notices.
+- Do not commit API keys, logs with secrets, generated local databases, or build artifacts.
 
-- [Code of Conduct](#code-of-conduct)
-- [How Can I Contribute?](#how-can-i-contribute)
-  - [Reporting Bugs](#reporting-bugs)
-  - [Suggesting Enhancements](#suggesting-enhancements)
-  - [Pull Requests](#pull-requests)
-- [Development Workflow](#development-workflow)
-  - [Prerequisites](#prerequisites)
-  - [Local Development](#local-development)
-  - [Architecture Overview](#architecture-overview)
-- [Styleguides](#styleguides)
-  - [Git Commit Messages](#git-commit-messages)
+## Local Development
 
-## Code of Conduct
+Recommended stack:
 
-This project and everyone participating in it is governed by the [Natively Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to evinjohnn@gmail.com.
+- Node.js 20+ or 22 LTS
+- npm
+- Rust and Cargo
+- Xcode Command Line Tools on macOS
 
-## How Can I Contribute?
+Setup:
 
-### Reporting Bugs
+```bash
+npm install
+npm run build:native
+```
 
-Before creating bug reports, please check the issue tracker as you might find out that you don't need to create one. When you are creating a bug report, please include as many details as possible:
+Run:
 
-- Use a clear and descriptive title for the issue to identify the problem.
-- Describe the exact steps which reproduce the problem in as many details as possible.
-- Provide specific examples to demonstrate the steps.
-- Describe the behavior you observed after following the steps and point out what exactly is the problem with that behavior.
-- Explain which behavior you expected to see instead and why.
-- Include screenshots and animated GIFs which show you following the described steps and clearly demonstrate the problem.
-- Specify your OS version.
-- Specify your Node/Npm versions.
+```bash
+npm start
+```
 
-### Suggesting Enhancements
+This starts Vite on `http://localhost:5180` and launches Electron.
 
-Enhancement suggestions are tracked as GitHub issues. When you are creating an enhancement suggestion, please include:
+Fast verification:
 
-- Use a clear and descriptive title for the issue to identify the suggestion.
-- Provide a step-by-step description of the suggested enhancement in as many details as possible.
-- Provide specific examples to demonstrate the steps.
-- Describe the current behavior and explain which behavior you expected to see instead and why.
-- Explain why this enhancement would be useful to most Natively users.
+```bash
+npm run build:electron
+npx tsc --noEmit
+```
 
-### Pull Requests
+Run the full service test suite only when needed:
 
-- Fill in the required template
-- Do not include issue numbers in the PR title
-- Include screenshots and animated GIFs in your pull request whenever possible.
-- Follow the TypeScript and React styleguides.
-- Document new code based on the Documentation Styleguide.
-- End all files with a newline.
+```bash
+npm test
+```
 
-## Development Workflow
+## Product Expectations
 
-### Prerequisites
+When making user-facing changes, keep the current AnswerFlow workflow intact:
 
-- Node.js (v20+ recommended)
-- Git
-- Rust (required for native audio capture compilation)
+1. First-run setup collects provider keys and permissions.
+2. New Interview opens a prep page, not an active recording.
+3. Prep chat messages receive assistant responses.
+4. Uploaded documents are ingested locally into Markdown and can be reused.
+5. Attached documents are visible in message history and clear from the composer after send.
+6. Live interview transcript clearly separates Interviewer, Me, and AI response.
+7. Interview finished appears as a scrollable boundary after the last transcript item.
+8. Post-interview chat continues with prep context, selected docs, transcript, and AI responses.
+9. Settings exposes only the supported AI provider keys: OpenAI, Google Gemini, and Anthropic Claude.
+10. Transcription uses the packaged local Moonshine Base model and should not expose speech-provider selection.
 
-### Local Development
+## Pull Requests
 
-1. Fork the repo and create your branch from `main`.
-2. Clone your fork locally: `git clone https://github.com/YOUR_USERNAME/natively-cluely-ai-assistant.git`
-3. Install dependencies: `npm install`
-4. Set up your `.env` file (refer to the README for template).
-5. Start the development server: `npm start`
+- Use clear titles.
+- Explain the user-facing behavior change.
+- Include screenshots or short recordings for UI changes.
+- Mention manual test steps.
+- Add focused tests when the change touches persistence, prompt construction, document ingestion, audio, or provider routing.
 
-If you've added code that should be tested, add tests.
-If you've changed APIs, update the documentation.
-Ensure the test suite passes.
+## Branching
 
-### Architecture Overview
+Use short descriptive branch names. For Codex-generated work, the default branch prefix is `codex/`.
 
-Natively uses a modern stack consisting of:
+Push to `origin`, not `upstream`.
 
-- **Frontend**: React, Vite, TypeScript, TailwindCSS
-- **Backend/Desktop**: Electron
-- **Native Audio**: Rust (`napi-rs` for zero-copy ABI transfers)
-- **Database**: SQLite (local storage with `sqlite-vec` for RAG)
+To bring in upstream changes:
 
-When contributing, ensure you understand which context (Main Process, Renderer Process, or Native/Rust addon) your code will run in, and use the IPC correctly for communication.
+```bash
+git fetch upstream
+git checkout main
+git merge upstream/main
+git push origin main
+```
 
-## Styleguides
-
-### Git Commit Messages
-
-- Use the present tense ("Add feature" not "Added feature")
-- Use the imperative mood ("Move cursor to..." not "Moves cursor to...")
-- Limit the first line to 72 characters or less
-- Reference issues and pull requests liberally after the first line
-- Consider starting the commit message with an applicable emoji:
-  - 🎨 `:art:` when improving the format/structure of the code
-  - 🐎 `:racehorse:` when improving performance
-  - 🚱 `:non-potable_water:` when plugging memory leaks
-  - 📝 `:memo:` when writing docs
-  - 🐧 `:penguin:` when fixing something on Linux
-  - 🍎 `:apple:` when fixing something on macOS
-  - 🏁 `:checkered_flag:` when fixing something on Windows
-  - 🐛 `:bug:` when fixing a bug
-  - 🔥 `:fire:` when removing code or files
-  - 💚 `:green_heart:` when fixing the CI build
-  - ✅ `:white_check_mark:` when adding tests
-  - 🔒 `:lock:` when dealing with security
-  - ⬆️ `:arrow_up:` when upgrading dependencies
-  - ⬇️ `:arrow_down:` when downgrading dependencies
-
-Thank you for contributing to Natively!
+Prefer merge over rebase on public/shared branches.

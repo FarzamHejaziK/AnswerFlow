@@ -1,11 +1,11 @@
-# Natively custom-mode answer-path architecture notes
+# AnswerFlow custom-mode answer-path architecture notes
 
 ## High-level flow
 1. `IntelligenceEngine` receives a transcript chunk or explicit Ask action.
 2. `IntentClassifier` decides whether the turn warrants an answer.
 3. `WhatToAnswerLLM` owns runtime intent classification and live-answer prompt construction.
 4. `PromptAssembler` combines the live answer request with retrieved snippets, screen OCR context, prior responses, and the active mode prompt suffix.
-5. `LLMHelper.streamChat` routes the assembled prompt to the active provider (Claude / Gemini / OpenAI / Natively / Ollama).
+5. `LLMHelper.streamChat` routes the assembled prompt to the active provider (Claude / Gemini / OpenAI / AnswerFlow / Ollama).
 
 ## Ownership
 - Modes Manager owns the mode catalog, reference files, and the active mode prompt suffix.

@@ -1,7 +1,7 @@
 YC application draft v3
 
 Founder background
-Founder previously shipped PriceX, a consumer price comparison tool that reached 80k monthly active users before being deprecated when the underlying scraper terms of service changed. Built two B2B SaaS products before Natively; first one acquired by a private buyer in 2023 (sale terms confidential), second one wound down after failing to find a wedge.
+Founder previously shipped PriceX, a consumer price comparison tool that reached 80k monthly active users before being deprecated when the underlying scraper terms of service changed. Built two B2B SaaS products before AnswerFlow; first one acquired by a private buyer in 2023 (sale terms confidential), second one wound down after failing to find a wedge.
 
 Why now
 Voice plus screen context plus retrieval has crossed the latency threshold where a live copilot is actually usable in a real conversation. Local Whisper has matured enough to support privacy-sensitive customers. The category is moving from novelty to daily-driver in the next 12 months.

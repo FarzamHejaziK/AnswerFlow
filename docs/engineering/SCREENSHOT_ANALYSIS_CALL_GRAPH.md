@@ -23,7 +23,7 @@ tree; every claim is grounded in code, not inference.
 | `electron/services/context/PromptAssembler.ts:263-287` | Wraps OCR text in `<screen_context trust_level="untrusted_visual_evidence">` block |
 | `electron/services/context/TrustLevels.ts:28` | Declares `UNTRUSTED_SCREEN` trust level |
 | `electron/llm/WhatToAnswerLLM.ts:40-205` | `generateStream(transcript, temporal, intent, imagePaths, screenContext, promptInstruction)` |
-| `electron/LLMHelper.ts:1198-2526` | Per-provider multimodal dispatch (Gemini, OpenAI, Claude, Groq, Ollama, Codex CLI, Natively, custom cURL) |
+| `electron/LLMHelper.ts:1198-2526` | Per-provider multimodal dispatch (Gemini, OpenAI, Claude, Groq, Ollama, Codex CLI, AnswerFlow, custom cURL) |
 | `electron/llm/ProviderRouter.ts:87-162` | `routeLLMProviders({capability:'vision', multimodal:true, …})` — six providers declared vision-capable |
 | `electron/llm/modelCapabilities.ts:75-108` | `supportsImages` lookup (Ollama family regex; cloud whitelist) |
 | `electron/IntelligenceEngine.ts:506-1081` | Orchestrates `runWhatShouldISay`, `runCodeHint`, `runBrainstorm` |
@@ -36,8 +36,8 @@ tree; every claim is grounded in code, not inference.
 
 ```
 src/hooks/useShortcuts.ts:65 ⌘+H
-  → src/components/NativelyInterface.tsx:2575 isShortcutPressed('takeScreenshot')
-    → handlers.takeScreenshot()  (NativelyInterface.tsx:2493)
+  → src/components/AnswerFlowInterface.tsx:2575 isShortcutPressed('takeScreenshot')
+    → handlers.takeScreenshot()  (AnswerFlowInterface.tsx:2493)
       → window.electronAPI.takeScreenshot()       (preload.ts:397)
         → ipcMain.invoke "take-screenshot"        (ipcHandlers.ts:266)
           → appState.takeScreenshot()              (main.ts:3346)
@@ -52,7 +52,7 @@ src/hooks/useShortcuts.ts:65 ⌘+H
             └── data:image/png;base64,<…>
           ← { path, preview }
         ← { path, preview }
-      → setAttachedContext([...prev, {path, preview}])  (NativelyInterface.tsx:1001)
+      → setAttachedContext([...prev, {path, preview}])  (AnswerFlowInterface.tsx:1001)
 ```
 
 Tray menu accelerator does the same via `globalShortcut.register` registered
@@ -70,7 +70,7 @@ performed yet**.
 
 ```
 src/hooks/useShortcuts.ts                          ⌘+Shift+H
-  → handlers.takeSelectiveScreenshot()             (NativelyInterface.tsx:2505)
+  → handlers.takeSelectiveScreenshot()             (AnswerFlowInterface.tsx:2505)
     → window.electronAPI.takeSelectiveScreenshot() (preload.ts:398)
       → ipcMain.invoke "take-selective-screenshot" (ipcHandlers.ts:277)
         → appState.takeSelectiveScreenshot()       (main.ts:3352)
@@ -99,11 +99,11 @@ global shortcut 'general:capture-and-process'      (main.ts:428)
   → mainWindow.webContents.send('capture-and-process', { path, preview })
                                                    (main.ts:441)
   → preload subscription onCaptureAndProcess       (preload.ts:424)
-  → NativelyInterface handler [implicit via attachment + manual submit flow]
+  → AnswerFlowInterface handler [implicit via attachment + manual submit flow]
     ... still uses the same Path E to actually run OCR+LLM.
 ```
 
-The handler logic in `NativelyInterface.tsx` lines 2003 and 2037 sends the
+The handler logic in `AnswerFlowInterface.tsx` lines 2003 and 2037 sends the
 attachment to a Gemini chat with a hard-coded "analyze this screenshot in
 context of what the user said" prompt — this goes through the
 `streamGeminiChat` IPC, *not* through the OCR pipeline.
@@ -115,7 +115,7 @@ context of what the user said" prompt — this goes through the
 This is the **only** path that uses `ScreenContextService` + Tesseract OCR.
 
 ```
-NativelyInterface.tsx:1499  handleWhatToSay()
+AnswerFlowInterface.tsx:1499  handleWhatToSay()
   └── currentAttachments = attachedContext + pendingCaptureRef
   └── window.electronAPI.generateWhatToSay(question, paths, options)
         (preload.ts:781)
@@ -151,7 +151,7 @@ NativelyInterface.tsx:1499  handleWhatToSay()
               → per-provider: see Path F
     ← { answer, question, screenContextStatus, ocrTextLength }
   → setScreenContextStatus(result.screenContextStatus)
-       (NativelyInterface.tsx:1537)
+       (AnswerFlowInterface.tsx:1537)
 ```
 
 Net effect: **OCR text + raw image bytes are both sent** to the model. OCR text
@@ -164,7 +164,7 @@ OCR text reaches the model.
 ## Path E — Code hint / Brainstorm (image-only, no OCR)
 
 ```
-NativelyInterface.tsx:1644  handleCodeHint()
+AnswerFlowInterface.tsx:1644  handleCodeHint()
   └── window.electronAPI.generateCodeHint(paths, problemStatement)
                                                    (preload.ts:783)
     → ipcMain.invoke "generate-code-hint"          (ipcHandlers.ts:2605)
@@ -203,7 +203,7 @@ The full multimodal dispatch table is in
 `SCREENSHOT_ANALYSIS_PROVIDER_MATRIX.md`. Common shape:
 
 ```
-streamWithNatively       → multipart with base64-PNG (Sharp resized to ≤768px)
+streamWithAnswerFlow       → multipart with base64-PNG (Sharp resized to ≤768px)
 streamWithGeminiModel    → inline_data { mime_type, data: base64 } via google-genai
 streamWithOpenaiMultimodal → message.content[].type='image_url' with data: URI
 streamWithClaudeMultimodal → message.content[].type='image', source=base64
@@ -232,7 +232,7 @@ SessionTracker emits transcript turn
   → user accepts the chip
     → window.electronAPI.acceptDynamicAction(...)
       → 'dynamic-action-accepted' IPC
-        → handleWhatToSay(promptInstruction)       (NativelyInterface.tsx:1499)
+        → handleWhatToSay(promptInstruction)       (AnswerFlowInterface.tsx:1499)
           → generateWhatToSay(question=undefined, paths=undefined, {promptInstruction})
 ```
 

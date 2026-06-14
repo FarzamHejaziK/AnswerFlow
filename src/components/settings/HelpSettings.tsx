@@ -10,7 +10,7 @@ import { SiOpenai, SiGoogle } from 'react-icons/si';
 import { useShortcuts } from '../../hooks/useShortcuts';
 import { useResolvedTheme } from '../../hooks/useResolvedTheme';
 import { isMac, getModifierSymbol } from '../../utils/platformUtils';
-import nativelyIcon from '../icon.png';
+import answerflowIcon from '../icon.png';
 
 // ----------------------
 // Animations & Mocks
@@ -51,8 +51,8 @@ const MockAppInterface = () => {
                         {/* Logo Button */}
                         <div className="w-8 h-8 rounded-full bg-bg-item-active flex items-center justify-center border border-border-muted overflow-hidden">
                             <img
-                                src={nativelyIcon}
-                                alt="Natively"
+                                src={answerflowIcon}
+                                alt="AnswerFlow"
                                 className="w-[20px] h-[20px] object-contain"
                                 style={{ filter: isLight ? 'brightness(0)' : 'brightness(0) invert(1)', opacity: 0.9 }}
                             />
@@ -259,7 +259,7 @@ const MockMeetingInterfaceAnim = () => {
                             </div>
                             <div className="flex items-start gap-3">
                                 <div className="mt-0.5 w-5 h-5 rounded-full bg-bg-input flex items-center justify-center border border-border-subtle shrink-0">
-                                    <img src={nativelyIcon} alt="AI" className="w-3 h-3 opacity-50 object-contain force-black-icon" />
+                                    <img src={answerflowIcon} alt="AI" className="w-3 h-3 opacity-50 object-contain force-black-icon" />
                                 </div>
                                 <div>
                                     <div className="text-[10px] text-text-tertiary mb-1 font-medium">10:35 AM</div>
@@ -290,7 +290,7 @@ const MockMeetingChatAnim = () => {
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle shrink-0">
                 <div className="flex items-center gap-2 text-text-tertiary">
-                    <img src={nativelyIcon} className="w-3.5 h-3.5 force-black-icon opacity-50" alt="logo" />
+                    <img src={answerflowIcon} className="w-3.5 h-3.5 force-black-icon opacity-50" alt="logo" />
                     <span className="text-[13px] font-medium">Search this meeting</span>
                 </div>
                 <X size={16} className="text-text-tertiary" />
@@ -423,8 +423,8 @@ const MockPermissionsAnim = () => {
                 </div>
                 <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                        <img src={nativelyIcon} alt="Natively" className="w-6 h-6 object-contain rounded drop-shadow-sm opacity-90" />
-                        <span className="text-text-primary text-sm font-medium">Natively</span>
+                        <img src={answerflowIcon} alt="AnswerFlow" className="w-6 h-6 object-contain rounded drop-shadow-sm opacity-90" />
+                        <span className="text-text-primary text-sm font-medium">AnswerFlow</span>
                     </div>
 
                     <motion.div
@@ -442,8 +442,8 @@ const MockPermissionsAnim = () => {
             </div>
             <div className="text-xs text-text-secondary text-center max-w-[280px]">
                 {isMac
-                    ? 'Natively requires Accessibility and Screen Recording permissions to analyze screen context.'
-                    : 'Natively will ask for microphone access the first time you start a meeting.'}
+                    ? 'AnswerFlow requires Accessibility and Screen Recording permissions to analyze screen context.'
+                    : 'AnswerFlow will ask for microphone access the first time you start a meeting.'}
             </div>
         </div>
     );
@@ -464,7 +464,7 @@ const MockPillControlsAnim = () => {
             {/* Logo → Launcher */}
             <div className="flex items-center gap-3 p-3 bg-bg-elevated border border-border-subtle rounded-xl">
                 <div className="w-8 h-8 rounded-full bg-bg-item-active flex items-center justify-center border border-border-muted shrink-0 shadow-sm">
-                    <img src={nativelyIcon} alt="Logo" className="w-[18px] h-[18px] object-contain force-black-icon opacity-90" />
+                    <img src={answerflowIcon} alt="Logo" className="w-[18px] h-[18px] object-contain force-black-icon opacity-90" />
                 </div>
                 <ArrowRight className="w-3.5 h-3.5 text-text-tertiary shrink-0" />
                 <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -731,7 +731,7 @@ const SetupGuide = () => {
         {
             title: 'Grant Permissions',
             desc: isMac
-                ? 'Enable Screen Recording and Accessibility for Natively in macOS Privacy & Security.'
+                ? 'Enable Screen Recording and Accessibility for AnswerFlow in macOS Privacy & Security.'
                 : 'Approve the microphone prompt the first time you start a meeting (Settings → Privacy → Microphone).',
         },
         {
@@ -762,7 +762,7 @@ const SetupGuide = () => {
         <div className="mb-10">
             <div className="mb-7">
                 <h3 className="text-[20px] font-bold text-text-primary tracking-tight leading-tight">Quick Start</h3>
-                <p className="text-[13px] text-text-tertiary mt-0.5">Get Natively running in four steps.</p>
+                <p className="text-[13px] text-text-tertiary mt-0.5">Get AnswerFlow running in four steps.</p>
             </div>
 
             <div>
@@ -814,16 +814,16 @@ export const HelpSettings: React.FC = () => {
 
     const restoreFloatingHelp = () => {
         try {
-            localStorage.removeItem('natively_help_assistant_dismissed_v1');
+            localStorage.removeItem('answerflow_help_assistant_dismissed_v1');
         } catch {
             /* localStorage can fail in constrained environments */
         }
-        window.dispatchEvent(new Event('natively-help-assistant-show'));
+        window.dispatchEvent(new Event('answerflow-help-assistant-show'));
         setFloatingHelpRestored(true);
         window.setTimeout(() => setFloatingHelpRestored(false), 1600);
     };
 
-    // Kbd class applying theme variables natively
+    // Kbd class applying theme variables.
     const kbdClass = `px-1.5 py-0.5 rounded text-[10px] font-mono border inline-block bg-bg-item-surface border-border-subtle text-text-secondary shadow-sm`;
 
     return (
@@ -834,7 +834,7 @@ export const HelpSettings: React.FC = () => {
                     Help & Setup Guide
                 </h2>
                 <p className={`text-sm text-text-secondary mt-3 max-w-2xl`}>
-                    Learn how to deeply configure Natively. Everything from providing the right API scopes to executing conversational interviews seamlessly is covered below.
+                    Learn how to deeply configure AnswerFlow. Everything from providing the right API scopes to executing conversational interviews seamlessly is covered below.
                 </p>
                 <button
                     type="button"
@@ -859,8 +859,8 @@ export const HelpSettings: React.FC = () => {
                     <div className="space-y-4">
                         <p>
                             {isMac
-                                ? 'Natively operates entirely on-device, but requires OS permissions to tap into your screen context and global keystrokes. Here is how your system should look:'
-                                : 'Natively operates entirely on-device. Windows will prompt you for microphone access the first time you start a meeting — no other OS permissions are required.'}
+                                ? 'AnswerFlow operates entirely on-device, but requires OS permissions to tap into your screen context and global keystrokes. Here is how your system should look:'
+                                : 'AnswerFlow operates entirely on-device. Windows will prompt you for microphone access the first time you start a meeting — no other OS permissions are required.'}
                         </p>
                         {isMac && <MockPermissionsAnim />}
                         <div className="space-y-3 mt-4">
@@ -871,11 +871,11 @@ export const HelpSettings: React.FC = () => {
                                     <Mic size={14} className="text-accent-primary" /> Microphone & Speaker Loopback Selection
                                 </h5>
                                 <p className="text-[11px] opacity-90 leading-relaxed text-text-secondary">
-                                    Natively can capture both what you say and what you hear globally. At the top of the Audio Settings, use the Dropdowns to explicitly select your hardware Input (e.g. your physical microphone) and Output capture (what the speakers play). By default, Natively utilizes the <strong>System Default</strong>, so audio routing will automatically follow your OS preferences.
+                                    AnswerFlow can capture both what you say and what you hear globally. At the top of the Audio Settings, use the Dropdowns to explicitly select your hardware Input (e.g. your physical microphone) and Output capture (what the speakers play). By default, AnswerFlow utilizes the <strong>System Default</strong>, so audio routing will automatically follow your OS preferences.
                                 </p>
                             </div>
 
-                            {isMac && (
+                            {false && isMac && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     <div className={`p-4 rounded-xl border bg-bg-item-surface border-border-subtle space-y-2`}>
                                         <h5 className={`font-semibold text-[13px] text-text-primary flex items-center gap-2`}>
@@ -901,7 +901,7 @@ export const HelpSettings: React.FC = () => {
                                     <Globe size={14} className="text-green-500" /> Language & Regional Accents
                                 </h5>
                                 <p className="text-[11px] opacity-90 leading-relaxed text-text-secondary">
-                                    Below the provider list, you must specify the <strong>Language</strong> you will be speaking (e.g., English). Most importantly, ensure you select your specific regional <span className={kbdClass}>Accent / Region</span> mapping (e.g., <em>en-US</em> vs <em>en-GB</em> vs <em>en-IN</em>) as STT backends use this map to vastly increase transcription accuracy logic based on regional inflections.
+                                    AnswerFlow uses the packaged local Moonshine Base transcription model. The main setup requirement is device routing: choose the microphone you speak into and the output device where meeting audio plays.
                                 </p>
                             </div>
                         </div>
@@ -912,7 +912,7 @@ export const HelpSettings: React.FC = () => {
                                     <h4 className={`font-semibold text-sm mb-2 text-text-primary flex items-center gap-2`}>
                                         <Monitor className="w-4 h-4 text-accent-primary" /> Screen Recording
                                     </h4>
-                                    <p className="text-xs opacity-90 mb-2">Provides Natively the ability to read your screen temporarily when you capture context.</p>
+                                    <p className="text-xs opacity-90 mb-2">Provides AnswerFlow the ability to read your screen temporarily when you capture context.</p>
                                     <p className="text-[11px] text-text-tertiary">System Settings &gt; Privacy & Security &gt; Screen Recording</p>
                                 </div>
 
@@ -920,7 +920,7 @@ export const HelpSettings: React.FC = () => {
                                     <h4 className={`font-semibold text-sm mb-2 text-text-primary flex items-center gap-2`}>
                                         <Command className="w-4 h-4 text-purple-500" /> Accessibility
                                     </h4>
-                                    <p className="text-xs opacity-90 mb-2">Required for Natively to detect the global keyboard shortcuts below, regardless of what window is focused.</p>
+                                    <p className="text-xs opacity-90 mb-2">Required for AnswerFlow to detect the global keyboard shortcuts below, regardless of what window is focused.</p>
                                     <p className="text-[11px] text-text-tertiary">System Settings &gt; Privacy & Security &gt; Accessibility</p>
                                 </div>
                             </div>
@@ -940,7 +940,7 @@ export const HelpSettings: React.FC = () => {
 
                 <AccordionSection title="2. Audio Setup (Microphone and Meeting Audio)" icon={<Mic className="w-4 h-4" />}>
                     <div className="space-y-6">
-                        <p>Natively uses the packaged local Moonshine Base model for transcription. In the Audio tab, configure the microphone and the output device where your meeting audio is playing.</p>
+                        <p>AnswerFlow uses the packaged local Moonshine Base model for transcription. In the Audio tab, configure the microphone and the output device where your meeting audio is playing.</p>
 
                         <MockProviderSelectionAnim />
 
@@ -1053,119 +1053,55 @@ export const HelpSettings: React.FC = () => {
 
                 <AccordionSection title="3. AI Providers & Prompt Engine" icon={<Key className="w-4 h-4" />}>
                     <div className="space-y-4">
-                        <p className="text-sm">Natively uses Large Language Models (LLMs) to reason about your screen and audio context. You can configure cloud providers, local models, or fully custom endpoints.</p>
+                        <p className="text-sm">
+                            AnswerFlow uses your selected main LLM for prep chat, live interview answers, post-interview chat, and Help Assistant replies. Configure one provider first, confirm it works, then add another only if you want a backup.
+                        </p>
 
-                        <div className="space-y-3 pt-2">
-                            <h4 className="font-bold text-lg text-text-primary border-b border-border-subtle pb-2">1. Standard Cloud Providers</h4>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <div className="p-3 rounded-xl border bg-bg-item-surface border-border-subtle hover:border-border-muted transition-colors">
-                                    <h5 className="font-semibold text-sm text-text-primary flex justify-between items-center mb-1">
-                                        <span className="flex items-center gap-2">
-                                            <img src="https://groq.com/favicon.svg" alt="Groq" className="w-4 h-4 object-contain" /> Groq
-                                        </span>
-                                        <button onClick={() => { (window as any).electronAPI?.openExternal('https://console.groq.com/keys') }} className="text-accent-primary hover:underline text-[10px] flex items-center gap-1"><ExternalLink size={10} /> Get Key</button>
-                                    </h5>
-                                    <p className="text-[11px] opacity-80 mb-2">Ultra-fast inference using LPU hardware. Default model: <strong>llama-3.3-70b-versatile</strong>.</p>
-                                    <span className={kbdClass}>gsk_...</span>
-                                </div>
-                                <div className="p-3 rounded-xl border bg-bg-item-surface border-border-subtle hover:border-border-muted transition-colors">
-                                    <h5 className="font-semibold text-sm text-text-primary flex justify-between items-center mb-1">
-                                        <span className="flex items-center gap-2">
-                                            <SiOpenai className={`w-3.5 h-3.5 ${isLight ? 'text-black' : 'text-white'}`} /> OpenAI
-                                        </span>
-                                        <button onClick={() => { (window as any).electronAPI?.openExternal('https://platform.openai.com/api-keys') }} className="text-accent-primary hover:underline text-[10px] flex items-center gap-1"><ExternalLink size={10} /> Get Key</button>
-                                    </h5>
-                                    <p className="text-[11px] opacity-80 mb-2">Industry standard pipeline. Default model: <strong>chat-latest</strong>.</p>
-                                    <span className={kbdClass}>sk-proj-...</span>
-                                </div>
-                                <div className="p-3 rounded-xl border bg-bg-item-surface border-border-subtle hover:border-border-muted transition-colors">
-                                    <h5 className="font-semibold text-sm text-text-primary flex justify-between items-center mb-1">
-                                        <span className="flex items-center gap-2">
-                                            <img src="https://cdn.simpleicons.org/anthropic/000000" style={{ filter: isLight ? '' : 'invert(1)' }} alt="Anthropic" className="w-4 h-4 object-contain" /> Anthropic
-                                        </span>
-                                        <button onClick={() => { (window as any).electronAPI?.openExternal('https://console.anthropic.com/settings/keys') }} className="text-accent-primary hover:underline text-[10px] flex items-center gap-1"><ExternalLink size={10} /> Get Key</button>
-                                    </h5>
-                                    <p className="text-[11px] opacity-80 mb-2">Superior coding baseline parameters. Default: <strong>claude-4.6-sonnet</strong>.</p>
-                                    <span className={kbdClass}>sk-ant-...</span>
-                                </div>
-                                <div className="p-3 rounded-xl border bg-bg-item-surface border-border-subtle hover:border-border-muted transition-colors">
-                                    <h5 className="font-semibold text-sm text-text-primary flex justify-between items-center mb-1">
-                                        <span className="flex items-center gap-2">
-                                            <SiGoogle className="w-3.5 h-3.5 text-accent-primary" /> Google Gemini
-                                        </span>
-                                        <button onClick={() => { (window as any).electronAPI?.openExternal('https://aistudio.google.com/app/apikey') }} className="text-accent-primary hover:underline text-[10px] flex items-center gap-1"><ExternalLink size={10} /> Get Key</button>
-                                    </h5>
-                                    <p className="text-[11px] opacity-80 mb-2">Immense contextual window. Default model: <strong>gemini-3.5-flash</strong>.</p>
-                                    <span className={kbdClass}>AIzaSy...</span>
-                                </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div className="p-3 rounded-xl border bg-bg-item-surface border-border-subtle hover:border-border-muted transition-colors">
+                                <h5 className="font-semibold text-sm text-text-primary flex justify-between items-center mb-1">
+                                    <span className="flex items-center gap-2">
+                                        <SiOpenai className={`w-3.5 h-3.5 ${isLight ? 'text-black' : 'text-white'}`} /> OpenAI
+                                    </span>
+                                    <button onClick={() => { (window as any).electronAPI?.openExternal('https://platform.openai.com/api-keys') }} className="text-accent-primary hover:underline text-[10px] flex items-center gap-1"><ExternalLink size={10} /> Get Key</button>
+                                </h5>
+                                <p className="text-[11px] opacity-80 mb-2">Use for GPT models and general-purpose interview reasoning.</p>
+                                <span className={kbdClass}>sk-...</span>
                             </div>
-
-                            <div className="mt-2 bg-bg-item-surface p-4 rounded-xl border border-border-subtle shadow-sm flex gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-bg-elevated border border-border-subtle flex items-center justify-center shrink-0">
-                                    <Zap className="w-4 h-4 text-accent-primary" />
-                                </div>
-                                <p className="text-[11px] text-text-secondary leading-relaxed mt-0.5">
-                                    <strong className="text-text-primary font-bold">Autonomous Registry Sync:</strong> Natively utilizes a 14-day background sync clock (<span className="font-mono bg-bg-elevated border border-border-muted px-1.5 py-0.5 rounded text-[10px] text-text-primary shadow-[inset_0_-1px_0_rgba(0,0,0,0.1)]">v2/api/models</span>) to silently poll upstream APIs. If Anthropic or OpenAI drops a new flagship architecture (e.g. GPT-5), your app dynamically absorbs it into the UI dropdown automatically.
-                                </p>
+                            <div className="p-3 rounded-xl border bg-bg-item-surface border-border-subtle hover:border-border-muted transition-colors">
+                                <h5 className="font-semibold text-sm text-text-primary flex justify-between items-center mb-1">
+                                    <span className="flex items-center gap-2">
+                                        <SiGoogle className="w-3.5 h-3.5 text-accent-primary" /> Google Gemini
+                                    </span>
+                                    <button onClick={() => { (window as any).electronAPI?.openExternal('https://aistudio.google.com/app/apikey') }} className="text-accent-primary hover:underline text-[10px] flex items-center gap-1"><ExternalLink size={10} /> Get Key</button>
+                                </h5>
+                                <p className="text-[11px] opacity-80 mb-2">Use for Gemini models with large context windows.</p>
+                                <span className={kbdClass}>AIza...</span>
                             </div>
-
-                            <div className="p-4 mt-2 rounded-xl border border-border-subtle bg-bg-item-surface">
-                                <h5 className="font-semibold text-[13px] text-text-primary mb-1">Configuring the Active Model Engine</h5>
-                                <p className="text-[11px] text-text-secondary leading-relaxed">
-                                    Inside the Launcher UI (above the start button), you can hot-swap your <strong>Active Model</strong>. This dictation is extremely important—it determines the active core reasoning engine. If set to <strong>claude-3-5-sonnet</strong>, the intelligence agent uses Anthropic infrastructure exclusively for screen analysis. Switch to <strong>llama3:8b</strong> beneath it, and the architecture instantly reverts to generating responses via your offline GPU pipeline.
-                                </p>
+                            <div className="p-3 rounded-xl border bg-bg-item-surface border-border-subtle hover:border-border-muted transition-colors">
+                                <h5 className="font-semibold text-sm text-text-primary flex justify-between items-center mb-1">
+                                    <span className="flex items-center gap-2">
+                                        <img src="https://cdn.simpleicons.org/anthropic/000000" style={{ filter: isLight ? '' : 'invert(1)' }} alt="Anthropic" className="w-4 h-4 object-contain" /> Anthropic
+                                    </span>
+                                    <button onClick={() => { (window as any).electronAPI?.openExternal('https://console.anthropic.com/settings/keys') }} className="text-accent-primary hover:underline text-[10px] flex items-center gap-1"><ExternalLink size={10} /> Get Key</button>
+                                </h5>
+                                <p className="text-[11px] opacity-80 mb-2">Use for Claude models and structured reasoning.</p>
+                                <span className={kbdClass}>sk-ant-...</span>
                             </div>
                         </div>
 
-                        <div className="space-y-3 pt-4">
-                            <h4 className="font-bold text-lg text-text-primary border-b border-border-subtle pb-2">2. Local Models (Ollama)</h4>
-                            <div className="p-4 rounded-xl border bg-bg-item-surface border-border-subtle space-y-3">
-                                <p className="text-xs opacity-90 leading-relaxed text-text-secondary">
-                                    You can run Natively completely offline with 100% data privacy using Ollama. Natively automatically scans <span className={kbdClass}>http://localhost:11434</span> for active models.
-                                </p>
-                                <ol className="list-decimal pl-4 text-xs space-y-2 opacity-90 text-text-secondary">
-                                    <li>Download Ollama locally via <button onClick={() => { (window as any).electronAPI?.openExternal('https://ollama.com/download') }} className="text-accent-primary hover:underline inline-flex items-center gap-1 font-medium">ollama.com <ExternalLink size={10} /></button></li>
-                                    <li>
-                                        Open Terminal and run our recommended 8B parameter instruction model:
-                                        <div className="mt-1 bg-bg-input p-2 rounded border border-border-subtle font-mono text-[11px]">ollama run llama3:8b</div>
-                                    </li>
-                                    <li>Alternatively, for faster generation without GPU, use Microsoft's smaller model:
-                                        <div className="mt-1 bg-bg-input p-2 rounded border border-border-subtle font-mono text-[11px]">ollama run phi3</div>
-                                    </li>
-                                    <li>Return to Natively's AI Providers overlay, and you will see your Local models ready for usage.</li>
-                                </ol>
-                            </div>
+                        <div className="p-4 mt-2 rounded-xl border border-border-subtle bg-bg-item-surface">
+                            <h5 className="font-semibold text-[13px] text-text-primary mb-1">What The Live Prompt Includes</h5>
+                            <p className="text-[11px] text-text-secondary leading-relaxed">
+                                Live interview answers include Custom Instructions, AI Persona, prep chat, selected document Markdown, transcript so far, prior AI responses, and the current answer request. This is why the prep chat and selected documents matter before you click Start interview.
+                            </p>
                         </div>
-
-                        <div className="space-y-3 pt-4">
-                            <h4 className="font-bold text-lg text-text-primary border-b border-border-subtle pb-2">3. Custom Providers</h4>
-                            <div className="p-4 rounded-xl border bg-bg-item-surface border-border-subtle space-y-3">
-                                <p className="text-xs opacity-90 leading-relaxed text-text-secondary">
-                                    Use Custom Providers to hook up any standard external LLM router (like OpenRouter, LMStudio, or proprietary company endpoints). Create a new provider using a cURL command template.
-                                </p>
-                                <div className="bg-bg-input p-3 rounded-lg border border-border-subtle space-y-2">
-                                    <div className="text-[11px] font-mono text-text-secondary">
-                                        <div className="text-purple-400">curl</div> <span className="text-accent-primary">https://openrouter.ai/api/v1/chat/completions</span> \
-                                        <br />  -H <span className="text-green-400">"Authorization: Bearer YOUR_KEY"</span> \
-                                        <br /> ...
-                                    </div>
-                                </div>
-                                <div className="flex items-start gap-2 mt-2">
-                                    <div className="w-5 h-5 rounded bg-orange-500/20 text-orange-500 flex items-center justify-center shrink-0 mt-0.5"><Zap size={10} /></div>
-                                    <div className="text-xs text-text-secondary leading-relaxed">
-                                        <strong>Crucial: The Response Path.</strong> You must inform Natively how to parse the JSON text back. Deeply nested outputs must define the exact path array. For OpenAI/OpenRouter compliant endpoints, this is strictly: <span className={kbdClass}>choices[0].message.content</span>.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                     </div>
                 </AccordionSection>
 
-                <AccordionSection title="4. Natively Interface Operations" icon={<Monitor className="w-4 h-4" />}>
+                <AccordionSection title="4. Interview Workspace" icon={<Monitor className="w-4 h-4" />}>
                     <div className="space-y-6">
-                        <p className="text-[13px]">When initialized, Natively hides itself visually while remaining active as a persistent translucent overlay. This is your command center.</p>
+                        <p className="text-[13px]">The main workspace is organized around interviews: the left panel lists interviews, the middle panel contains prep chat, transcript, and post-interview chat, and the right panel contains setup status, model, audio, and detectability controls.</p>
 
                         <div className="relative w-full flex flex-col p-2 sm:p-5 bg-bg-main rounded-[26px] border border-border-subtle shadow-inner">
                             <MockAppInterface />
@@ -1250,9 +1186,9 @@ export const HelpSettings: React.FC = () => {
                     </div>
                 </AccordionSection>
 
-                <AccordionSection title="5. Meeting Intelligence" icon={<Calendar className="w-4 h-4" />}>
+                <AccordionSection title="5. Interview History" icon={<Calendar className="w-4 h-4" />}>
                     <div className="space-y-6">
-                        <p className="text-[13px]">When an active session concludes, it gets saved directly to your local file system as a complete intelligence dossier spanning the transcript, AI token usage, and automated structural summaries.</p>
+                        <p className="text-[13px]">When an interview concludes, AnswerFlow saves the prep chat, selected docs, transcript, AI responses, interview-finished boundary, and follow-up chat so the interview can be reopened later.</p>
 
                         <MockMeetingInterfaceAnim />
 
@@ -1262,7 +1198,7 @@ export const HelpSettings: React.FC = () => {
                                     <FileText className="w-4 h-4 text-accent-primary group-hover:scale-110 transition-transform" /> Summary Execution
                                 </h4>
                                 <p className="text-[12px] text-text-secondary leading-relaxed">
-                                    Natively fires a local background job as soon as the meeting finishes to compress the entire raw audio transcript into clean, formatted markdown representing structural overviews and explicit action items.
+                                    AnswerFlow keeps the full interview transcript and makes it available to the post-interview chat. Generated responses should render Markdown cleanly.
                                 </p>
                             </div>
 
@@ -1280,16 +1216,16 @@ export const HelpSettings: React.FC = () => {
                                     <Cpu className="w-4 h-4 text-purple-500 group-hover:scale-110 transition-transform" /> Usage & Storage
                                 </h4>
                                 <p className="text-[12px] text-text-secondary leading-relaxed">
-                                    View exactly how many tokens the AI consumed globally across the meeting, tracking visual and textual inputs separately.
+                                    Selected documents and prep chat stay linked to the interview so follow-up questions can use the same context.
                                 </p>
                             </div>
                         </div>
 
                         <div className="border-t border-border-subtle pt-6">
                             <h4 className="font-bold text-sm text-text-primary flex items-center gap-2 mb-4">
-                                <MessageSquare className="w-4 h-4 text-accent-primary" /> In-Meeting Semantic Search
+                                <MessageSquare className="w-4 h-4 text-accent-primary" /> Post-Interview Chat
                             </h4>
-                            <p className="text-[13px] mb-6">Instead of re-reading the entire transcript to find what happened, use the attached RAG interface pinned to the bottom of the Meeting details window.</p>
+                            <p className="text-[13px] mb-6">After the interview finished boundary, continue chatting with the assistant. It should answer using prep notes, selected docs, transcript, and AI responses from that interview.</p>
 
                             <MockMeetingChatAnim />
 
@@ -1299,7 +1235,7 @@ export const HelpSettings: React.FC = () => {
                                         <Search className="w-4 h-4 text-orange-500 group-hover:scale-110 transition-transform" /> Contextual Semantic Search
                                     </h4>
                                     <p className="text-[12px] text-text-secondary leading-relaxed">
-                                        You don't need to craft long AI prompts. Simply ask, "What API dependencies did they list?" and the system injects the localized transcript from that specific timeline to provide highly-accurate responses dynamically.
+                                        Ask direct follow-up questions such as "How did I answer the system design question?" or "What should I improve next time?"
                                     </p>
                                 </div>
 
@@ -1308,7 +1244,7 @@ export const HelpSettings: React.FC = () => {
                                         <Brain className="w-4 h-4 text-teal-500 group-hover:scale-110 transition-transform" /> Memory Isolation
                                     </h4>
                                     <p className="text-[12px] text-text-secondary leading-relaxed">
-                                        Conversations here are strictly isolated to the selected meeting boundaries. They do not utilize global memory, ensuring hyper-focused extraction without cross-contamination.
+                                        Conversations stay scoped to the selected interview so context from another interview does not leak into this one.
                                     </p>
                                 </div>
                             </div>
@@ -1318,7 +1254,7 @@ export const HelpSettings: React.FC = () => {
 
                 <AccordionSection title="6. Global Search & Shortcuts" icon={<Search className="w-4 h-4" />}>
                     <div className="space-y-6">
-                        <p className="text-[13px]">Hit <span className={kbdClass}>{isMac ? 'Cmd+K' : 'Ctrl+K'}</span> anywhere on your computer to invoke the Natively Global Palette. This acts as your Spotlight overlay for interacting directly with the system backbone.</p>
+                        <p className="text-[13px]">Hit <span className={kbdClass}>{isMac ? 'Cmd+K' : 'Ctrl+K'}</span> anywhere on your computer to invoke the AnswerFlow Global Palette. This acts as your Spotlight overlay for interacting directly with the system backbone.</p>
 
                         <MockSearchPillAnim />
 
@@ -1344,7 +1280,7 @@ export const HelpSettings: React.FC = () => {
 
                         <div className="border-t border-border-subtle pt-6">
                             <h4 className="font-bold text-sm text-text-primary border-b border-border-subtle pb-1">Global System Shortcuts</h4>
-                            <p className="text-[11px] text-text-secondary mt-1 mb-3">These hotkeys work anywhere on your operating system, regardless of whether Natively is focused or completely hidden. Change them via <strong>Settings &gt; Hotkeys</strong>.</p>
+                            <p className="text-[11px] text-text-secondary mt-1 mb-3">These hotkeys work anywhere on your operating system, regardless of whether AnswerFlow is focused or completely hidden. Change them via <strong>Settings &gt; Hotkeys</strong>.</p>
 
                             <div className="grid gap-3">
                                 <div className="flex items-center justify-between p-4 rounded-xl border bg-bg-item-surface border-border-subtle group">
@@ -1384,7 +1320,7 @@ export const HelpSettings: React.FC = () => {
                                         </div>
                                         <div>
                                             <div className="font-semibold text-sm text-text-primary">Process Captured Context (Execute)</div>
-                                            <div className="text-xs text-text-secondary mt-1">Triggers Natively to analyze the captured screenshots and text from the rolling buffer.</div>
+                                            <div className="text-xs text-text-secondary mt-1">Triggers AnswerFlow to analyze the captured screenshots and text from the rolling buffer.</div>
                                         </div>
                                     </div>
                                     <div className="flex gap-1 shrink-0">
@@ -1488,7 +1424,7 @@ export const HelpSettings: React.FC = () => {
                     </div>
                 </AccordionSection>
 
-                <AccordionSection title="8. Miscellaneous" icon={<Settings className="w-4 h-4" />}>
+                {false && <AccordionSection title="8. Miscellaneous" icon={<Settings className="w-4 h-4" />}>
                     <div className="space-y-6">
                         {/* Calendar */}
                         <div>
@@ -1497,7 +1433,7 @@ export const HelpSettings: React.FC = () => {
                                     <Calendar size={14} /> What is Calendar Intelligence?
                                 </h4>
                                 <p className="text-[11px] text-text-secondary leading-relaxed mb-0">
-                                    By connecting your Google Calendar directly to Natively, the AI automatically gains context on your upcoming meetings, syncs the event data, and reads attendee lists to hyper-personalize your interactions.
+                                    By connecting your Google Calendar directly to AnswerFlow, the AI automatically gains context on your upcoming meetings, syncs the event data, and reads attendee lists to hyper-personalize your interactions.
                                 </p>
                             </div>
 
@@ -1507,13 +1443,13 @@ export const HelpSettings: React.FC = () => {
                                     <ul className="text-[11px] text-text-secondary space-y-1 list-disc pl-4">
                                         <li>Navigate to the <strong>Calendar</strong> tab in settings.</li>
                                         <li>Click <strong>Connect Google Calendar</strong> and authenticate securely.</li>
-                                        <li>Natively will quietly background-sync your schedule.</li>
+                                        <li>AnswerFlow will quietly background-sync your schedule.</li>
                                     </ul>
                                 </div>
                                 <div className="p-4 rounded-xl border bg-bg-item-surface border-border-subtle">
                                     <h4 className="font-semibold text-sm mb-2 text-text-primary">Follow-Up System</h4>
                                     <p className="text-[11px] text-text-secondary">
-                                        When tracking live meetings, Natively uses the connected calendar context to instantly figure out <strong>who you are talking to</strong>. This powers the Follow-Up Email system, letting you auto-draft post-meeting notes to confirmed attendees.
+                                        When tracking live meetings, AnswerFlow uses the connected calendar context to instantly figure out <strong>who you are talking to</strong>. This powers the Follow-Up Email system, letting you auto-draft post-meeting notes to confirmed attendees.
                                     </p>
                                 </div>
                                 <div className="p-4 rounded-xl border bg-bg-item-surface border-border-subtle">
@@ -1553,16 +1489,16 @@ export const HelpSettings: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                </AccordionSection>
+                </AccordionSection>}
 
-                <AccordionSection title="10. Phone Mirror" icon={<Smartphone className="w-4 h-4" />}>
+                {false && <AccordionSection title="10. Phone Mirror" icon={<Smartphone className="w-4 h-4" />}>
                     <div className="space-y-4">
                         <div className="p-3 bg-sky-500/10 border border-sky-500/20 rounded-xl mb-2">
                             <h4 className="text-[13px] font-semibold text-sky-400 flex items-center gap-2 mb-1">
-                                <Smartphone size={14} /> Stream Natively to Your Phone
+                                <Smartphone size={14} /> Stream AnswerFlow to Your Phone
                             </h4>
                             <p className="text-[11px] text-text-secondary leading-relaxed mb-0">
-                                Phone Mirror spins up a small local web server so you can watch Natively's live transcript and AI answers from your phone or tablet — handy when your screen is being shared and you don't want the overlay visible.
+                                Phone Mirror spins up a small local web server so you can watch AnswerFlow's live transcript and AI answers from your phone or tablet — handy when your screen is being shared and you don't want the overlay visible.
                             </p>
                         </div>
 
@@ -1593,7 +1529,7 @@ export const HelpSettings: React.FC = () => {
                             </p>
                         </div>
                     </div>
-                </AccordionSection>
+                </AccordionSection>}
 
                 <AccordionSection title="11. Stealth & Window Control" icon={<Ghost className="w-4 h-4" />}>
                     <div className="space-y-4">
@@ -1602,7 +1538,7 @@ export const HelpSettings: React.FC = () => {
                                 <Ghost size={14} /> Process Disguise & Undetectability
                             </h4>
                             <p className="text-[11px] text-text-secondary leading-relaxed mb-0">
-                                Natively is heavily geared towards power users seeking minimalistic operation. The process completely disguises itself and remains undetectable/invisible to standard screen-recording applications and desktop sharing utilities.
+                                AnswerFlow is heavily geared towards power users seeking minimalistic operation. The process completely disguises itself and remains undetectable/invisible to standard screen-recording applications and desktop sharing utilities.
                             </p>
                         </div>
 
@@ -1625,7 +1561,7 @@ export const HelpSettings: React.FC = () => {
                                 </p>
                                 <div className="p-2 border border-orange-500/20 bg-orange-500/5 rounded-lg">
                                     <p className="text-[10px] text-orange-400 m-0">
-                                        <strong>⚠️ Warning:</strong> This renders the Natively overlay completely unclickable. You MUST memorize the Global Hotkeys (e.g. <strong>{isMac ? 'Cmd' : 'Ctrl'}+Shift+Arrows</strong> to move, <strong>{isMac ? 'Cmd' : 'Ctrl'}+B</strong> to hide, <strong>{isMac ? 'Cmd' : 'Ctrl'}+1-7</strong> for actions) to control the application once this is active.
+                                        <strong>⚠️ Warning:</strong> This renders the AnswerFlow overlay completely unclickable. You MUST memorize the Global Hotkeys (e.g. <strong>{isMac ? 'Cmd' : 'Ctrl'}+Shift+Arrows</strong> to move, <strong>{isMac ? 'Cmd' : 'Ctrl'}+B</strong> to hide, <strong>{isMac ? 'Cmd' : 'Ctrl'}+1-7</strong> for actions) to control the application once this is active.
                                     </p>
                                 </div>
                             </div>

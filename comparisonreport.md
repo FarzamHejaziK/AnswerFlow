@@ -1,18 +1,18 @@
-# Natively vs Cluely Deep Codebase Audit
+# AnswerFlow vs legacy overlay Deep Codebase Audit
 
 **Report Date:** 2026-05-15
 **Auditor:** Senior Product Engineer + Code Reviewer
-**Natively API Key:** `natively_sk_[REDACTED]`
-**Cluely Research Source:** `cluelyresearch.md`
+**AnswerFlow API Key:** `answerflow_sk_[REDACTED]`
+**legacy overlay Research Source:** `answerflow-market-research.md`
 
 ---
 
 ## 1. Executive Summary
 
-### Where Natively is Strong
+### Where AnswerFlow is Strong
 
 1. **Real multi-provider LLM routing** — Gemini, Groq, OpenAI, Claude, Ollama with fallback logic and rate limiting (`ProviderRouter.ts`, `RateLimiter.ts`)
-2. **Multiple STT providers** — Deepgram, ElevenLabs, Google, OpenAI, Local Whisper, Natively Pro with provider fallback (`electron/audio/`)
+2. **Multiple STT providers** — Deepgram, ElevenLabs, Google, OpenAI, Local Whisper, AnswerFlow Pro with provider fallback (`electron/audio/`)
 3. **Genuine modes system** — 7 distinct mode templates with mode-specific prompts, reference files per mode, post-call note templates (`ModesManager.ts`)
 4. **Anti-AI-tell post-processing** — Dash reduction, filler phrase stripping, em-dash replacement (`postProcessor.ts`)
 5. **Speculative inference** — Pre-starts LLM on high-confidence interviewer partials to reduce perceived latency (`IntelligenceEngine.ts:97`)
@@ -22,22 +22,22 @@
 9. **Streaming with latency tracking** — Per-token latency measurement in `WhatToAnswerLLM.ts`
 10. **Conversation summarizer** — Epoch compaction to preserve early context (`ConversationSummarizer.ts`)
 
-### Where Natively is Weak
+### Where AnswerFlow is Weak
 
-1. **No dynamic action cards** — Cluely's signature "auto-detected answer opportunities" are NOT implemented. The planner decides `silent/answer/clarify/recap` but never surfaces UI action cards.
+1. **No dynamic action cards** — legacy overlay's signature "auto-detected answer opportunities" are NOT implemented. The planner decides `silent/answer/clarify/recap` but never surfaces UI action cards.
 2. **No screen OCR context** — No Tesseract/screenshot analysis feeding into answers. Only screenshot file references, no actual screen understanding.
-3. **No mode-specific dynamic action triggers** — Modes don't define `retrieval_scopes`, `dynamic_actions`, or `trigger` rules like Cluely. Only prompt suffix differences.
+3. **No mode-specific dynamic action triggers** — Modes don't define `retrieval_scopes`, `dynamic_actions`, or `trigger` rules like legacy overlay. Only prompt suffix differences.
 4. **No pre-call briefs** — No calendar integration, no participant research, no meeting preparation summaries.
 5. **No post-call coaching** — No missed-opportunity detection, no customizable scorecards, no coaching rubrics per mode.
 6. **No CRM/ATS integrations** — No HubSpot, Salesforce, Pipedrive, Greenhouse, Lever. Zero.
 7. **No analytics/telemetry** — No tracking of mode usage, answer latency, action click rates, RAG hit/miss rates.
 8. **No enterprise features** — No team prompts, no role-based prompt assignment, no shared KB, no admin controls.
 9. **Mode-context retrieval is primitive** — Simple keyword scoring, not vector embeddings. No semantic search for mode reference files.
-10. **No Tavily/web search** — Cluely has live links as data sources. Natively has zero web search capability.
+10. **No Tavily/web search** — legacy overlay has live links as data sources. AnswerFlow has zero web search capability.
 
 ### Are Modes Real or Superficial?
 
-**Partially real.** Natively modes have:
+**Partially real.** AnswerFlow modes have:
 - Distinct system prompt suffixes (`TEMPLATE_SYSTEM_PROMPTS`)
 - Per-mode reference files (`addReferenceFile`, `getReferenceFiles`)
 - Per-mode post-call note templates (`TEMPLATE_NOTE_SECTIONS`)
@@ -50,7 +50,7 @@ But modes **lack**:
 - Auto-mode detection from calendar/participants/context
 - Mode behavior switching mid-session (same planner runs regardless of mode)
 
-**Verdict:** Modes are ~60% of what Cluely calls "modes." Better than nothing, but not the full mode engine.
+**Verdict:** Modes are ~60% of what legacy overlay calls "modes." Better than nothing, but not the full mode engine.
 
 ### Is Auto-Answer Real or Superficial?
 
@@ -64,7 +64,7 @@ But there is:
 - **No UI action card rendering** based on detected triggers
 - **No dynamic action buttons** surfacing detected objections/questions
 - **No Tab/Cmd+Enter trigger** for confirmed answers
-- **No `dynamic_action` data structure** matching Cluely's `{id, trigger, priority, prompt}` pattern
+- **No `dynamic_action` data structure** matching legacy overlay's `{id, trigger, priority, prompt}` pattern
 
 **Verdict:** The LLM-side plumbing exists but the UI-side dynamic action card layer is missing.
 
@@ -78,7 +78,7 @@ But there is:
 
 But missing:
 - Mode-specific retrieval scope filtering (only `modeId` scoping, not content-type scoping)
-- **No live links/web crawl** (Cluely supports live URLs as RAG sources)
+- **No live links/web crawl** (legacy overlay supports live URLs as RAG sources)
 - **No citation verification** — snippets marked `reference_grounding_guard` but no fact-checking
 - No RAG evaluation metrics (hit/miss tracking, relevance scoring feedback)
 - Large file handling is naive (simple character truncation, no intelligent chunk selection)
@@ -86,11 +86,11 @@ But missing:
 
 **Verdict:** Usable RAG for personal reference files. Not production-grade for enterprise KB.
 
-### Can Natively Compete with Cluely Today?
+### Can AnswerFlow Compete with legacy overlay Today?
 
 **No. Not close enough for enterprise. Close enough for individual power users.**
 
-| Dimension | Natively | Cluely | Gap |
+| Dimension | AnswerFlow | legacy overlay | Gap |
 |---|---|---|---|
 | Individual features | 7/10 | 8/10 | Small |
 | Mode system | 6/10 | 9/10 | Medium |
@@ -102,20 +102,20 @@ But missing:
 | Post-call coaching | 0/10 | 8/10 | Critical |
 | Telemetry | 1/10 | 8/10 | Critical |
 
-**Bottom line:** Natively is a solid individual meeting assistant. Cluely is a full enterprise revenue intelligence platform. Natively needs 6-12 months of development to approach enterprise Cluely parity.
+**Bottom line:** AnswerFlow is a solid individual meeting assistant. legacy overlay is a full enterprise revenue intelligence platform. AnswerFlow needs 6-12 months of development to approach enterprise legacy overlay parity.
 
 ---
 
 ## 2. Feature Parity Matrix
 
-| Capability | Cluely-style expectation | Natively current status | Evidence/file paths | Gap severity | Fix difficulty |
+| Capability | legacy overlay-style expectation | AnswerFlow current status | Evidence/file paths | Gap severity | Fix difficulty |
 |---|---|---|---|---|---|
 | Live transcript | Real-time streaming transcript with speaker labeling | ✅ Implemented | `SessionTracker.ts`, `electron/audio/*` | None | — |
 | System audio capture | Loopback audio from meeting apps | ✅ Implemented | `SystemAudioCapture.ts` | None | — |
 | Mic capture | Dedicated mic input | ✅ Implemented | `MicrophoneCapture.ts` | None | — |
 | STT streaming | Cloud + local Whisper options | ✅ Implemented | `DeepgramStreamingSTT.ts`, `OpenAIStreamingSTT.ts`, `LocalWhisperSTT.ts`, `ElevenLabsStreamingSTT.ts`, `GoogleSTT.ts` | None | — |
 | AI answer generation | Context-aware first-person answers | ✅ Implemented | `WhatToAnswerLLM.ts`, `AnswerLLM.ts` | None | — |
-| Auto answer | Auto-detected action opportunities with UI cards | 🔴 Missing | No `DynamicActionCard` type, no action card rendering in `NativelyInterface.tsx`, no Tab/Cmd+Enter binding for confirmed answers | P0 | High |
+| Auto answer | Auto-detected action opportunities with UI cards | 🔴 Missing | No `DynamicActionCard` type, no action card rendering in `AnswerFlowInterface.tsx`, no Tab/Cmd+Enter binding for confirmed answers | P0 | High |
 | Dynamic action detection | Question/objection/technical term/competitor detection | 🔴 Missing | `PlannerDecision.ts` detects `silent/answer/clarify/recap/follow_up_questions/brainstorm` but outputs no UI action cards. No detection for: competitor mentions, pricing objections, buying signals, candidate concerns | P0 | High |
 | Mode switching | Dropdown with 7+ modes | ✅ Implemented | `ModesManager.ts:50-62`, UI in `SettingsOverlay.tsx` | None | — |
 | Mode-specific prompts | Different system prompts per mode | ✅ Implemented | `TEMPLATE_SYSTEM_PROMPTS` in `ModesManager.ts:115-125` | None | — |
@@ -131,7 +131,7 @@ But missing:
 | Telemetry | Latency, usage, error metrics | 🔴 Missing | `verboseLog.ts` is basic console/file logging. No PostHog/Axiom/Sentry integration. No mode usage analytics | P1 | Medium |
 | Error handling | Provider errors, rate limits, API failures | ✅ Implemented | Rate limiters, retry logic in `LLMHelper.ts`, error events in `IntelligenceEngine.ts` | None | — |
 | Hotkeys | Global shortcuts | ✅ Implemented | `KeybindManager.ts`, `StealthKeyboardManager.ts` | None | — |
-| Overlay UX | Always-on-top floating UI | ✅ Implemented | `GlobalChatOverlay.tsx`, `NativelyInterface.tsx`, `WindowHelper.ts` | None | — |
+| Overlay UX | Always-on-top floating UI | ✅ Implemented | `GlobalChatOverlay.tsx`, `AnswerFlowInterface.tsx`, `WindowHelper.ts` | None | — |
 | Settings persistence | Mode, credentials, preferences | ✅ Implemented | `SettingsManager.ts`, `DatabaseManager.ts`, keytar for secrets | None | — |
 | API key safety | Secure storage | ✅ Implemented | keytar, no hardcoded keys, `CUSTOM_SYSTEM_PROMPT` has no credential exposure | None | — |
 | Onboarding | First-run setup | ⚠️ Partial | `StartupSequence.tsx`, `onboarding/` directory | P2 | Low |
@@ -160,7 +160,7 @@ But missing:
 - **Real implementation status:** ✅ Functional
 - **Mode bleeding risks:** None identified
 - **Bugs:** None identified
-- **Missing Cluely-level behavior:** No "general meeting" specific actions like "Who am I talking to?", "Fact check"
+- **Missing legacy overlay-level behavior:** No "general meeting" specific actions like "Who am I talking to?", "Fact check"
 
 ### Mode: Sales
 - **Purpose:** Close deals with strategic discovery and objection handling
@@ -175,7 +175,7 @@ But missing:
 - **Real implementation status:** ⚠️ Partial — prompt exists but no dynamic action cards for pricing objection/competitor detection
 - **Mode bleeding risks:** Reference files not cleared on mode switch (only `setActiveMode()` DB call)
 - **Bugs:** No trigger-based action generation for sales-specific events
-- **Missing Cluely-level behavior:** No competitor mention detection, no pricing objection cards, no buying signal detection, no CRM context
+- **Missing legacy overlay-level behavior:** No competitor mention detection, no pricing objection cards, no buying signal detection, no CRM context
 
 ### Mode: Recruiting
 - **Purpose:** Evaluate candidates with structured interview insights
@@ -185,7 +185,7 @@ But missing:
 - **Dynamic actions:** None
 - **Output format:** Candidate evaluation notes
 - **Real implementation status:** ⚠️ Partial
-- **Missing Cluely-level behavior:** No ATS integration, no candidate signal detection (strong/weak fit), no scorecard generation, no interview notes push to ATS
+- **Missing legacy overlay-level behavior:** No ATS integration, no candidate signal detection (strong/weak fit), no scorecard generation, no interview notes push to ATS
 
 ### Mode: Team Meet
 - **Purpose:** Track action items and key decisions from meetings
@@ -195,7 +195,7 @@ But missing:
 - **Dynamic actions:** None
 - **Output format:** Meeting notes with sections (Action Items, Announcements, Team updates, etc.)
 - **Real implementation status:** ⚠️ Partial — post-call template exists, no real-time action item detection
-- **Missing Cluely-level behavior:** No decision point detection, no action item extraction from live transcript, no blocker detection
+- **Missing legacy overlay-level behavior:** No decision point detection, no action item extraction from live transcript, no blocker detection
 
 ### Mode: Looking for Work (Interview)
 - **Purpose:** Answer interview questions with confidence
@@ -206,7 +206,7 @@ But missing:
 - **Output format:** First-person candidate script
 - **Real implementation status:** ✅ Working for behavioral questions, ⚠️ weak for sub-mode differentiation
 - **Bugs:** No technical interview sub-mode differentiation (same prompt as behavioral)
-- **Missing Cluely-level behavior:** No coding sub-mode, no system design sub-mode, no PM/case sub-mode, no sub-mode auto-detection
+- **Missing legacy overlay-level behavior:** No coding sub-mode, no system design sub-mode, no PM/case sub-mode, no sub-mode auto-detection
 
 ### Mode: Technical Interview
 - **Purpose:** Whiteboard-style coding and system design support
@@ -216,7 +216,7 @@ But missing:
 - **Dynamic actions:** None
 - **Output format:** Code block + explanation + follow-ups
 - **Real implementation status:** ⚠️ Partial — code detection exists in `SessionTracker.ts:168` but no coding-specific trigger rules
-- **Missing Cluely-level behavior:** No LeetCode problem detection, no compiler error detection, no runtime complexity questions, no system design mode
+- **Missing legacy overlay-level behavior:** No LeetCode problem detection, no compiler error detection, no runtime complexity questions, no system design mode
 
 ### Mode: Lecture
 - **Purpose:** Capture key concepts from lectures
@@ -226,7 +226,7 @@ But missing:
 - **Dynamic actions:** None
 - **Output format:** Structured notes with key concepts
 - **Real implementation status:** ⚠️ Partial
-- **Missing Cluely-level behavior:** No slide change detection, no formula detection, no definition extraction, no lecture-specific question detection
+- **Missing legacy overlay-level behavior:** No slide change detection, no formula detection, no definition extraction, no lecture-specific question detection
 
 ---
 
@@ -287,7 +287,7 @@ This is correct — mode context is reloaded per request.
 | Speculative inference | ✅ Timer-based | `IntelligenceEngine.ts:193` | Debounced on interviewer partials |
 | Negotiation coaching | ✅ Event-based | `IntelligenceEngine.ts:63` | Dedicated channel |
 
-### What is Missing (Cluely-Level)
+### What is Missing (legacy overlay-Level)
 
 | Detection Type | Status | Location | Missing |
 |---|---|---|---|
@@ -301,9 +301,9 @@ This is correct — mode context is reloaded per request.
 | **Risk/blocker detection** | 🔴 Missing | — | No "blocked on", "issue with", "problem" detection |
 | **Screen problem (OCR)** | 🔴 Missing | — | `ScreenshotHelper.ts` exists but not in answer pipeline |
 
-### Dynamic Action Architecture (Proposed for Natively)
+### Dynamic Action Architecture (Proposed for AnswerFlow)
 
-Based on Cluely's model and Natively's current code, a production dynamic action system needs:
+Based on legacy overlay's model and AnswerFlow's current code, a production dynamic action system needs:
 
 ```typescript
 interface DynamicAction {
@@ -436,7 +436,7 @@ When modeContextBlock + transcript exceeds budget, there's no intelligent priori
 
 **Weaknesses:**
 - **Mode files use keyword search, not vectors** (`ModeContextRetriever.ts:76-89` — TF-IDF-like scoring, no embeddings)
-- No live links/web crawling (unlike Cluely)
+- No live links/web crawling (unlike legacy overlay)
 - No RAG evaluation/hit-rate tracking
 - Large files: simple character truncation, no intelligent chunk selection
 - No handling of malformed PDFs beyond empty content check
@@ -454,7 +454,7 @@ MicrophoneCapture.ts / SystemAudioCapture.ts
         ↓
 [Native Audio] → [Platform-specific audio capture]
         ↓
-STT Adapter (Deepgram/ElevenLabs/OpenAI/Google/Whisper/NativelyPro)
+STT Adapter (Deepgram/ElevenLabs/OpenAI/Google/Whisper/AnswerFlowPro)
         ↓
 [Streaming transcription with interim/final handling]
         ↓
@@ -470,7 +470,7 @@ WhatToAnswerLLM.generateStream() → LLM response
         ↓
 preload.ts → renderer (ipcRenderer)
         ↓
-NativelyInterface.tsx → UI rendering
+AnswerFlowInterface.tsx → UI rendering
 ```
 
 ### Current Implementation Status
@@ -484,7 +484,7 @@ NativelyInterface.tsx → UI rendering
 | Intent classification | ✅ Working | `IntentClassifier.ts` |
 | Planner decision | ✅ Working | `PlannerDecision.ts` |
 | LLM streaming | ✅ Working | `LLMHelper.ts`, `WhatToAnswerLLM.ts` |
-| UI rendering | ⚠️ Partial | `NativelyInterface.tsx` (180K lines, very large) |
+| UI rendering | ⚠️ Partial | `AnswerFlowInterface.tsx` (180K lines, very large) |
 | IPC bridge | ✅ Working | `preload.ts`, `ipcHandlers.ts` |
 
 ### Latency Risks
@@ -514,7 +514,7 @@ NativelyInterface.tsx → UI rendering
 | OpenAI | `setOpenaiApiKey()` → `OpenAI` | ✅ | Via `ProviderRouter` | ❌ None | ❌ None |
 | Claude | `setClaudeApiKey()` → `Anthropic` | ✅ Via streaming | Via `ProviderRouter` | ❌ None | ❌ None |
 | Ollama | Direct URL | ✅ | Self-hosted only | ❌ None | ❌ None |
-| Natively Pro | `setNativelyKey()` | ✅ | Via `NativelyProSTT` | ❌ Unknown | ❌ Unknown |
+| AnswerFlow Pro | `setAnswerFlowKey()` | ✅ | Via `AnswerFlowProSTT` | ❌ Unknown | ❌ Unknown |
 
 ### Key Issues
 
@@ -544,7 +544,7 @@ NativelyInterface.tsx → UI rendering
 ### Electron Implementation
 
 **Main process:** `electron/main.ts` (175K+ lines — very large)
-**Renderer:** `src/components/NativelyInterface.tsx` (180K lines — extremely large)
+**Renderer:** `src/components/AnswerFlowInterface.tsx` (180K lines — extremely large)
 **Window management:** `WindowHelper.ts`, `SettingsWindowHelper.ts`
 
 ### Hotkeys
@@ -562,7 +562,7 @@ NativelyInterface.tsx → UI rendering
 - `setContentProtection()` for screen-share invisibility on Mac
 - Multi-monitor support via `display` events
 
-**Potentially Broken (from cluelyresearch.md):**
+**Potentially Broken (from answerflow-market-research.md):**
 - `NSWindowSharingNone` on macOS with ScreenCaptureKit may still capture overlay
 - Windows `WDA_EXCLUDEFROMCAPTURE` doesn't work on Windows 10/11 Home
 - No documented invisibility compatibility matrix
@@ -624,15 +624,15 @@ NativelyInterface.tsx → UI rendering
 | No CORS configuration visible | ⚠️ MEDIUM | `ipcHandlers.ts` | Verify IPC is browser-bridge only |
 | No auth on local IPC | ⚠️ MEDIUM | `ipcHandlers.ts` | Electron contextBridge is secure by default |
 | No payment/license bypass — but no license check code found | ⚠️ MEDIUM | `premium/` | Verify license enforcement |
-| `natively_sk_josgls...` API key in research doc | 🔴 HIGH | This report / `cluelyresearch.md` | Rotate key immediately |
+| `answerflow_sk_josgls...` API key in research doc | 🔴 HIGH | This report / `answerflow-market-research.md` | Rotate key immediately |
 
 ### Secrets Exposure (IMMEDIATE ACTION)
 
-The API key `natively_sk_[REDACTED]` appears in research documentation. **Rotate this key immediately.**
+The API key `answerflow_sk_[REDACTED]` appears in research documentation. **Rotate this key immediately.**
 
 ---
 
-## 13. UX / Product Weaknesses Compared to Cluely
+## 13. UX / Product Weaknesses Compared to legacy overlay
 
 ### What Would Confuse a First-Time User
 
@@ -645,7 +645,7 @@ The API key `natively_sk_[REDACTED]` appears in research documentation. **Rotate
 
 ### What Breaks Trust
 
-1. **"Auto answer" isn't actually automatic** — user expects Otter/Cluely behavior, gets manual trigger
+1. **"Auto answer" isn't actually automatic** — user expects Otter/legacy overlay behavior, gets manual trigger
 2. **No visible transcript** — user can't verify what was heard
 3. **Answer appears with no context** — user doesn't know if answer came from their files, transcript, or general knowledge
 4. **No feedback loop** — user can't say "that answer was wrong" and have it improve
@@ -671,12 +671,12 @@ The API key `natively_sk_[REDACTED]` appears in research documentation. **Rotate
 
 | Rank | Issue | Severity | Evidence | User impact | Fix |
 |---|---|---|---|---|---|
-| P0 | No dynamic action cards UI | Breaks core product | `NativelyInterface.tsx` has no `DynamicActionCard` component, `PlannerDecision.ts` outputs only internal decisions | User can't see auto-detected opportunities | Create `DynamicActionCard` component, wire to `PlannerDecision` events |
+| P0 | No dynamic action cards UI | Breaks core product | `AnswerFlowInterface.tsx` has no `DynamicActionCard` component, `PlannerDecision.ts` outputs only internal decisions | User can't see auto-detected opportunities | Create `DynamicActionCard` component, wire to `PlannerDecision` events |
 | P0 | No screen OCR in answer pipeline | Major competitive weakness | `ScreenshotHelper.ts` captures but not used in `WhatToAnswerLLM.generateStream()` | Coding questions with visible screen don't get answered | Integrate `imagePaths` into answer context |
 | P0 | `.env` file may contain real API keys | Security | `.env` in repo, `git status` shows it | Key exposure risk | Remove from git, rotate keys |
 | P0 | No pre-call briefs | Major feature gap | `CalendarManager.ts` exists but unused | No meeting preparation | Wire calendar → participant research → summary |
 | P0 | No CRM/ATS integrations | Enterprise blocker | Zero CRM code | Cannot compete in enterprise | Add Merge.dev or direct integrations |
-| P0 | API key in research docs | Security | `natively_sk_josgls...` in `cluelyresearch.md` | Key compromise | Rotate immediately |
+| P0 | API key in research docs | Security | `answerflow_sk_josgls...` in `answerflow-market-research.md` | Key compromise | Rotate immediately |
 | P1 | Mode bleeding risk | Reliability | `setActiveMode()` no state clearing, `SessionTracker` context persists | Answer contamination between modes | Add `clearSessionContext()` on mode switch |
 | P1 | No post-call coaching | Major feature gap | No coaching module | No missed opportunity detection | Build coaching scoring module |
 | P1 | Telemetry is missing | Observability | `verboseLog` basic, no PostHog/Axiom | Can't debug production issues | Add PostHog + Axiom |
@@ -685,16 +685,16 @@ The API key `natively_sk_[REDACTED]` appears in research documentation. **Rotate
 | P1 | No follow-up email generation (production-grade) | Product gap | `FollowUpEmailModal.tsx` exists but basic | Can't send proper follow-ups | Enhance with template system |
 | P1 | IntentClassifier model lazy-loads on first use | Latency | `ZeroShotClassifier.ensureLoaded()` fires first time | 1-3s delay on first question | Warmup in `initializeLLMs()` |
 | P1 | Rate limiters created but not used | Reliability | `createProviderRateLimiters()` but no `acquire()` calls | Possible 429 errors | Wire rate limiters into LLM calls |
-| P1 | Natively Pro STT provider — status unclear | Reliability | `NativelyProSTT.ts` in code | May not be functional | Verify with live test |
+| P1 | AnswerFlow Pro STT provider — status unclear | Reliability | `AnswerFlowProSTT.ts` in code | May not be functional | Verify with live test |
 | P2 | No mode auto-detection | UX gap | Calendar/participant-based mode suggestion missing | User has to manually switch | Add calendar → mode inference |
-| P2 | `NativelyInterface.tsx` is 180K lines | Maintainability | Single component file too large | Hard to navigate/modify | Split into smaller components |
+| P2 | `AnswerFlowInterface.tsx` is 180K lines | Maintainability | Single component file too large | Hard to navigate/modify | Split into smaller components |
 | P2 | `main.ts` is 175K lines | Maintainability | Single file too large | Hard to maintain | Extract modules |
 | P2 | No meeting search | Product gap | No search across past meetings | Can't find historical context | Add full-text search |
 | P2 | No speaker identification in transcript | Product gap | `speaker` field in `TranscriptSegment` but no diarization | Can't tell who said what | Add speaker diarization |
 | P2 | Windows system audio may not work | Compatibility | `SystemAudioCapture.ts` may have platform issues | Windows users can't capture system audio | Test and fix Windows path |
 | P2 | Local Whisper integration is complex | Ease of use | `LocalWhisperSTT.ts` + `whisper/` dir + model download script | User setup is hard | Simplify onboarding |
-| P2 | No "Who am I talking to?" action | Feature gap | Cluely has this, Natively doesn't | Can't identify participants | Add participant lookup |
-| P2 | No fact-check action | Feature gap | Cluely has "Fact check", Natively doesn't | Can't verify claims | Add fact verification module |
+| P2 | No "Who am I talking to?" action | Feature gap | legacy overlay has this, AnswerFlow doesn't | Can't identify participants | Add participant lookup |
+| P2 | No fact-check action | Feature gap | legacy overlay has "Fact check", AnswerFlow doesn't | Can't verify claims | Add fact verification module |
 | P2 | Em-dash post-processor is partial | Polish | `reduceDashesInChunk` for streaming, but cross-chunk dashes slip through | AI tells still visible in streaming | Full post-process after stream completes |
 | P2 | No incremental RAG index update | Performance | Full rebuild on new files | Slow with large file sets | Add delta indexing |
 | P2 | No meeting export (PDF/Word) | Product gap | Notes exist but no export format | Can't share notes externally | Add export functionality |
@@ -753,7 +753,7 @@ The API key `natively_sk_[REDACTED]` appears in research documentation. **Rotate
 7. **Build meeting export (PDF/Word)** — Structured export of meeting notes
 8. **Add meeting sharing** — Shareable links for meeting notes
 9. **Build enterprise team management** — Team prompts, role-based modes, shared KB
-10. **Performance: Split `NativelyInterface.tsx`** — Extract overlay, chat, settings into separate components
+10. **Performance: Split `AnswerFlowInterface.tsx`** — Extract overlay, chat, settings into separate components
 
 ### Enterprise-Level Roadmap
 
@@ -809,7 +809,7 @@ await this.groqClient.chat.completions.create({...});
 - `electron/services/DynamicActionEngine.ts` — trigger detection + card generation
 
 **Files to modify:**
-- `src/components/NativelyInterface.tsx` — add `DynamicActionBar` rendering
+- `src/components/AnswerFlowInterface.tsx` — add `DynamicActionBar` rendering
 - `electron/IntelligenceEngine.ts` — emit `dynamic_action` events
 
 ### Priority 4: Integrate Screen Context into Answers
@@ -909,9 +909,9 @@ async retrieve(mode: Mode, files: ModeReferenceFile[], options: RetrieveOptions)
 
 ## 18. Final Verdict
 
-### Is Natively Currently Close to Cluely?
+### Is AnswerFlow Currently Close to legacy overlay?
 
-**No, but closer than most open-source attempts.** Natively has:
+**No, but closer than most open-source attempts.** AnswerFlow has:
 - Real multi-provider LLM routing ✅
 - Real streaming transcription ✅
 - Real modes with distinct prompts ✅
@@ -927,35 +927,35 @@ But missing:
 - Team/enterprise features ❌
 - Production telemetry ❌
 
-**Natively is a solid individual meeting assistant. It's not yet an enterprise revenue intelligence platform.**
+**AnswerFlow is a solid individual meeting assistant. It's not yet an enterprise revenue intelligence platform.**
 
-### Top 5 Reasons Natively is Behind Cluely
+### Top 5 Reasons AnswerFlow is Behind legacy overlay
 
-1. **No dynamic action card UI** — Cluely's signature is auto-detected answer opportunities surfaced as clickable cards. Natively's planner only makes internal decisions; nothing is shown to the user.
+1. **No dynamic action card UI** — legacy overlay's signature is auto-detected answer opportunities surfaced as clickable cards. AnswerFlow's planner only makes internal decisions; nothing is shown to the user.
 
-2. **No enterprise integrations** — CRM (HubSpot, Salesforce), ATS (Greenhouse, Lever), calendar (Google Calendar) are Cluely's enterprise moat. Natively has zero of these.
+2. **No enterprise integrations** — CRM (HubSpot, Salesforce), ATS (Greenhouse, Lever), calendar (Google Calendar) are legacy overlay's enterprise moat. AnswerFlow has zero of these.
 
-3. **No pre-call briefs** — Cluely generates meeting preparation from calendar events. Natively's `CalendarManager.ts` is dead code.
+3. **No pre-call briefs** — legacy overlay generates meeting preparation from calendar events. AnswerFlow's `CalendarManager.ts` is dead code.
 
-4. **No coaching/post-call analytics** — Cluely's coaching tracks missed opportunities, scorecards, team-wide trends. Natively has no coaching module.
+4. **No coaching/post-call analytics** — legacy overlay's coaching tracks missed opportunities, scorecards, team-wide trends. AnswerFlow has no coaching module.
 
-5. **No screen context in answers** — Cluely's "Get Answer" for coding/Excel/screens is a key differentiator. Natively captures screenshots but never feeds them into the answer pipeline.
+5. **No screen context in answers** — legacy overlay's "Get Answer" for coding/Excel/screens is a key differentiator. AnswerFlow captures screenshots but never feeds them into the answer pipeline.
 
-### Top 5 Easiest Areas Where Natively Can Beat Cluely
+### Top 5 Easiest Areas Where AnswerFlow Can Beat legacy overlay
 
-1. **Anti-AI-tell post-processing** — Natively's `reduceDashes()` and filler phrase stripping are better than Cluely's output quality. Make this a marketing point.
+1. **Anti-AI-tell post-processing** — AnswerFlow's `reduceDashes()` and filler phrase stripping are better than legacy overlay's output quality. Make this a marketing point.
 
-2. **Local Whisper STT** — Natively's local Whisper integration works offline. Cluely is cloud-only. Market this for privacy-sensitive users.
+2. **Local Whisper STT** — AnswerFlow's local Whisper integration works offline. legacy overlay is cloud-only. Market this for privacy-sensitive users.
 
-3. **Open-source transparency** — Cluely is closed. Natively can build trust through open development, something Cluely can't match.
+3. **Open-source transparency** — legacy overlay is closed. AnswerFlow can build trust through open development, something legacy overlay can't match.
 
-4. **Multi-provider fallback** — Natively routes across Gemini/Groq/OpenAI/Claude/Ollama. Cluely is single-provider. Natively's resilience is architecturally superior.
+4. **Multi-provider fallback** — AnswerFlow routes across Gemini/Groq/OpenAI/Claude/Ollama. legacy overlay is single-provider. AnswerFlow's resilience is architecturally superior.
 
-5. **Mode prompt customization** — Natively lets users edit mode system prompts directly. Cluely's mode customization is more constrained. Power users will prefer Natively's flexibility.
+5. **Mode prompt customization** — AnswerFlow lets users edit mode system prompts directly. legacy overlay's mode customization is more constrained. Power users will prefer AnswerFlow's flexibility.
 
 ### What to Build Next, in Exact Order
 
-1. **Dynamic Action Card System** — The single highest-impact feature. Create `DynamicActionCard` UI component, wire to `PlannerDecision` events. This is Cluely's core differentiator.
+1. **Dynamic Action Card System** — The single highest-impact feature. Create `DynamicActionCard` UI component, wire to `PlannerDecision` events. This is legacy overlay's core differentiator.
 
 2. **Screen Context in Answers** — Integrate `ScreenshotHelper` output into `WhatToAnswerLLM.generateStream()`. Even basic screen text extraction (Tesseract OCR) would unlock coding question support.
 
@@ -969,9 +969,9 @@ But missing:
 
 7. **Telemetry Pipeline** — Add PostHog for product analytics + Axiom for logs. Can't optimize what you can't measure.
 
-8. **Follow-up Email Templates** — Expand `FollowUpEmailModal` with mode-specific templates. Cluely has this; it's a quick win.
+8. **Follow-up Email Templates** — Expand `FollowUpEmailModal` with mode-specific templates. legacy overlay has this; it's a quick win.
 
-9. **Meeting Search** — Full-text search across past meeting transcripts. Basic feature that Cluely has and users expect.
+9. **Meeting Search** — Full-text search across past meeting transcripts. Basic feature that legacy overlay has and users expect.
 
 10. **Calendar Integration (Pre-call briefs)** — Wire `CalendarManager` into the meeting start flow. This unlocks auto-mode-detection and pre-call briefs.
 
@@ -979,6 +979,6 @@ But missing:
 
 ## Appendix: Critical Security Note
 
-**API key `natively_sk_[REDACTED]` appears in research documentation (`cluelyresearch.md`). Rotate this key immediately.**
+**API key `answerflow_sk_[REDACTED]` appears in research documentation (`answerflow-market-research.md`). Rotate this key immediately.**
 
 Additionally, the `.env` file in the repository root should be checked for actual credential content and removed from git tracking if it contains real keys.

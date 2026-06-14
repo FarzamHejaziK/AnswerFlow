@@ -1,9 +1,9 @@
 Case study Halo Labs (beta cohort)
 
-Halo Labs is a six person consultancy that runs roughly twelve client discovery calls and four hiring interviews per week. They were the third beta customer for Natively and have used it as their daily driver for nine weeks at time of writing.
+Halo Labs is a six person consultancy that runs roughly twelve client discovery calls and four hiring interviews per week. They were the third beta customer for AnswerFlow and have used it as their daily driver for nine weeks at time of writing.
 
 Quoted outcome
-"Beta user Halo Labs reported a 40 percent faster interview prep cycle after switching to Natively, primarily because the per mode reference files meant the founder did not have to manually re-paste the JD into a chat window before every screen."
+"Beta user Halo Labs reported a 40 percent faster interview prep cycle after switching to AnswerFlow, primarily because the per mode reference files meant the founder did not have to manually re-paste the JD into a chat window before every screen."
 
 Quantified outcome (self reported, not audited)
 - Interview prep time per role dropped from 90 minutes to 55 minutes on average

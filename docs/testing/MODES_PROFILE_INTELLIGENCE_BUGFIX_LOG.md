@@ -43,7 +43,7 @@ Each entry below documents a real bug found by the new automated QA suite and th
 - **Tests added:** 86 new tests across the 8 new files; all 86 pass after the fix.
 - **Commands run:**
   ```
-  node --test electron/services/__tests__/Mode*.test.mjs electron/services/__tests__/ProfileIntelligenceGate.test.mjs electron/services/__tests__/NativelyApiE2E.test.mjs
+  node --test electron/services/__tests__/Mode*.test.mjs electron/services/__tests__/ProfileIntelligenceGate.test.mjs electron/services/__tests__/AnswerFlowApiE2E.test.mjs
   npm test
   ```
 - **After behavior:** 299/299 tests pass. The finding is documented as a real signal to consider whether `MIN_RELEVANCE_SCORE` should be query-length-aware (e.g. lower threshold when the bare query alone is short and no transcript is provided yet at the very start of a session).
@@ -56,30 +56,30 @@ Each entry below documents a real bug found by the new automated QA suite and th
 - **Suggested fix (not applied this pass):** in `wordsOf` at `electron/services/ModeContextRetriever.ts:58-64`, treat apostrophes inside words as zero-width (`'` → ``) rather than space, so `Green's` becomes `greens` (still ≥3 chars). Same change in `electron/services/modes/ModeHybridRetriever.ts:63-69`.
 - **Status:** documented; awaits product sign-off before changing tokenizer behavior (could affect existing matches).
 
-### FINDING-011 — Real Natively API smoke test hits an unresolved domain with the wrong auth header
+### FINDING-011 — Real AnswerFlow API smoke test hits an unresolved domain with the wrong auth header
 
 - **Mode affected:** none at runtime (test-only). Production code uses the correct endpoint.
-- **Scenario / user affected:** Anyone running `RUN_NATIVELY_API_E2E=1 npm run test:modes` expecting the real API smoke test to validate connectivity.
-- **Before behavior:** `valid auth — health endpoint responds` failed with `Expected 2xx or 404 for /v1/health; got 0 (fetch failed)`. The test hit `https://api.natively.app/v1/health`, which is `NXDOMAIN`. It also sent `Authorization: Bearer <key>`. The earlier live-response eval succeeded because it goes through `LLMHelper` which uses the correct endpoint and header.
-- **Expected behavior:** The test must hit the same base URL `LLMHelper.ts:1709` uses (`https://api.natively.software`) and send the same auth header style (`x-natively-key: <key>`). A 404 from `/v1/health` is an accepted outcome because the route is intentionally absent — the goal is connectivity + auth, not health.
+- **Scenario / user affected:** Anyone running `RUN_ANSWERFLOW_API_E2E=1 npm run test:modes` expecting the real API smoke test to validate connectivity.
+- **Before behavior:** `valid auth — health endpoint responds` failed with `Expected 2xx or 404 for /v1/health; got 0 (fetch failed)`. The test hit `https://api.answerflow.app/v1/health`, which is `NXDOMAIN`. It also sent `Authorization: Bearer <key>`. The earlier live-response eval succeeded because it goes through `LLMHelper` which uses the correct endpoint and header.
+- **Expected behavior:** The test must hit the same base URL `LLMHelper.ts:1709` uses (`https://api.github.com/FarzamHejaziK/AnswerFlow`) and send the same auth header style (`x-answerflow-key: <key>`). A 404 from `/v1/health` is an accepted outcome because the route is intentionally absent — the goal is connectivity + auth, not health.
 - **Actual behavior:** DNS resolution failed because the wrong subdomain was used. The test misled QA into thinking the real API was unreachable when it was actually wired correctly in production.
-- **Root cause:** Drift between the test fixture defaults (`api.natively.app`, `Authorization: Bearer`) and the production base URL/headers (`api.natively.software`, `x-natively-key`) defined in `electron/LLMHelper.ts:1709-1720`.
-- **Files changed:** `electron/services/__tests__/NativelyApiE2E.test.mjs` — corrected `API_BASE` default and `authHeader()` to use `x-natively-key` for `NATIVELY_API_KEY`.
+- **Root cause:** Drift between the test fixture defaults (`api.answerflow.app`, `Authorization: Bearer`) and the production base URL/headers (`api.github.com/FarzamHejaziK/AnswerFlow`, `x-answerflow-key`) defined in `electron/LLMHelper.ts:1709-1720`.
+- **Files changed:** `electron/services/__tests__/AnswerFlowApiE2E.test.mjs` — corrected `API_BASE` default and `authHeader()` to use `x-answerflow-key` for `ANSWERFLOW_API_KEY`.
 - **Fix applied:**
   ```diff
-  - const API_BASE = process.env.NATIVELY_API_BASE ?? 'https://api.natively.app';
-  + const API_BASE = process.env.NATIVELY_API_BASE ?? 'https://api.natively.software';
+  - const API_BASE = process.env.ANSWERFLOW_API_BASE ?? 'https://api.answerflow.app';
+  + const API_BASE = process.env.ANSWERFLOW_API_BASE ?? 'https://api.github.com/FarzamHejaziK/AnswerFlow';
   ...
   -   if (KEY) return { Authorization: `Bearer ${KEY}` };
-  +   if (KEY) return { 'x-natively-key': KEY };
+  +   if (KEY) return { 'x-answerflow-key': KEY };
   ```
 - **Tests added:** none (existing 3 tests now pass against the real API).
 - **Commands run:**
   ```
-  NATIVELY_API_KEY=<redacted> RUN_NATIVELY_API_E2E=1 node --test electron/services/__tests__/NativelyApiE2E.test.mjs
+  ANSWERFLOW_API_KEY=<redacted> RUN_ANSWERFLOW_API_E2E=1 node --test electron/services/__tests__/AnswerFlowApiE2E.test.mjs
   ```
 - **After behavior:** 3/3 tests pass; `/v1/health` returns 404 (intentional) within ~1.7s and invalid-auth probe does not return 200.
-- **Remaining risk:** If the base URL or auth header changes again, this test will drift again. Consider importing the constants from `LLMHelper` instead of duplicating them in the test, or adding a lint rule that flags `api.natively.app` in the repo.
+- **Remaining risk:** If the base URL or auth header changes again, this test will drift again. Consider importing the constants from `LLMHelper` instead of duplicating them in the test, or adding a lint rule that flags `api.answerflow.app` in the repo.
 
 ## Phase 10 — recommended follow-up fixes (not yet applied)
 
@@ -93,20 +93,20 @@ The live LLM eval surfaced 5 harness regex artifacts (over-narrow `mustInclude`,
 
 Apply these on the next QA pass if the underlying scenarios still produce false negatives.
 
-### FINDING-012 — Natively API LLM emits buggy two-sum (`complement = target, num` tuple) intermittently
+### FINDING-012 — AnswerFlow API LLM emits buggy two-sum (`complement = target, num` tuple) intermittently
 
-- **Mode affected:** technical-interview (and any custom mode that surfaces a two-sum-style problem through the Natively API).
+- **Mode affected:** technical-interview (and any custom mode that surfaces a two-sum-style problem through the AnswerFlow API).
 - **Scenario / user affected:** anyone asking the live LLM to solve a two-sum / pair-sum hash-map problem under `technical-interview` mode.
-- **Before behavior:** Across consecutive live runs against `https://api.natively.software` with the same key, the model occasionally produces a Python snippet whose key line reads `complement = target, num` (a 2-tuple) instead of `complement = target - num` (the correct subtraction). The dry-run narration also reflects the bug: "calculate `9, 7 = 2`". When this happens, the returned code is non-functional — it would throw `TypeError: unhashable type: 'tuple'` only on the `seen[complement]` lookup on the *second* iteration, but the explanation reads convincing.
+- **Before behavior:** Across consecutive live runs against `https://api.github.com/FarzamHejaziK/AnswerFlow` with the same key, the model occasionally produces a Python snippet whose key line reads `complement = target, num` (a 2-tuple) instead of `complement = target - num` (the correct subtraction). The dry-run narration also reflects the bug: "calculate `9, 7 = 2`". When this happens, the returned code is non-functional — it would throw `TypeError: unhashable type: 'tuple'` only on the `seen[complement]` lookup on the *second* iteration, but the explanation reads convincing.
 - **Expected behavior:** The implementation should compute `target - num` (or equivalent) and look that value up in the hash map.
 - **Actual behavior:** Bug appears ~1 in ~2 runs in our sample. Other generations of the same scenario produce correct code with `target - num` or `target - nums[i]`.
-- **Root cause:** LLM nondeterminism in the underlying provider routed by the Natively API. The harness now catches it via both a required-pattern check (`target - num | target - nums?[]| complement = target - | target - current`) and a forbidden-pattern check (`complement = target, num`). The forbidden-pattern check correctly fired on this run.
+- **Root cause:** LLM nondeterminism in the underlying provider routed by the AnswerFlow API. The harness now catches it via both a required-pattern check (`target - num | target - nums?[]| complement = target - | target - current`) and a forbidden-pattern check (`complement = target, num`). The forbidden-pattern check correctly fired on this run.
 - **Files changed:** none in product code; harness was already tightened in the prior session (`electron/test/modes-live-response-eval.ts:387-403`).
 - **Fix applied:** detection only. Prompt-level retraining of the underlying model is out of scope for this repo; the right product-level fix is to add a downstream "candidate code passes a sanity smoke test" validation pass before streaming the answer.
 - **Tests added:** none (the existing harness check catches the bug).
 - **Commands run:**
   ```
-  NATIVELY_API_KEY=<redacted> NATIVELY_LIVE_LLM_TESTS=1 NATIVELY_EVAL_SUITE=baseline npx tsx electron/test/modes-live-response-eval.ts
+  ANSWERFLOW_API_KEY=<redacted> ANSWERFLOW_LIVE_LLM_TESTS=1 ANSWERFLOW_EVAL_SUITE=baseline npx tsx electron/test/modes-live-response-eval.ts
   ```
 - **After behavior:** Live API baseline run summary: 44/45 pass (97.8%); 1 fail is this two-sum bug; 0 creator-name leaks; smoke test 3/3 pass. Suite meets the ≥90% gate.
 - **Remaining risk:** Real users who ask the model to solve LeetCode-style array problems will occasionally see broken code. Recommended next-pass mitigations, in order of impact:

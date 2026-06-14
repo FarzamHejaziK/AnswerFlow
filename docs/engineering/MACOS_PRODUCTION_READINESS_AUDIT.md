@@ -1,10 +1,10 @@
-# macOS Production Readiness Audit — Natively
+# macOS Production Readiness Audit — AnswerFlow
 
 **Status:** LIVING DOCUMENT — updated after every phase.
 **Started:** 2026-05-29
 **Owner of last edit:** Claude Code (autopilot)
 **App version:** 2.6.0
-**Goal:** Make Natively behave like a real, Developer ID-signed + notarized production macOS desktop app — not a hacked ad-hoc local build. Cover signing/notarization, permissions/TCC, overlay/visibility toggle reliability, audio capture stability, premium/Natively-API gating, startup performance, and UX reliability.
+**Goal:** Make AnswerFlow behave like a real, Developer ID-signed + notarized production macOS desktop app — not a hacked ad-hoc local build. Cover signing/notarization, permissions/TCC, overlay/visibility toggle reliability, audio capture stability, premium/AnswerFlow-API gating, startup performance, and UX reliability.
 
 ---
 
@@ -26,18 +26,18 @@ Three docs are kept in sync after every phase:
 
 Priority legend: **P0** = ship-blocker / money / security. **P1** = major UX/perf. **P2** = diagnostics/tests. **P3** = polish.
 
-### P0 — Premium & Natively API (money path)
+### P0 — Premium & AnswerFlow API (money path)
 | File | Role | Why P0 |
 |------|------|--------|
 | `premium/electron/services/LicenseManager.ts` | License validation, plan resolution | Core paid gating. Offline/failed-check degradation, key redaction. |
 | `electron/premium/featureGate.ts` | Runtime probe for premium modules | Decides whether paid code loads at all. |
 | `src/premium/index.tsx` | Renderer-side premium component loader (Vite glob) | Controls premium UI surfacing + ad campaigns. |
-| `src/components/settings/NativelyApiSettings.tsx` | Natively API key UI | Key entry/validation/redaction. |
-| `src/components/settings/NativelyProSettings.tsx` | Pro plan UI | Plan separation, upgrade copy. |
-| `electron/audio/NativelyProSTT.ts` | Pro-tier hosted STT | Gated capability; failure messaging. |
+| `src/components/settings/AnswerFlowApiSettings.tsx` | AnswerFlow API key UI | Key entry/validation/redaction. |
+| `src/components/settings/AnswerFlowProSettings.tsx` | Pro plan UI | Plan separation, upgrade copy. |
+| `electron/audio/AnswerFlowProSTT.ts` | Pro-tier hosted STT | Gated capability; failure messaging. |
 | `electron/services/CredentialsManager.ts` | Secret storage (keytar) | Key persistence + redaction. |
 | `electron/services/RateLimiter.ts` | API quota | Quota-exhausted vs failure separation. |
-| `natively-api/server.js` + `natively-api/lib/*` | Backend license/activation | Source of truth for plan→feature mapping (read-only reference). |
+| `answerflow-api/server.js` + `answerflow-api/lib/*` | Backend license/activation | Source of truth for plan→feature mapping (read-only reference). |
 
 ### P0 — Signing / Notarization / Entitlements / Permissions
 | File | Role | Why P0 |
@@ -57,14 +57,14 @@ Priority legend: **P0** = ship-blocker / money / security. **P1** = major UX/per
 | `electron/services/StealthKeyboardManager.ts` | Keyboard tap / block-input | Stealth state coupling. |
 | `electron/services/KeybindManager.ts` | Global shortcut registration | Toggle entry point, concurrent calls. |
 | `electron/ipcHandlers.ts` | IPC for visibility/stealth/toggle | Must return reliable success/failure. |
-| `src/components/ui/TopPill.tsx`, `src/components/NativelyInterface.tsx` | Renderer toggle UI | Renderer state vs main desync. |
+| `src/components/ui/TopPill.tsx`, `src/components/AnswerFlowInterface.tsx` | Renderer toggle UI | Renderer state vs main desync. |
 
 ### P0 — Audio capture reliability
 | File | Role |
 |------|------|
 | `electron/audio/MicrophoneCapture.ts`, `electron/audio/SystemAudioCapture.ts` | Capture lifecycle |
 | `electron/audio/nativeModuleLoader.ts` | Native module load |
-| `electron/audio/{Deepgram,OpenAI,Soniox,Google,Rest,NativelyPro}*STT.ts` | STT providers start/stop |
+| `electron/audio/{Deepgram,OpenAI,Soniox,Google,Rest,AnswerFlowPro}*STT.ts` | STT providers start/stop |
 | `native-module/src/{microphone.rs,speaker/*.rs}` | Native capture |
 
 ### P1 — Startup performance & window lifecycle
@@ -102,15 +102,15 @@ Evidence from `package.json` `build.mac` and `scripts/ad-hoc-sign.js`:
 | S3 | **Ad-hoc signs production artifacts** | `afterPack: ad-hoc-sign.js` runs `codesign --sign -` | Production zip/dmg ship ad-hoc-signed → Gatekeeper "damaged/unverified", TCC perms unstable across builds. | ❌ blocker |
 | S4 | **No notarization/staple hook** | `@electron/notarize` in devDeps but no `afterSign`/`notarize` config | Even with identity, nothing uploads for notarization or staples the ticket. | ❌ blocker |
 | S5 | **Generic appId** | `"appId": "com.electron.meeting-notes"` | Stale Electron-sample-style bundle id; unprofessional, risks TCC collision with other Electron apps. Changing it later resets TCC. | ⚠️ decision |
-| S6 | **`--deep` signing** | `codesign --force --deep` | `--deep` is deprecated by Apple and notoriously breaks nested signatures; correct approach signs inside-out (electron-builder does this natively when given an identity). | ⚠️ |
+| S6 | **`--deep` signing** | `codesign --force --deep` | `--deep` is deprecated by Apple and notoriously breaks nested signatures; correct approach signs inside-out (electron-builder does this answerflow when given an identity). | ⚠️ |
 | S7 | **xattr/quarantine assumptions** | (to verify in README/install docs) | Any "run `xattr -cr`" user instruction implies the build isn't properly notarized. | ⚠️ |
 
 **Root-cause synthesis:** the build is intentionally ad-hoc for local distribution. To go production we need: a real Developer ID Application certificate, hardened runtime ON, entitlements applied by electron-builder (not a manual `--deep` pass), an `afterSign` notarize+staple step, and a stable professional appId. Most of this can be **wired up and validated structurally locally**; the actual cert + notarization upload **requires the paid Apple Developer Program account** (documented as a hard external dependency).
 
-### 2.2 Premium / Natively API — STRUCTURE MAPPED (audit pending Phase 2)
+### 2.2 Premium / AnswerFlow API — STRUCTURE MAPPED (audit pending Phase 2)
 - Premium ships as a **git submodule** (`premium/`). Open-source builds omit it; `featureGate.ts` probes via `require()` and `src/premium/index.tsx` via Vite `import.meta.glob` with null fallbacks. This is a clean optional-module pattern.
 - Plan tiers referenced in code: API plans (Standard/Pro/Max/Ultra) vs desktop **Lifetime Pro**. Separation correctness + offline degradation + key redaction to be verified in Phase 2.
-- `natively-api/` is the authoritative backend (license check, activation, webhooks). Treat as read-only reference.
+- `answerflow-api/` is the authoritative backend (license check, activation, webhooks). Treat as read-only reference.
 
 ### 2.3 Toggle / Visibility — SUSPECTED (investigation dispatched Phase 3)
 - Symptom: rapid toggling desyncs; ~5s wait "fixes" it → race between renderer state, main-process window ops, and native stealth calls. ~1s invisible window during on/off.
@@ -130,7 +130,7 @@ Evidence from `package.json` `build.mac` and `scripts/ad-hoc-sign.js`:
 |-------|------|--------|------|
 | 0 | Repo scan, priority map, docs | ✅ done | 2026-05-29 |
 | 1 | Signing/notarization/entitlements/permissions | ✅ done (reviewed; live notarization needs Apple cert) | 2026-05-29 |
-| 2 | Premium + Natively API gating | ✅ F4 fixed + tested (money path otherwise sound; F5/F7 UX follow-ups) | 2026-05-29 |
+| 2 | Premium + AnswerFlow API gating | ✅ F4 fixed + tested (money path otherwise sound; F5/F7 UX follow-ups) | 2026-05-29 |
 | 3 | Toggle/visibility/stealth state machine | ✅ RC-2 desync fixed + tested (1s-flicker + queue = GUI follow-ups) | 2026-05-29 |
 | 4 | Audio capture reliability | ✅ bug1 (stuck-watchdog) + bug2 (in-flight init abort/AbortController) BOTH fixed+tested (12/12 lifecycle) | 2026-05-29 |
 | 5 | Startup performance + window lifecycle | ✅ unused startup font removed; 4 bigger wins documented (need GUI/profiling) | 2026-05-29 |

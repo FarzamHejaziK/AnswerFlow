@@ -3,10 +3,10 @@
 ## Git Workflow
 
 - This checkout tracks the public fork at `origin`: `https://github.com/FarzamHejaziK/AnswerFlow.git`.
-- The original project is configured as `upstream`: `https://github.com/Natively-AI-assistant/natively-cluely-ai-assistant.git`.
+- The original upstream project is configured as `upstream`; use `git remote -v` if you need the exact remote URL.
 - Push local work to `origin`, not `upstream`.
 - Keep the local `upstream` push URL disabled unless the user explicitly asks to change it.
-- To bring in future updates from the original repo:
+- To bring in future updates from the original upstream:
 
 ```bash
 git fetch upstream
@@ -21,7 +21,7 @@ git push origin main
 ## Repository Notes
 
 - The repository is AGPL-3.0. Public modified releases should keep the license notices and make corresponding source available.
-- Some submodule paths are not fully available from the public checkout: `premium` points to a private or unavailable repository, and `natively-api` is a gitlink without a matching `.gitmodules` entry.
+- Some submodule paths are not fully available from the public checkout: `premium` points to a private or unavailable repository, and `answerflow-api` is a gitlink without a matching `.gitmodules` entry.
 
 ## Local Development
 
@@ -58,4 +58,4 @@ ELECTRON_APP_PORT=5173 npx playwright test
 
 Treat Electron/preload failures in browser-only Playwright as harness issues unless the test is run against a real Electron window.
 
-- Manual macOS smoke checklist: launch Electron with `npm start`, grant Microphone/Screen Recording/Accessibility if prompted, open Settings, configure one AI provider and one speech provider, test provider connections, start a meeting, verify transcript updates, trigger a screenshot/answer flow, stop the meeting, and confirm the saved meeting/summary appears.
+- Manual macOS smoke checklist: launch Electron with `npm start`, grant Microphone/Screen Recording/Accessibility if prompted, open Settings, configure one AI provider, confirm input/output audio devices, create a New Interview, add prep context, attach a sample document, start the interview, verify transcript updates, stop the interview, and confirm prep chat/transcript/post-interview chat persist.

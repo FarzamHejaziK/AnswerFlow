@@ -1,8 +1,8 @@
-# Natively vs Cluely Deep Codebase Audit
+# AnswerFlow vs legacy overlay Deep Codebase Audit
 
 ## 1. Executive Summary
 
-Natively is not a toy. It already has real pieces of a Cluely-style desktop AI meeting assistant:
+AnswerFlow is not a toy. It already has real pieces of a legacy overlay-style desktop AI meeting assistant:
 
 - Electron overlay app
 - Native audio capture
@@ -18,15 +18,15 @@ Natively is not a toy. It already has real pieces of a Cluely-style desktop AI m
 - Credential encryption
 - Stealth/always-on-top desktop behavior
 
-But the codebase is not yet architected like a production-grade Cluely competitor.
+But the codebase is not yet architected like a production-grade legacy overlay competitor.
 
-The biggest issue is that the product currently treats “modes” mostly as prompt suffixes, custom context, reference files, and note templates. Cluely-style modes should be full workflows:
+The biggest issue is that the product currently treats “modes” mostly as prompt suffixes, custom context, reference files, and note templates. legacy overlay-style modes should be full workflows:
 
 ```text
 Mode = prompt + context policy + trigger rules + retrieval scope + actions + output templates + post-call workflow + telemetry + security policy
 ```
 
-Natively has the prompt/context/note-template part. It does not yet have first-class mode actions, per-mode retrieval policy, per-mode trigger rules, per-mode telemetry, per-mode privacy controls, or robust behavioral QA.
+AnswerFlow has the prompt/context/note-template part. It does not yet have first-class mode actions, per-mode retrieval policy, per-mode trigger rules, per-mode telemetry, per-mode privacy controls, or robust behavioral QA.
 
 The second biggest issue is security. Several main-process IPC paths expose sensitive material or allow dangerous data flow:
 
@@ -39,21 +39,21 @@ The second biggest issue is security. Several main-process IPC paths expose sens
 
 The third biggest issue is reliability. The app has many STT/provider/reconnect/fallback paths, but test coverage is mostly structural/unit-level. There is not enough QA proving live meeting behavior under long sessions, provider failures, mode switching, reference-grounding, audio recovery, or hallucination pressure.
 
-Final verdict: Natively has strong raw ingredients, but the current implementation is best described as an advanced local AI meeting assistant prototype with serious product ambition, not yet a hardened Cluely-grade realtime meeting OS.
+Final verdict: AnswerFlow has strong raw ingredients, but the current implementation is best described as an advanced local AI meeting assistant prototype with serious product ambition, not yet a hardened legacy overlay-grade realtime meeting OS.
 
 ---
 
 ## 2. Feature Parity Matrix
 
-| Capability | Natively current state | Cluely-style expectation | Gap severity |
+| Capability | AnswerFlow current state | legacy overlay-style expectation | Gap severity |
 |---|---|---|---|
 | Live insights / answer suggestions | Real streaming suggestion system via `IntelligenceEngine.ts` and LLM wrappers | Continuous action/insight detection with lifecycle, confidence, evidence, and user action tracking | High |
 | Auto answer / Dynamic Actions | Partial. `PlannerDecision.ts` routes to answer/clarify/recap/follow-up/brainstorm | Action cards triggered by context, mode, confidence, and user command | High |
 | Modes | Real templates in `ModesManager.ts`; active prompt suffixes, custom context, reference files, note sections | Modes as full workflows with action policy, RAG policy, triggers, notes, telemetry, security | High |
 | Reference files | Real storage/injection; lexical retrieval via `ModeContextRetriever.ts` | Hybrid semantic RAG, citations, source ranking, ingestion, stale-index handling | High |
 | Meeting-history RAG | SQLite/sqlite-vec infrastructure exists via `RAGManager.ts` / `DatabaseManager.ts` | Integrated context engine across meetings, docs, profile, current call | Medium-high |
-| Audio/STT | Many providers implemented: Natively, Deepgram, OpenAI, Google, ElevenLabs, Local Whisper, REST, etc. | Battle-tested realtime capture with robust simulation/soak coverage | Medium-high |
-| Provider layer | Gemini/Groq/OpenAI/Claude/Ollama/Natively/custom cURL support in `LLMHelper.ts` | Policy-aware router by privacy, cost, latency, modality, health, mode | High |
+| Audio/STT | Many providers implemented: AnswerFlow, Deepgram, OpenAI, Google, ElevenLabs, Local Whisper, REST, etc. | Battle-tested realtime capture with robust simulation/soak coverage | Medium-high |
+| Provider layer | Gemini/Groq/OpenAI/Claude/Ollama/AnswerFlow/custom cURL support in `LLMHelper.ts` | Policy-aware router by privacy, cost, latency, modality, health, mode | High |
 | Overlay UX | Electron always-on-top/transparent/stealth behavior in `WindowHelper.ts` | Native-feeling overlay with reliable capture invisibility claims and clear caveats | Medium |
 | Post-call notes | Real mode-specific summary pipeline in `MeetingPersistence.ts` | Validated schemas, CRM/ATS/export workflows, evidence-linked notes | Medium |
 | Profile intelligence | Some profile/resume/JD/knowledge modules appear present | Strong entity/profile memory linked to live context and modes | Medium-high |
@@ -115,7 +115,7 @@ isActive
 createdAt
 ```
 
-That is not enough for Cluely-style modes.
+That is not enough for legacy overlay-style modes.
 
 Recommended target:
 
@@ -198,7 +198,7 @@ Needed tests:
 
 ## 5. Auto Answer / Dynamic Actions Audit
 
-Natively has an early version of dynamic action routing, but it is not Cluely-grade.
+AnswerFlow has an early version of dynamic action routing, but it is not legacy overlay-grade.
 
 Evidence:
 
@@ -224,11 +224,11 @@ Evidence:
 
 What this means:
 
-- Natively can detect some answer opportunities.
+- AnswerFlow can detect some answer opportunities.
 - It can route to answer/clarify/recap/follow-up/brainstorm.
 - It can begin speculative answer generation from interim transcript.
 
-What is missing versus Cluely-style Dynamic Actions:
+What is missing versus legacy overlay-style Dynamic Actions:
 
 - No typed action card model.
 - No action lifecycle:
@@ -246,7 +246,7 @@ What is missing versus Cluely-style Dynamic Actions:
 - No sales/recruiting/lecture-specific action detection.
 - No confidence calibration.
 
-Current planner is pattern/intent based. Cluely-style behavior should detect events such as:
+Current planner is pattern/intent based. legacy overlay-style behavior should detect events such as:
 
 - “pricing objection”
 - “competitor mention”
@@ -310,7 +310,7 @@ Weaknesses:
 - Summary extraction is heuristic.
 - Long-session recall is not proven by tests.
 
-Cluely-style context engine should maintain:
+legacy overlay-style context engine should maintain:
 
 ```ts
 interface MeetingContextState {
@@ -441,7 +441,7 @@ Evidence:
   - `electron/audio/SystemAudioCapture.ts`
   - `electron/audio/MicrophoneCapture.ts`
 - STT providers:
-  - `NativelyProSTT.ts`
+  - `AnswerFlowProSTT.ts`
   - `DeepgramStreamingSTT.ts`
   - `OpenAIStreamingSTT.ts`
   - `ElevenLabsStreamingSTT.ts`
@@ -455,7 +455,7 @@ Evidence:
 Strengths:
 
 - Multi-provider STT is real.
-- Natively hosted STT has WebSocket buffering and reconnect behavior.
+- AnswerFlow hosted STT has WebSocket buffering and reconnect behavior.
 - Deepgram has reconnect constants and buffering.
 - Local Whisper exists.
 - Google STT appears to handle stream restarts.
@@ -469,7 +469,7 @@ Weaknesses:
 - No robust evidence that partial/final transcript ordering survives reconnect.
 - No robust evidence that stop/flush race is fixed across all providers.
 - No real-device matrix encoded in tests.
-- Hosted Natively STT sends audio to cloud, contradicting any broad “local-only” privacy claim unless clearly disclosed.
+- Hosted AnswerFlow STT sends audio to cloud, contradicting any broad “local-only” privacy claim unless clearly disclosed.
 
 Critical QA cases missing:
 
@@ -495,7 +495,7 @@ Critical QA cases missing:
 
 Evidence:
 
-- Supports Gemini, Groq, OpenAI, Claude, Natively, Ollama, Codex CLI, custom providers.
+- Supports Gemini, Groq, OpenAI, Claude, AnswerFlow, Ollama, Codex CLI, custom providers.
 - Contains provider clients and keys.
 - Handles prompt assembly, image handling, provider selection, streaming, fallback, custom cURL, caching, and knowledge interception.
 - `ProviderRouter.ts` exists and models provider availability/capabilities.
@@ -540,7 +540,7 @@ GeminiProvider
 OpenAIProvider
 ClaudeProvider
 GroqProvider
-NativelyProvider
+AnswerFlowProvider
 OllamaProvider
 CustomCurlProvider
 MediaPreprocessor
@@ -568,7 +568,7 @@ Recommended:
 
 ```ts
 interface ProviderPolicy {
-  privacy: 'local_only' | 'user_configured_cloud' | 'natively_cloud_allowed';
+  privacy: 'local_only' | 'user_configured_cloud' | 'answerflow_cloud_allowed';
   latencyClass: 'realtime' | 'balanced' | 'quality';
   allowedProviders?: LLMProviderId[];
   disallowedProviders?: LLMProviderId[];
@@ -630,7 +630,7 @@ Risks:
 
 Product gap:
 
-- Cluely-style overlay UX is not only invisibility; it includes:
+- legacy overlay-style overlay UX is not only invisibility; it includes:
   - instant action cards
   - confidence
   - low-friction controls
@@ -639,7 +639,7 @@ Product gap:
   - answer accept/dismiss
   - post-call continuity
 
-Natively has overlay foundations, but the product-level dynamic action UX appears incomplete.
+AnswerFlow has overlay foundations, but the product-level dynamic action UX appears incomplete.
 
 ---
 
@@ -650,7 +650,7 @@ This is a major gap.
 Current state:
 
 - Many `console.log`, `console.warn`, `console.error` calls.
-- `main.ts` logs console output to `~/Documents/natively_debug.log`.
+- `main.ts` logs console output to `~/Documents/answerflow_debug.log`.
 - Provider attempts are logged in places.
 - No strong evidence of structured telemetry.
 
@@ -828,7 +828,7 @@ Fix:
 
 ---
 
-## 13. UX / Product Weaknesses Compared to Cluely
+## 13. UX / Product Weaknesses Compared to legacy overlay
 
 ### 13.1 Modes are not workflow-complete
 
@@ -844,7 +844,7 @@ User can choose a mode, but the mode does not fully control:
 
 ### 13.2 Dynamic Actions are underdeveloped
 
-Current answer/clarify/recap/brainstorm routing is useful, but Cluely-style UX needs visible cards such as:
+Current answer/clarify/recap/brainstorm routing is useful, but legacy overlay-style UX needs visible cards such as:
 
 - “Answer this”
 - “Handle pricing objection”
@@ -868,16 +868,16 @@ Current lexical retrieval and fallback raw injection are not enough.
 
 ### 13.4 “Local/offline/private” claims need qualification
 
-Natively supports local paths, but also hosted Natively STT and cloud LLM/STT providers. Product copy must be precise:
+AnswerFlow supports local paths, but also hosted AnswerFlow STT and cloud LLM/STT providers. Product copy must be precise:
 
 - Local Whisper is local.
 - Ollama/Codex local-ish paths may be local depending config.
-- Natively API STT sends audio to hosted backend.
+- AnswerFlow API STT sends audio to hosted backend.
 - Deepgram/OpenAI/Google/ElevenLabs send audio/text externally.
 
 ### 13.5 Post-call workflow is partial
 
-Mode-specific notes exist, but Cluely-style product expectations include:
+Mode-specific notes exist, but legacy overlay-style product expectations include:
 
 - action items
 - follow-up drafts
@@ -954,7 +954,7 @@ Current system mostly logs. It does not appear to learn from product usage.
 47. No long-session compression recall tests.
 48. No reference hallucination/refusal tests strong enough for product claims.
 49. No real telemetry/SLO instrumentation.
-50. README/product claims such as “fully offline,” “undetectable,” “speaker identification,” or “Cluely but more features” need evidence-backed qualification.
+50. README/product claims such as “fully offline,” “undetectable,” “speaker identification,” or “legacy overlay but more features” need evidence-backed qualification.
 
 ---
 
@@ -1214,7 +1214,7 @@ electron/llm/providers/GeminiProvider.ts
 electron/llm/providers/OpenAIProvider.ts
 electron/llm/providers/ClaudeProvider.ts
 electron/llm/providers/GroqProvider.ts
-electron/llm/providers/NativelyProvider.ts
+electron/llm/providers/AnswerFlowProvider.ts
 electron/llm/providers/OllamaProvider.ts
 electron/llm/providers/CustomCurlProvider.ts
 ```
@@ -1268,7 +1268,7 @@ electron/telemetry/LocalTelemetrySink.ts
    - custom provider
    - Ollama
    - Codex if enabled
-   - Natively if available/mocked
+   - AnswerFlow if available/mocked
 
 Assertions:
 
@@ -1317,11 +1317,11 @@ Assert:
 
 ### STT/audio tests
 
-15. NativelyProSTT auth failure.
+15. AnswerFlowProSTT auth failure.
 
-16. NativelyProSTT DNS failure.
+16. AnswerFlowProSTT DNS failure.
 
-17. NativelyProSTT reconnect cap.
+17. AnswerFlowProSTT reconnect cap.
 
 18. Deepgram reconnect and buffer behavior.
 
@@ -1381,7 +1381,7 @@ Assert:
 
 ## 18. Final Verdict
 
-Natively has impressive breadth. It already contains many systems that a Cluely competitor needs: overlay, audio capture, STT providers, LLM providers, modes, reference files, RAG infrastructure, screenshots, meeting persistence, and post-call summaries.
+AnswerFlow has impressive breadth. It already contains many systems that a legacy overlay competitor needs: overlay, audio capture, STT providers, LLM providers, modes, reference files, RAG infrastructure, screenshots, meeting persistence, and post-call summaries.
 
 But the product is currently held back by five structural problems:
 
@@ -1399,6 +1399,6 @@ The highest-leverage product move is not “make auto-answer more automatic.” 
 Mode Runtime + Context Engine + Dynamic Actions + Hybrid RAG + Provider Policy + Telemetry
 ```
 
-That architecture would move Natively from “AI assistant with modes” toward “Cluely-style realtime meeting OS.”
+That architecture would move AnswerFlow from “AI assistant with modes” toward “legacy overlay-style realtime meeting OS.”
 
-Until then, the current codebase should be marketed carefully: powerful, local-first-capable, extensible, and open-source, but not yet more complete or more reliable than Cluely in the areas that matter most during live meetings.
+Until then, the current codebase should be marketed carefully: powerful, local-first-capable, extensible, and open-source, but not yet more complete or more reliable than legacy overlay in the areas that matter most during live meetings.

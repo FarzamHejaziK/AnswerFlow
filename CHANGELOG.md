@@ -76,8 +76,8 @@
     ### What's New
 
     - **Dynamic AI Model Selection:** Replaced static model lists with dynamic dropdowns. Your preferred models synced from providers (like OpenAI, Anthropic, Google) now automatically appear across the entire app.
-    - **Multimodal Resilience:** Added a "Smart Dynamic Fallback" using Groq Llama 4 Scout. If default vision models fail or get rate-limited during screen analysis, Natively instantly reroutes the image to ensure uninterrupted performance.
-    - **Multiple Screenshot Support:** The Natively Interface can now handle and process multiple attached screenshots simultaneously instead of just one.
+    - **Multimodal Resilience:** Added a "Smart Dynamic Fallback" using Groq Llama 4 Scout. If default vision models fail or get rate-limited during screen analysis, AnswerFlow instantly reroutes the image to ensure uninterrupted performance.
+    - **Multiple Screenshot Support:** The AnswerFlow Interface can now handle and process multiple attached screenshots simultaneously instead of just one.
     - **Improved Settings UX:** API keys now auto-save after 5 seconds of inactivity, and selecting a preferred model immediately updates the rest of the application without requiring a page reload.
 
     ### Architecture & Fixes
@@ -238,7 +238,7 @@
     If you see "App is damaged":
 
     1. Move the app to your Applications folder.
-    2. Open Terminal and run: `xattr -cr /Applications/Natively.app`
+    2. Open Terminal and run: `xattr -cr /Applications/AnswerFlow.app`
 
     ## [1.1.4] - 2026-02-12
 

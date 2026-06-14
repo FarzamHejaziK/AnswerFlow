@@ -1,8 +1,8 @@
-# Natively → Cluely Parity Fix Log
+# AnswerFlow → legacy overlay Parity Fix Log
 
 **Started:** 2026-05-15
 **Lead:** Claude (Opus 4.7) acting as senior engineer / architect / QA / reviewer
-**Source audit:** `/comparisonreport.md` (Natively vs Cluely, 2026-05-15)
+**Source audit:** `/comparisonreport.md` (AnswerFlow vs legacy overlay, 2026-05-15)
 **Source QA:** `/QA_REPORT.md` (48/61 = 78.7% baseline pass rate, 2026-05-14)
 **Source mission:** `/promptfix.md`
 
@@ -17,11 +17,11 @@ shell output. "Done" only when typecheck/tests/manual scenario all confirm.
 ### 0.1 Pre-existing repo state on entry
 
 **Branch:** `main` (commit `43ae233`)
-**Submodules:** `natively-api`, `premium` both modified (untouched here).
+**Submodules:** `answerflow-api`, `premium` both modified (untouched here).
 
 **Working tree on entry — uncommitted changes:**
 
-* **Source files modified:** 31 (electron/* core + src/components/NativelyInterface.tsx + src/types/electron.d.ts)
+* **Source files modified:** 31 (electron/* core + src/components/AnswerFlowInterface.tsx + src/types/electron.d.ts)
 * **Source files added (untracked):**
   * `electron/llm/PlannerDecision.ts`, `electron/llm/ProviderRouter.ts`
   * `electron/services/ModeContextRetriever.ts`
@@ -32,7 +32,7 @@ shell output. "Done" only when typecheck/tests/manual scenario all confirm.
   * `electron/services/screen/{ImageHashService,ScreenContextService}.ts`
   * `electron/services/telemetry/TelemetryService.ts`
 * **Test files added (untracked, 25 suites):** see `electron/services/__tests__/`
-* **Reports added (untracked):** `QA_REPORT.md`, `comparisonreport.md`, `cluelyresearch.md`,
+* **Reports added (untracked):** `QA_REPORT.md`, `comparisonreport.md`, `answerflow-market-research.md`,
   `QAautomationprompt.md`, `report.md`
 * **Deleted (staged):** `docs/RELEASE.md`, `docs/competitor-matrix.md`,
   `docs/gap-analysis.md`, `docs/improvement-roadmap.md`, `docs/internal-audit.md`
@@ -76,7 +76,7 @@ and hardening that work — not starting from a blank slate.**
 **Decision:** the test runner (`build:electron` → esbuild → `node --test`) does not
 type-check, so these errors do not block our regression suite. They will be
 fixed opportunistically. Hard typecheck pass is a Phase 11 deliverable —
-documented in `NATIVELY_CLUELY_PARITY_ROADMAP.md`.
+documented in `ANSWERFLOW_PARITY_ROADMAP.md`.
 
 ### 0.4 Test runner baseline (verified)
 
@@ -287,7 +287,7 @@ single `ModeRuntime.startMeeting() → MeetingModeContext` that captures all
 policies (RAG, provider, retention, output, telemetry labels) atomically.
 
 The current ad-hoc snapshot is **correct enough to pass the bleeding tests**
-but does not centralize the per-mode policy attachment Cluely-style.
+but does not centralize the per-mode policy attachment legacy overlay-style.
 
 ---
 
@@ -333,7 +333,7 @@ a card. **This is the single most impactful unshipped product feature.**
 6. Build `src/components/dynamic-actions/{DynamicActionBar,DynamicActionCard,
    ActionEvidencePopover}.tsx`.
 7. Mount `DynamicActionBar` above the answer area in
-   `src/components/NativelyInterface.tsx`. Hook keyboard `Tab` to accept the
+   `src/components/AnswerFlowInterface.tsx`. Hook keyboard `Tab` to accept the
    primary card.
 
 Estimated effort: 1.5–2 days for a polished first cut.
@@ -517,7 +517,7 @@ isolation. See roadmap §9.
   prunes stale (>60 s) cards, sorts by priority desc, caps at 3 visible,
   binds global `Tab` keypress to accept the primary card (skipping when
   focus is in an editable element), self-hides when empty.
-* **`src/components/NativelyInterface.tsx`** — mounted `<DynamicActionBar>`
+* **`src/components/AnswerFlowInterface.tsx`** — mounted `<DynamicActionBar>`
   between status pills and rolling transcript. `onAcceptAction` populates
   the input with the action label and triggers existing `handleManualSubmit`
   (so the action stream-answers through the normal LLM path).
@@ -546,7 +546,7 @@ isolation. See roadmap §9.
 | IPC accept/dismiss/list | shipped |
 | Preload + renderer types | shipped |
 | DynamicActionBar / Card components | shipped |
-| Mounted in NativelyInterface | shipped |
+| Mounted in AnswerFlowInterface | shipped |
 | Tab keyboard shortcut | shipped |
 | End-to-end smoke (real Electron meeting) | **not run this pass** — needs manual click-through |
 | Telemetry events for action lifecycle | not wired (Phase 8 follow-up) |
@@ -566,7 +566,7 @@ isolation. See roadmap §9.
   * Interview: intro pitch, company motivation, and weakness-question actions.
   * Technical interview: complexity analysis and system-design outline actions.
   * Lecture: broader definition/formula matching and worked-example action.
-* **`electron/services/__tests__/DynamicActionEngine.test.mjs`** — added service-level E2E coverage for 18 canonical Cluely-style phrases across eight modes and an explicit sales/negotiation/interview mode-isolation guard.
+* **`electron/services/__tests__/DynamicActionEngine.test.mjs`** — added service-level E2E coverage for 18 canonical legacy overlay-style phrases across eight modes and an explicit sales/negotiation/interview mode-isolation guard.
 
 **Verification:**
 
@@ -590,7 +590,7 @@ npm test
 * **`electron/IntelligenceManager.ts`** — `runWhatShouldISay` options now accept `screenContext`.
 * **`electron/IntelligenceEngine.ts`** — `runWhatShouldISay` forwards `options.screenContext` into `WhatToAnswerLLM.generateStream(..., imagePaths, screenContext)`. Logging contains only OCR availability/length, not OCR body.
 * **`src/types/electron.d.ts`** — renderer IPC type now includes screen-context status metadata.
-* **`src/components/NativelyInterface.tsx`** — the screen-context pill reports `OCR attached` or `OCR unavailable` after a screenshot-backed answer request.
+* **`src/components/AnswerFlowInterface.tsx`** — the screen-context pill reports `OCR attached` or `OCR unavailable` after a screenshot-backed answer request.
 
 **Verification:**
 
@@ -687,7 +687,7 @@ npm test
 
 ### Already in place on entry
 
-* Active mode badge during meeting (`NativelyInterface.tsx:3084`).
+* Active mode badge during meeting (`AnswerFlowInterface.tsx:3084`).
 * STT status pill (`:3088`).
 * Screen-context indicator pill (`:3092`).
 * Privacy / LLM provider pill (`:3096`).
@@ -697,7 +697,7 @@ npm test
 ### New this pass
 
 * **DynamicActionBar** mounted into the answer surface — covers the single
-  largest visible Cluely-parity gap. See Phase 3 above for full spec.
+  largest visible legacy overlay-parity gap. See Phase 3 above for full spec.
 
 ### Still in roadmap
 
@@ -828,8 +828,8 @@ should be the first items in the next pass.
 | ProviderRouting test suite | hung indefinitely → 0 verified test results | 20/20 pass in 199ms |
 | `ModeContextRetriever.retrieveHybrid()` | unbuildable (`HybridContext` undefined) | builds and is type-safe |
 | Verified passing test count across new infra | unknown (suite never completed) | ≥145 passing, 0 failing |
-| `docs/engineering/NATIVELY_CLUELY_PARITY_FIX_LOG.md` | did not exist | source-of-truth log created |
-| `docs/engineering/NATIVELY_CLUELY_PARITY_ROADMAP.md` | did not exist | concrete next-step ticket list created |
+| `docs/engineering/ANSWERFLOW_PARITY_FIX_LOG.md` | did not exist | source-of-truth log created |
+| `docs/engineering/ANSWERFLOW_PARITY_ROADMAP.md` | did not exist | concrete next-step ticket list created |
 
 ## Files changed in this pass
 
@@ -845,10 +845,10 @@ should be the first items in the next pass.
 | `src/types/electron.d.ts` | +35 | `DynamicActionPayload` + `DynamicActionEvidenceRef` types and four new ElectronAPI methods |
 | `src/components/dynamic-actions/DynamicActionCard.tsx` | +95 (new) | presentation card |
 | `src/components/dynamic-actions/DynamicActionBar.tsx` | +105 (new) | container, dedupe/expire, Tab shortcut |
-| `src/components/NativelyInterface.tsx` | +18 | mount DynamicActionBar + onAcceptAction handler |
+| `src/components/AnswerFlowInterface.tsx` | +18 | mount DynamicActionBar + onAcceptAction handler |
 | `electron/services/__tests__/IntelligenceEngineDynamicActions.test.mjs` | +180 (new) | 8 wiring tests, all pass |
-| `docs/engineering/NATIVELY_CLUELY_PARITY_FIX_LOG.md` | +new | this file |
-| `docs/engineering/NATIVELY_CLUELY_PARITY_ROADMAP.md` | +new | concrete remaining work |
+| `docs/engineering/ANSWERFLOW_PARITY_FIX_LOG.md` | +new | this file |
+| `docs/engineering/ANSWERFLOW_PARITY_ROADMAP.md` | +new | concrete remaining work |
 
 ## Commands run in this pass
 
@@ -872,7 +872,7 @@ node --test --test-timeout=15000 electron/services/__tests__/TelemetryService.te
 node --test --test-timeout=15000 electron/services/__tests__/ProviderRouting.test.mjs       # 20/20 after fix
 ```
 
-## Honest position vs Cluely
+## Honest position vs legacy overlay
 
 | Dimension | Pre-pass score (audit) | Post-pass evidence |
 |---|---|---|
@@ -889,13 +889,13 @@ node --test --test-timeout=15000 electron/services/__tests__/ProviderRouting.tes
 | UX polish | "missing many states" | status pills present pre-pass; **DynamicActionBar shipped this pass**; settings/onboarding still in roadmap |
 | Full E2E (Playwright) | "missing" | not started |
 
-**Honest verdict:** Natively now has a **substantially complete, well-tested
-back-end foundation** for parity with Cluely on individual-user features. The
-gap to Cluely-grade is no longer about the modules — it's about **wiring,
+**Honest verdict:** AnswerFlow now has a **substantially complete, well-tested
+back-end foundation** for parity with legacy overlay on individual-user features. The
+gap to legacy overlay-grade is no longer about the modules — it's about **wiring,
 integration, and UI surface**, which is concrete week-scale work documented in
 the roadmap.
 
-Natively is **not yet at individual Cluely parity in the running app** because
+AnswerFlow is **not yet at individual legacy overlay parity in the running app** because
 the user cannot see/use most of the new infrastructure. With ~2 weeks of focused
 wiring + UI work following the roadmap, individual-tier parity is realistic.
 Enterprise parity (CRM/ATS, team prompts, pre-call briefs) remains a multi-month

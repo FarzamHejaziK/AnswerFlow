@@ -1,6 +1,6 @@
-# Natively API Audit — 2026-05-04
+# AnswerFlow API Audit — 2026-05-04
 
-Server lives in `natively-api/` (single ~6k-line `server.js` + `lib/queryClassifier.js`). Submodule with public remote `github.com/evinjohnn/natively-api`. All path:line refs are inside `natively-api/`.
+Server lives in `answerflow-api/` (single ~6k-line `server.js` + `lib/queryClassifier.js`). Submodule with public remote `github.com/FarzamHejaziK/answerflow-api`. All path:line refs are inside `answerflow-api/`.
 
 ## Critical (fix now)
 
@@ -8,11 +8,11 @@ Server lives in `natively-api/` (single ~6k-line `server.js` + `lib/queryClassif
 
 - **Raw API keys in logs** — `server.js:4371`. `sk = ${key}:${channel}` for paid users, then `session=${sk}` is logged in dozens of places (Deepgram, Google STT, ElevenLabs, billing, errors). Railway log retention = customer-key compromise. **Fix:** hash or truncate `key` before forming `sk`; e.g. `sk = ${key.slice(0,16)}…:${channel}`.
 
-- **API keys committed to public repo** — `tests/exhaustion.test.mjs:12`, `tests/test-new-email.mjs:13`, `tests/stress-test.mjs:370,620`, `scratch/inspect_api_key.js:10`, `scratch/reset_stt.js:10`. Real-shaped 40-char keys (`natively_sk_HSSP1bxyjuWa934r7ysZsIUqttI9aypGgQWeHBUK` etc.) committed to the public submodule. **Fix:** rotate any of these still active in `api_keys`, move to `.env`, add to `.gitignore`, scrub git history.
+- **API keys committed to public repo** — `tests/exhaustion.test.mjs:12`, `tests/test-new-email.mjs:13`, `tests/stress-test.mjs:370,620`, `scratch/inspect_api_key.js:10`, `scratch/reset_stt.js:10`. Real-shaped 40-char keys (`answerflow_sk_HSSP1bxyjuWa934r7ysZsIUqttI9aypGgQWeHBUK` etc.) committed to the public submodule. **Fix:** rotate any of these still active in `api_keys`, move to `.env`, add to `.gitignore`, scrub git history.
 
 ## High
 
-- **`TRIAL_JWT_SECRET` falls back to hardcoded string** — `server.js:1280-1284`. Default `'natively_dev_trial_secret_change_in_prod'` is checked into the repo; only `console.warn` if env unset. Any deploy missing the env lets an attacker forge `parseTrialToken` payloads with arbitrary `id`/`exp` and bypass HMAC, granting unlimited free quota. **Fix:** hard-fail (`process.exit(1)`) on missing `TRIAL_JWT_SECRET` in production.
+- **`TRIAL_JWT_SECRET` falls back to hardcoded string** — `server.js:1280-1284`. Default `'answerflow_dev_trial_secret_change_in_prod'` is checked into the repo; only `console.warn` if env unset. Any deploy missing the env lets an attacker forge `parseTrialToken` payloads with arbitrary `id`/`exp` and bypass HMAC, granting unlimited free quota. **Fix:** hard-fail (`process.exit(1)`) on missing `TRIAL_JWT_SECRET` in production.
 
 - **Unauthenticated Google OAuth proxy** — `server.js:3040, 3063`. `/api/calendar/exchange` and `/api/calendar/refresh` accept `code`/`refresh_token` from anyone, exchange via `GOOGLE_CLIENT_SECRET`, return tokens raw. Lets anyone replay a stolen refresh_token through your server, hides their IP behind your egress, and burns Google quota. **Fix:** require valid API key / trial token, rate-limit per identity.
 

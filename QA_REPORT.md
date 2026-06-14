@@ -1,4 +1,4 @@
-# Natively Modes Manager — QA Report
+# AnswerFlow Modes Manager — QA Report
 **Date:** 2026-05-14
 **Evaluator:** Test Engineer Agent
 **Test Suites:** Baseline (45 scenarios) + Stress (16 scenarios) = 61 total

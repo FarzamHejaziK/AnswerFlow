@@ -1,16 +1,16 @@
-The strongest finding so far: Cluely’s “modes” are not separate models. Public docs describe them as active prompt modes plus KB/RAG, live actions, meeting notes templates, and enterprise role/team assignment.
+The strongest finding so far: legacy overlay’s “modes” are not separate models. Public docs describe them as active prompt modes plus KB/RAG, live actions, meeting notes templates, and enterprise role/team assignment.
 
 Thought for 2m 25s
 
-Below is the full Cluely teardown from official docs, public reviews, Reddit, GitHub clones, Hacker News/forum-style discussions, and technical Electron/OS references.
+Below is the full legacy overlay teardown from official docs, public reviews, Reddit, GitHub clones, Hacker News/forum-style discussions, and technical Electron/OS references.
 
-The biggest correction first: Cluely’s “auto answer” is not fully automatic in the way people imagine. Official docs show that Cluely auto-detects questions/keywords/suggestions as Dynamic Actions, but the user usually clicks, presses Tab, or uses Cmd/Ctrl + Enter to get the answer. Reddit users and third-party reviews also report that it does not always auto-generate direct answers without a trigger.
+The biggest correction first: legacy overlay’s “auto answer” is not fully automatic in the way people imagine. Official docs show that legacy overlay auto-detects questions/keywords/suggestions as Dynamic Actions, but the user usually clicks, presses Tab, or uses Cmd/Ctrl + Enter to get the answer. Reddit users and third-party reviews also report that it does not always auto-generate direct answers without a trigger.
 
-1. What Cluely actually is
+1. What legacy overlay actually is
 
-Cluely is a desktop/mobile AI assistant that listens to meeting audio, reads screen context, gives real-time answers, creates meeting notes, and optionally hides its overlay from screen sharing. Its own site describes the core loop as: listen in real time, understand what is being said, and give instant answers, notes, and next steps.
+legacy overlay is a desktop/mobile AI assistant that listens to meeting audio, reads screen context, gives real-time answers, creates meeting notes, and optionally hides its overlay from screen sharing. Its own site describes the core loop as: listen in real time, understand what is being said, and give instant answers, notes, and next steps.
 
-For enterprise, Cluely frames itself mainly around sales, recruiting, consulting, support, and internal meetings, not just interviews. Its enterprise docs say it helps users “win deals, scan candidates, consult better, and deliver more value,” and specifically mentions handling tough questions, objections, and follow-up questions.
+For enterprise, legacy overlay frames itself mainly around sales, recruiting, consulting, support, and internal meetings, not just interviews. Its enterprise docs say it helps users “win deals, scan candidates, consult better, and deliver more value,” and specifically mentions handling tough questions, objections, and follow-up questions.
 
 The app has three big surfaces:
 
@@ -41,11 +41,11 @@ LLM response
         ↓
 Overlay answer + meeting notes + follow-up actions
 
-Official docs confirm the key pieces: Cluely has real-time transcription, no-bot meeting notes, keyword detection, question/objection/technical-term detection, prompt-based answers, knowledge base retrieval, and enterprise models.
+Official docs confirm the key pieces: legacy overlay has real-time transcription, no-bot meeting notes, keyword detection, question/objection/technical-term detection, prompt-based answers, knowledge base retrieval, and enterprise models.
 
 3. What “Modes” are
 
-Cluely “Modes” are basically active prompt configurations.
+legacy overlay “Modes” are basically active prompt configurations.
 
 A mode is not a separate trained AI model. It is closer to:
 
@@ -61,24 +61,24 @@ A mode is not a separate trained AI model. It is closer to:
   "allowed_team_roles": ["sales_rep", "account_manager"]
 }
 
-Official docs call the mode dropdown “Customize Cluely” prompts, and say users can switch the active mode inside Live Insights or from the desktop app.
+Official docs call the mode dropdown “Customize legacy overlay” prompts, and say users can switch the active mode inside Live Insights or from the desktop app.
 
-For individuals, modes appear to be mostly custom prompts and uploaded files. Cluely pricing says Starter includes limited AI responses, limited note-taking, custom instructions, and file uploads; Pro expands to unlimited responses, note-taking, models, files, and customization.
+For individuals, modes appear to be mostly custom prompts and uploaded files. legacy overlay pricing says Starter includes limited AI responses, limited note-taking, custom instructions, and file uploads; Pro expands to unlimited responses, note-taking, models, files, and customization.
 
 For enterprise, modes become much more powerful: admins create prompts, assign prompts to teams, attach knowledge bases, define team access, and use analytics/coaching. The docs explicitly mention prompt customization, knowledge base management, team configuration, permissions, and analytics.
 
 4. Pro vs Enterprise modes
 
-This is important for Natively.
+This is important for AnswerFlow.
 
-Cluely Pro seems to have:
+legacy overlay Pro seems to have:
 
 Custom prompt
 + personal files
 + default actions
 + basic meeting notes
 
-Cluely Enterprise adds:
+legacy overlay Enterprise adds:
 
 Team prompts
 + role-based prompt assignment
@@ -95,7 +95,7 @@ This means the real product depth is not the overlay. It is the mode management 
 
 5. How “Auto Answer” / Dynamic Actions work
 
-Cluely’s “auto answer” is better understood as auto-detected answer opportunities.
+legacy overlay’s “auto answer” is better understood as auto-detected answer opportunities.
 
 Official docs say real-time questions, keywords, and suggestions detected from the transcript appear below the main Live Insights card. Users can click one, or hit Tab to answer the top Dynamic Action.
 
@@ -116,15 +116,15 @@ UI creates Dynamic Action:
 User hits Tab/clicks:
 generate answer using transcript + mode prompt + KB + pricing docs
 
-Cluely also has Cmd/Ctrl + Enter for Ask AI and Cmd/Ctrl + Shift + Enter / Get Answer for screen/conversation-based answers without typed input.
+legacy overlay also has Cmd/Ctrl + Enter for Ask AI and Cmd/Ctrl + Shift + Enter / Get Answer for screen/conversation-based answers without typed input.
 
 Reddit users report that, at least in some versions, users still needed to prompt it manually; one commenter says “No auto-capture. Must prompt it if you want an answer.” A third-party review also says no automatic answer was generated in their test and they had to type or click.
 
-So for Natively: do not build “auto answer” as fully autonomous first. Build “auto-detected action cards” first. That is safer, faster, and closer to what Cluely seems to do.
+So for AnswerFlow: do not build “auto answer” as fully autonomous first. Build “auto-detected action cards” first. That is safer, faster, and closer to what legacy overlay seems to do.
 
 6. The mode-by-mode map
 
-Cluely does not publish one clean “all modes” list, but public docs, site copy, Reddit posts, and product pages reveal these mode families.
+legacy overlay does not publish one clean “all modes” list, but public docs, site copy, Reddit posts, and product pages reveal these mode families.
 
 A. General Meeting Mode
 
@@ -149,7 +149,7 @@ Fact check
 Who am I talking to?
 Recap
 
-Cluely’s Live Insights docs list these exact default actions: “What should I say next,” “Follow up questions,” “Fact check,” “Who am I talking to,” and “Recap.”
+legacy overlay’s Live Insights docs list these exact default actions: “What should I say next,” “Follow up questions,” “Fact check,” “Who am I talking to,” and “Recap.”
 
 Output style:
 
@@ -158,7 +158,7 @@ Short answer
 Clarifying question
 Mini recap
 
-Natively implementation:
+AnswerFlow implementation:
 
 {
   "mode": "general_meeting",
@@ -176,7 +176,7 @@ Purpose:
 
 Help reps handle discovery, objection handling, pricing, competitor questions, and follow-up.
 
-Official docs repeatedly position Cluely around sales: “win deals,” “make every rep your best rep,” answer during calls, handle objections, and ask follow-up questions.
+Official docs repeatedly position legacy overlay around sales: “win deals,” “make every rep your best rep,” answer during calls, handle objections, and ask follow-up questions.
 
 Inputs:
 
@@ -201,7 +201,7 @@ Onboarding question
 Budget/timeline question
 Buying signal
 
-The official enterprise docs say Cluely listens for questions, objections, and technical terms, and gives answers from prompts, KB, and models.
+The official enterprise docs say legacy overlay listens for questions, objections, and technical terms, and gives answers from prompts, KB, and models.
 
 Reddit sales users are doing exactly this manually: uploading rebuttal docs, building objection lists, and writing prompts that group objections by call stage.
 
@@ -219,7 +219,7 @@ Generate:
 - proof point
 - follow-up question
 
-Best Sales Mode actions for Natively:
+Best Sales Mode actions for AnswerFlow:
 
 Handle objection
 Ask discovery question
@@ -259,7 +259,7 @@ Integration error
 Angry customer sentiment
 Escalation language
 
-Knowledge base docs are central here. Cluely supports files, live links, and data sources; it mentions support documentation, product knowledge bases, company wikis, internal docs, and external knowledge sources.
+Knowledge base docs are central here. legacy overlay supports files, live links, and data sources; it mentions support documentation, product knowledge bases, company wikis, internal docs, and external knowledge sources.
 
 Likely Support Mode flow:
 
@@ -275,7 +275,7 @@ Answer:
 3. Restart app/audio service
 4. Escalate if still failing
 
-Natively actions:
+AnswerFlow actions:
 
 Troubleshoot issue
 Find policy
@@ -324,7 +324,7 @@ Candidate signal:
 Suggested reply:
 "That’s a fair question. The role is open because..."
 
-Natively actions:
+AnswerFlow actions:
 
 Evaluate candidate answer
 Ask follow-up interview question
@@ -334,7 +334,7 @@ Score candidate
 Generate interview notes
 Push notes to ATS
 
-Cluely’s ATS/CRM integration docs say integrations can match participants, pull activity history, and push meeting notes into CRM/ATS systems.
+legacy overlay’s ATS/CRM integration docs say integrations can match participants, pull activity history, and push meeting notes into CRM/ATS systems.
 
 E. Interview / Job-Seeker Mode
 
@@ -342,7 +342,7 @@ Purpose:
 
 Help a candidate answer recruiter, behavioral, technical, coding, or system design questions.
 
-This is the controversial original use case. Cluely’s public positioning has included interviews, and the mobile page lists “Interview” among “perfect for your next” use cases.
+This is the controversial original use case. legacy overlay’s public positioning has included interviews, and the mobile page lists “Interview” among “perfect for your next” use cases.
 
 Inputs:
 
@@ -368,9 +368,9 @@ System design prompt
 LeetCode/coding screen
 Runtime/complexity follow-up
 
-The alleged public Cluely system prompt contains specific handling for behavioral/PM questions, technical problems, math, multiple choice, UI navigation, screen problem solving, and transcript errors. Treat this as unverified but useful signal, because it is a public gist, not official Cluely docs.
+The alleged public legacy overlay system prompt contains specific handling for behavioral/PM questions, technical problems, math, multiple choice, UI navigation, screen problem solving, and transcript errors. Treat this as unverified but useful signal, because it is a public gist, not official legacy overlay docs.
 
-For Natively, Interview Mode should be split into submodes:
+For AnswerFlow, Interview Mode should be split into submodes:
 
 Recruiter Screen
 Behavioral / STAR
@@ -387,7 +387,7 @@ Purpose:
 
 Answer coding, LeetCode, system design, spreadsheet, and visible screen problems.
 
-Cluely docs mention Smart Mode for coding assistance, and Get Answer for coding problems or Excel sheets on the screen.
+legacy overlay docs mention Smart Mode for coding assistance, and Get Answer for coding problems or Excel sheets on the screen.
 
 Inputs:
 
@@ -414,7 +414,7 @@ Complexity
 Dry run
 Edge cases
 
-Open-source Cluely-style clones follow the same pattern: Cass captures screenshots/audio notes, sends them to Gemini, and formats responses for LeetCode, MCQs, math, and plans.
+Open-source legacy overlay-style clones follow the same pattern: Cass captures screenshots/audio notes, sends them to Gemini, and formats responses for LeetCode, MCQs, math, and plans.
 
 G. Internal Meeting / 1:1 / Standup Mode
 
@@ -422,7 +422,7 @@ Purpose:
 
 Take notes, catch decisions, suggest follow-ups, and extract action items.
 
-Official docs recommend using Cluely in daily standups and internal meetings during team adoption.
+Official docs recommend using legacy overlay in daily standups and internal meetings during team adoption.
 
 Inputs:
 
@@ -449,7 +449,7 @@ Decision log
 Risks/blockers
 Follow-up draft
 
-Meeting Notes docs confirm Cluely generates detailed notes, AI-drafted next steps, full transcripts with speaker identification, key insights, editable summaries, share links, and transcript export.
+Meeting Notes docs confirm legacy overlay generates detailed notes, AI-drafted next steps, full transcripts with speaker identification, key insights, editable summaries, share links, and transcript export.
 
 H. Consulting / Client Advisory Mode
 
@@ -457,7 +457,7 @@ Purpose:
 
 Help consultants respond confidently in client calls.
 
-Cluely’s docs mention “consult better,” and Reddit users discuss people using Cluely to handle consulting-style client communication.
+legacy overlay’s docs mention “consult better,” and Reddit users discuss people using legacy overlay to handle consulting-style client communication.
 
 Inputs:
 
@@ -521,7 +521,7 @@ This is very relevant to your earlier lecture-note mode idea.
 
 7. Full use-case map
 
-Public Cluely pages and docs support these use cases:
+Public legacy overlay pages and docs support these use cases:
 
 Meetings
 Sales calls
@@ -551,7 +551,7 @@ Notes to self
 
 The mobile page explicitly lists many of these casual/professional use cases. Pricing also says people use it for meetings, homework, sales calls, or curiosity.
 
-For Natively, do not present all these as separate modes. Group them into mode families:
+For AnswerFlow, do not present all these as separate modes. Group them into mode families:
 
 1. Meeting Assistant
 2. Sales Copilot
@@ -563,7 +563,7 @@ For Natively, do not present all these as separate modes. Group them into mode f
 8. Consulting/Client Copilot
 8. Intent detection taxonomy
 
-Based on docs, alleged prompt leaks, and user behavior, Cluely likely detects these intent families.
+Based on docs, alleged prompt leaks, and user behavior, legacy overlay likely detects these intent families.
 
 Officially supported / strongly documented
 Question detected
@@ -575,7 +575,7 @@ Screen problem detected
 Summary/recap request
 Follow-up question opportunity
 
-Official docs explicitly say Cluely detects questions, objections, technical terms, questions/keywords/suggestions, and surfaces them as live actions.
+Official docs explicitly say legacy overlay detects questions, objections, technical terms, questions/keywords/suggestions, and surfaces them as live actions.
 
 Likely inferred from modes
 Pricing objection
@@ -592,7 +592,7 @@ Risk/blocker
 CRM/account mention
 ATS/candidate mention
 
-The inferred list follows directly from Cluely’s sales/recruiting/support positioning, knowledge base docs, CRM/ATS integration docs, and Reddit prompt usage.
+The inferred list follows directly from legacy overlay’s sales/recruiting/support positioning, knowledge base docs, CRM/ATS integration docs, and Reddit prompt usage.
 
 Alleged prompt-level logic
 
@@ -600,7 +600,7 @@ The public gist says the assistant should focus on the end of the transcript, in
 
 9. How the overlay / invisibility likely works
 
-Cluely says it does not join meetings, so there is no meeting bot in the participant list. Its site says it is invisible to screen share, recordings, and external meeting tools.
+legacy overlay says it does not join meetings, so there is no meeting bot in the participant list. Its site says it is invisible to screen share, recordings, and external meeting tools.
 
 Official docs say the invisibility feature uses the same privacy technology Zoom uses to avoid infinite overlays and depends on Windows/macOS standards.
 
@@ -608,17 +608,17 @@ Technically, Electron provides win.setContentProtection(true), which prevents wi
 
 Microsoft’s docs say WDA_EXCLUDEFROMCAPTURE makes a window appear only on the monitor and not in capture, but also warns this is not DRM/security and cannot stop someone photographing the screen.
 
-Cluely’s own docs admit limitations: as of September 2025, it was not invisible for Windows 10, Windows 11 Home, or pre-2020 Apple devices in Microsoft Teams, Zoom full-screen share, or Google Meet full-screen share.
+legacy overlay’s own docs admit limitations: as of September 2025, it was not invisible for Windows 10, Windows 11 Home, or pre-2020 Apple devices in Microsoft Teams, Zoom full-screen share, or Google Meet full-screen share.
 
-For Natively: make invisibility a compatibility matrix, not a promise.
+For AnswerFlow: make invisibility a compatibility matrix, not a promise.
 
 10. Audio capture / transcription
 
-Cluely requires microphone and screen/system audio permissions. Its troubleshooting docs say users should see a waveform, open a transcription window, and see text appear; own voice appears in blue.
+legacy overlay requires microphone and screen/system audio permissions. Its troubleshooting docs say users should see a waveform, open a transcription window, and see text appear; own voice appears in blue.
 
-The docs also mention Cluely uses system audio settings, microphone permissions, screen/system audio recording permissions, Windows Audio service restarts, and network/WebSocket access to Cluely transcription endpoints.
+The docs also mention legacy overlay uses system audio settings, microphone permissions, screen/system audio recording permissions, Windows Audio service restarts, and network/WebSocket access to legacy overlay transcription endpoints.
 
-For Natively, the important architecture is:
+For AnswerFlow, the important architecture is:
 
 Mic audio
 + system loopback audio
@@ -627,17 +627,17 @@ Mic audio
 + speaker labeling
 + rolling transcript buffer
 
-Cluely appears to use cloud transcription infrastructure, because its docs mention domains like service.transcribe.cluely.com and WebSocket/network troubleshooting.
+legacy overlay appears to use cloud transcription infrastructure, because its docs mention domains like service.transcribe.legacy-overlay.com and WebSocket/network troubleshooting.
 
 11. Screen context / OCR / screenshot analysis
 
-Cluely’s site says users can ask about the screen or conversation, and the UI says “Viewed screen.”
+legacy overlay’s site says users can ask about the screen or conversation, and the UI says “Viewed screen.”
 
 Docs say Get Answer / Cmd Shift Enter can help with coding problems or Excel sheets on screen without text input.
 
-Open-source clones confirm the common implementation pattern: screenshot capture + OCR/screen analysis + audio transcription + LLM answer + floating overlay. Cheap-cluely uses Tesseract/screen OCR, Whisper, Gemini, and a translucent always-on-top overlay; Cass captures screenshots/audio and streams them to Gemini; Pluely describes system audio capture and voice input.
+Open-source clones confirm the common implementation pattern: screenshot capture + OCR/screen analysis + audio transcription + LLM answer + floating overlay. Cheap-legacy-overlay uses Tesseract/screen OCR, Whisper, Gemini, and a translucent always-on-top overlay; Cass captures screenshots/audio and streams them to Gemini; Pluely describes system audio capture and voice input.
 
-For Natively, screen context should be split into:
+For AnswerFlow, screen context should be split into:
 
 fast OCR text
 + screenshot image model call
@@ -649,13 +649,13 @@ Do not image-model every frame. Use OCR/change detection first, then vision mode
 
 12. Knowledge Base / RAG
 
-This is one of Cluely’s biggest enterprise advantages.
+This is one of legacy overlay’s biggest enterprise advantages.
 
-Cluely’s knowledge base can sync company knowledge, sales scripts, and process docs so AI can use them during calls. It supports files, live links, data sources, team-level permissions, shared access, and analytics.
+legacy overlay’s knowledge base can sync company knowledge, sales scripts, and process docs so AI can use them during calls. It supports files, live links, data sources, team-level permissions, shared access, and analytics.
 
 Supported text-based docs include PDFs, Word docs, TXT, MD, and other text-based files. Live links can be configured for support documentation, product updates, knowledge articles, company wikis, and external sources.
 
-Cluely says its RAG is used for live insights, Cmd Enter, scoped missed-opportunity/meeting-note context, and conversation linking for pre-call briefs.
+legacy overlay says its RAG is used for live insights, Cmd Enter, scoped missed-opportunity/meeting-note context, and conversation linking for pre-call briefs.
 
 This means modes should not just have prompts. Modes need retrieval scopes:
 
@@ -672,7 +672,7 @@ This means modes should not just have prompts. Modes need retrieval scopes:
 }
 13. CRM / ATS integrations
 
-Cluely integrates CRM and ATS systems through Merge.dev. Docs say it can match call participants with contacts, pull activity history, and push meeting notes into the CRM or ATS.
+legacy overlay integrates CRM and ATS systems through Merge.dev. Docs say it can match call participants with contacts, pull activity history, and push meeting notes into the CRM or ATS.
 
 Supported examples include HubSpot, Salesforce, Pipedrive, Zoho CRM, Greenhouse, Lever, Workday, BambooHR, and others via Merge.dev.
 
@@ -687,15 +687,15 @@ pull candidate/job history → evaluate candidate and push interview notes
 Support Mode:
 pull customer/ticket history → suggest resolution and escalation
 
-For Natively, this is a huge upsell layer. Personal users need files/prompts. Teams need CRM/ATS + KB + admin controls.
+For AnswerFlow, this is a huge upsell layer. Personal users need files/prompts. Teams need CRM/ATS + KB + admin controls.
 
 14. Pre-call briefs
 
-Cluely pre-call briefs use Google Calendar to identify upcoming meeting participants, research professional profiles, pull meeting context, and generate preparation summaries. Only Google Calendar was supported as of August 27, 2025, according to their docs.
+legacy overlay pre-call briefs use Google Calendar to identify upcoming meeting participants, research professional profiles, pull meeting context, and generate preparation summaries. Only Google Calendar was supported as of August 27, 2025, according to their docs.
 
 Briefs include meeting details, participant names/roles/backgrounds, previous meeting history, relevant docs/topics, suggested talking points/questions, and company/role background.
 
-For Natively:
+For AnswerFlow:
 
 5 minutes before meeting:
 calendar event → participants → CRM/LinkedIn/company search → past notes → mode suggestion
@@ -711,11 +711,11 @@ That is how you make modes feel “smart.”
 
 15. Post-call notes and follow-ups
 
-Cluely meeting notes include detailed notes, AI-drafted next steps, full transcripts with speaker identification, key insights, editable summaries, shareable links, session continuation, and transcript export.
+legacy overlay meeting notes include detailed notes, AI-drafted next steps, full transcripts with speaker identification, key insights, editable summaries, shareable links, session continuation, and transcript export.
 
-Enterprise docs also say meeting notes can include mode-specific email templates and generated follow-up emails. Changelog says Cluely Modes include customized email templates for meeting notes.
+Enterprise docs also say meeting notes can include mode-specific email templates and generated follow-up emails. Changelog says legacy overlay Modes include customized email templates for meeting notes.
 
-For Natively, each mode needs a post-call template:
+For AnswerFlow, each mode needs a post-call template:
 
 Sales:
 - pain
@@ -747,13 +747,13 @@ Internal:
 - owners
 16. Coaching / missed opportunities
 
-Cluely’s Coaching feature monitors how reps respond to prospect queries during calls, compares against customizable sales scorecards, and summarizes missed opportunities after calls.
+legacy overlay’s Coaching feature monitors how reps respond to prospect queries during calls, compares against customizable sales scorecards, and summarizes missed opportunities after calls.
 
 The docs describe real-time monitoring, custom criteria, instant feedback, post-call analysis, actionable improvement recommendations, ROI tracking, team dashboards, and trend analysis.
 
 This is another layer beyond “answer mode.”
 
-Natively equivalent:
+AnswerFlow equivalent:
 
 During call:
 - classify moments
@@ -771,9 +771,9 @@ For sales, this is enterprise gold.
 
 17. Analytics / admin layer
 
-Cluely pilot reporting includes detailed Ask AI interaction analysis, categorization by use case, call-specific context, time-based usage trends, ROI and business impact metrics, objection handling success, knowledge base ROI, technical health, adoption, app version rates, and integration success.
+legacy overlay pilot reporting includes detailed Ask AI interaction analysis, categorization by use case, call-specific context, time-based usage trends, ROI and business impact metrics, objection handling success, knowledge base ROI, technical health, adoption, app version rates, and integration success.
 
-For Natively, track:
+For AnswerFlow, track:
 
 Mode used
 Meeting type
@@ -818,9 +818,9 @@ Invisibility is not universal
 
 Official docs list specific OS/device/platform cases where invisibility does not work reliably.
 
-19. What to copy for Natively
+19. What to copy for AnswerFlow
 
-The core Cluely playbook is:
+The core legacy overlay playbook is:
 
 1. Make the assistant ambient.
 2. Detect when help is needed.
@@ -831,7 +831,7 @@ The core Cluely playbook is:
 7. Keep answer short and usable.
 8. Turn the call into notes/follow-ups/coaching.
 
-The minimum strong Natively mode schema should be:
+The minimum strong AnswerFlow mode schema should be:
 
 {
   "id": "sales_discovery",
@@ -868,7 +868,7 @@ The minimum strong Natively mode schema should be:
   "post_call_template": "sales_notes",
   "coaching_rubric": "custom_sales_scorecard"
 }
-20. Best Natively implementation roadmap
+20. Best AnswerFlow implementation roadmap
 Phase 1: Make modes real
 
 Build:
@@ -932,11 +932,11 @@ Call coaching
 CRM/ATS sync
 Custom privacy settings
 
-That is where Cluely is trying to monetize enterprise.
+That is where legacy overlay is trying to monetize enterprise.
 
 21. The final mental model
 
-Cluely is not “one chatbot over a meeting.”
+legacy overlay is not “one chatbot over a meeting.”
 
 It is:
 
@@ -963,4 +963,4 @@ The third:
 
 The hard moat is latency + context orchestration + UX reliability, not the model.
 
-For Natively, the fastest way to beat them is not “copy Cluely modes.” It is to make modes testable objects with measurable trigger accuracy, latency, retrieval quality, and answer usefulness.
+For AnswerFlow, the fastest way to beat them is not “copy legacy overlay modes.” It is to make modes testable objects with measurable trigger accuracy, latency, retrieval quality, and answer usefulness.

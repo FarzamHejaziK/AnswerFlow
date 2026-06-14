@@ -30,7 +30,7 @@ UI affordances called out below remain unfinished.
 - **Native OCR adapters.** Apple Vision and Windows OCR are stubs; all macOS
   OCR currently lands on Tesseract.
 - **`npm run test:e2e:screen-understanding`.** The script exists but runs a
-  Node-only harness against the Natively API, not the Electron app.
+  Node-only harness against the AnswerFlow API, not the Electron app.
 
 ## How to reproduce
 
