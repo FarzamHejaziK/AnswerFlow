@@ -99,6 +99,9 @@
         "NSAudioCaptureUsageDescription": "AnswerFlow needs system audio access to transcribe interview audio."
       }
     },
+    "dmg": {
+      "size": "4g"
+    },
     "win": {
       "target": [
         {
