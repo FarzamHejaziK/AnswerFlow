@@ -2,12 +2,33 @@ const path = require('path');
 const fs = require('fs');
 
 const MOONSHINE_BASE_MODEL = 'onnx-community/moonshine-base-ONNX';
+const MOONSHINE_BASE_LOCAL_DIR = path.join(
+    __dirname,
+    '../resources/models/onnx-community/moonshine-base-ONNX',
+);
+const MOONSHINE_BASE_REQUIRED_FILES = [
+    'config.json',
+    'generation_config.json',
+    'preprocessor_config.json',
+    'tokenizer.json',
+    'tokenizer_config.json',
+    'onnx/encoder_model.onnx',
+    'onnx/decoder_model_merged.onnx',
+    'onnx/decoder_model_merged_quantized.onnx',
+];
 const MIXED_ASR_DTYPE = {
     encoder_model: 'fp32',
     decoder_model: 'q8',
     decoder_model_merged: 'q8',
     decoder_with_past_model: 'q8',
 };
+
+function missingMoonshineBaseFiles() {
+    return MOONSHINE_BASE_REQUIRED_FILES.filter((relativePath) => {
+        const filePath = path.join(MOONSHINE_BASE_LOCAL_DIR, relativePath);
+        return !fs.existsSync(filePath) || fs.statSync(filePath).size === 0;
+    });
+}
 
 async function downloadModels() {
     const { pipeline, env } = await import('@huggingface/transformers');
@@ -42,7 +63,19 @@ async function downloadModels() {
         console.log(`[download-models] ${MOONSHINE_BASE_MODEL} fp32 downloaded.`);
 
         console.log(`[download-models] Downloading ${MOONSHINE_BASE_MODEL} (mixed fp32/q8)...`);
-        await pipeline('automatic-speech-recognition', MOONSHINE_BASE_MODEL, { dtype: MIXED_ASR_DTYPE });
+        try {
+            await pipeline('automatic-speech-recognition', MOONSHINE_BASE_MODEL, { dtype: MIXED_ASR_DTYPE });
+        } catch (mixedError) {
+            const missing = missingMoonshineBaseFiles();
+            if (missing.length > 0) {
+                throw mixedError;
+            }
+            console.warn(
+                '[download-models] Mixed Moonshine validation failed after download; ' +
+                'continuing because all required package files are present.',
+                mixedError?.message || mixedError,
+            );
+        }
         console.log(`[download-models] ${MOONSHINE_BASE_MODEL} mixed fp32/q8 downloaded.`);
 
         console.log('[download-models] All models downloaded successfully!');

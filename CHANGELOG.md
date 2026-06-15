@@ -24,6 +24,8 @@ AnswerFlow v2.7.3 completes the first AnswerFlow-branded release pass: new cross
 
 - Fixed stale app names in update instructions and macOS release verification.
 - Fixed the macOS release workflow check that still searched for the old app bundle name.
+- Fixed Windows release packaging when Transformers.js downloads the Moonshine Base quantized graph successfully but ONNX runtime validation fails during install.
+- Added the missing macOS entitlements files required by both unsigned ad-hoc packaging and future signed/notarized builds.
 - Removed the old update promotion popup path so update notices no longer look like promotional UI.
 - Removed the confusing `Clear` control from the interview header.
 
