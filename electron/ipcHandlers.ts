@@ -19,6 +19,8 @@ import { TRIAL_SENTINEL_KEY } from './config/constants';
 import { AI_RESPONSE_LANGUAGES, RECOGNITION_LANGUAGES } from './config/languages';
 import { CHAT_MODE_PROMPT } from './llm/prompts';
 
+const DEBUG_LOG_FILE_NAME = 'answerflow_debug.log';
+
 export function initializeIpcHandlers(appState: AppState): void {
   const safeHandle = (
     channel: string,
@@ -1021,7 +1023,7 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle('get-log-file-path', async () => {
     try {
-      return path.join(app.getPath('documents'), 'natively_debug.log');
+      return path.join(app.getPath('documents'), DEBUG_LOG_FILE_NAME);
     } catch {
       return null;
     }
@@ -1029,7 +1031,7 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   safeHandle('open-log-file', async () => {
     try {
-      const logPath = path.join(app.getPath('documents'), 'natively_debug.log');
+      const logPath = path.join(app.getPath('documents'), DEBUG_LOG_FILE_NAME);
       // Ensure the file exists before opening
       if (!fs.existsSync(logPath)) {
         fs.writeFileSync(logPath, '');

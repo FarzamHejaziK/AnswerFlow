@@ -2088,7 +2088,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
 // Renderer-side console forwarding to main-process log file.
 // When verbose logging is on, patch console.log/warn/error so that renderer
-// output appears in ~/Documents/natively_debug.log alongside main-process logs.
+// output appears in ~/Documents/answerflow_debug.log alongside main-process logs.
 (function patchRendererConsole() {
   let _verbose = false;
 

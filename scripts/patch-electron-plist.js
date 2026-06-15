@@ -18,6 +18,13 @@
 const fs = require('fs');
 const path = require('path');
 
+const APP_NAME = 'AnswerFlow';
+const PERMISSIONS = {
+  NSScreenCaptureUsageDescription: 'AnswerFlow needs Screen Recording permission to capture system audio for interview transcription.',
+  NSAudioCaptureUsageDescription: 'AnswerFlow needs system audio access to transcribe interview audio.',
+  NSMicrophoneUsageDescription: 'AnswerFlow needs microphone access to transcribe your voice during interviews.',
+};
+
 const plistPath = path.join(
   __dirname,
   '..',
@@ -38,39 +45,54 @@ let content = fs.readFileSync(plistPath, 'utf8');
 
 let modified = false;
 
-// Patch NSScreenCaptureUsageDescription
-if (!content.includes('NSScreenCaptureUsageDescription')) {
-  content = content.replace(
-    '<key>NSMicrophoneUsageDescription</key>',
-    '<key>NSScreenCaptureUsageDescription</key>\n\t<string>Natively needs Screen Recording permission to capture system audio for meeting transcription.</string>\n\t<key>NSMicrophoneUsageDescription</key>'
-  );
-  modified = true;
-  console.log('[patch-electron-plist] Added NSScreenCaptureUsageDescription.');
-} else {
-  console.log('[patch-electron-plist] NSScreenCaptureUsageDescription already present — skipping.');
+function setStringValue(key, value, insertBeforeKey = null) {
+  const keyPattern = new RegExp(`(<key>${key}</key>\\s*<string>)([^<]*)(</string>)`);
+  if (keyPattern.test(content)) {
+    content = content.replace(keyPattern, (_match, prefix, oldValue, suffix) => {
+      if (oldValue !== value) {
+        modified = true;
+        console.log(`[patch-electron-plist] Updated ${key}.`);
+      }
+      return `${prefix}${value}${suffix}`;
+    });
+    return;
+  }
+
+  if (insertBeforeKey && content.includes(`<key>${insertBeforeKey}</key>`)) {
+    content = content.replace(
+      `<key>${insertBeforeKey}</key>`,
+      `<key>${key}</key>\n\t<string>${value}</string>\n\t<key>${insertBeforeKey}</key>`
+    );
+    modified = true;
+    console.log(`[patch-electron-plist] Added ${key}.`);
+  }
 }
 
-// Patch NSAudioCaptureUsageDescription
-if (!content.includes('NSAudioCaptureUsageDescription')) {
+setStringValue('CFBundleDisplayName', APP_NAME);
+setStringValue('CFBundleName', APP_NAME);
+
+setStringValue(
+  'NSScreenCaptureUsageDescription',
+  PERMISSIONS.NSScreenCaptureUsageDescription,
+  'NSMicrophoneUsageDescription'
+);
+
+setStringValue(
+  'NSAudioCaptureUsageDescription',
+  PERMISSIONS.NSAudioCaptureUsageDescription,
+  'NSMicrophoneUsageDescription'
+);
+
+if (!content.includes('NSMicrophoneUsageDescription')) {
   content = content.replace(
-    '<key>NSMicrophoneUsageDescription</key>',
-    '<key>NSAudioCaptureUsageDescription</key>\n\t<string>Natively needs system audio access to transcribe meeting audio.</string>\n\t<key>NSMicrophoneUsageDescription</key>'
+    '</dict>',
+    `\t<key>NSMicrophoneUsageDescription</key>\n\t<string>${PERMISSIONS.NSMicrophoneUsageDescription}</string>\n</dict>`
   );
   modified = true;
-  console.log('[patch-electron-plist] Added NSAudioCaptureUsageDescription.');
-} else {
-  console.log('[patch-electron-plist] NSAudioCaptureUsageDescription already present — skipping.');
+  console.log('[patch-electron-plist] Added NSMicrophoneUsageDescription.');
 }
 
-// Patch NSMicrophoneUsageDescription if it has the generic stock text
-if (content.includes('This app needs access to the microphone')) {
-  content = content.replace(
-    '<string>This app needs access to the microphone</string>',
-    '<string>Natively needs microphone access to transcribe your voice during meetings.</string>'
-  );
-  modified = true;
-  console.log('[patch-electron-plist] Updated NSMicrophoneUsageDescription text.');
-}
+setStringValue('NSMicrophoneUsageDescription', PERMISSIONS.NSMicrophoneUsageDescription);
 
 if (modified) {
   fs.writeFileSync(plistPath, content, 'utf8');

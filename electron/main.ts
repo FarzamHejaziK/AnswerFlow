@@ -8,6 +8,10 @@ if (!app.isPackaged) {
   require('dotenv').config();
 }
 
+const APP_NAME = "AnswerFlow";
+const APP_ID = "com.answerflow.desktop";
+const DEBUG_LOG_FILE_NAME = "answerflow_debug.log";
+
 /**
  * Whether THIS build carries a real Developer ID signature.
  *
@@ -77,7 +81,7 @@ let _logFile: string | null = null;
 const getLogFile = (): string | null => {
   if (_logFile) return _logFile;
   try {
-    _logFile = path.join(app.getPath('documents'), 'natively_debug.log');
+    _logFile = path.join(app.getPath('documents'), DEBUG_LOG_FILE_NAME);
     return _logFile;
   } catch {
     // app.ready not yet fired — return null, logToFile will skip silently
@@ -4317,7 +4321,7 @@ export class AppState {
     trayIcon.setTemplateImage(iconToUse.endsWith('Template.png'));
 
     this.tray = new Tray(trayIcon)
-    this.tray.setToolTip('AnswerFlow') // This tooltip might also need update if we change global shortcut, but global shortcut is removed.
+    this.tray.setToolTip(APP_NAME) // This tooltip might also need update if we change global shortcut, but global shortcut is removed.
     this.updateTrayMenu();
 
     // Double-click to show window
@@ -4335,7 +4339,7 @@ export class AppState {
     console.log('[Main] updateTrayMenu called. Screenshot Accelerator:', screenshotAccel);
 
     // Update tooltip for verification
-    this.tray.setToolTip('AnswerFlow');
+    this.tray.setToolTip(APP_NAME);
 
     // Helper to format accelerator for display (e.g. CommandOrControl+H -> Cmd+H)
     const formatAccel = (accel: string) => {
@@ -4355,7 +4359,7 @@ export class AppState {
 
     const contextMenu = Menu.buildFromTemplate([
       {
-        label: 'Show AnswerFlow',
+        label: `Show ${APP_NAME}`,
         click: () => {
           this.centerAndShowWindow()
         }
@@ -4502,7 +4506,7 @@ export class AppState {
           // Capture whether AnswerFlow is currently the frontmost app BEFORE
           // dock.hide() — that call triggers an implicit macOS app-deactivation
           // which shifts keyboard focus to the next frontmost app (Chrome, etc.).
-          const nativelyWasFocused =
+          const answerFlowWasFocused =
             targetFocusWindow != null &&
             !targetFocusWindow.isDestroyed() &&
             targetFocusWindow.isFocused();
@@ -4516,7 +4520,7 @@ export class AppState {
           // hand control to Chrome / whatever is behind us.
           // We use win.focus() (not app.focus()) to avoid the heavy-handed
           // [NSApp activateIgnoringOtherApps:YES] side-effect.
-          if (nativelyWasFocused && targetFocusWindow && !targetFocusWindow.isDestroyed()) {
+          if (answerFlowWasFocused && targetFocusWindow && !targetFocusWindow.isDestroyed()) {
             targetFocusWindow.focus();
           }
         } else {
@@ -4605,7 +4609,7 @@ export class AppState {
   }
 
   private _applyDisguise(mode: 'terminal' | 'settings' | 'activity' | 'none'): void {
-    let appName = "AnswerFlow";
+    let appName = APP_NAME;
     let iconPath = "";
 
     const isWin = process.platform === 'win32';
@@ -4649,7 +4653,7 @@ export class AppState {
         }
         break;
       case 'none':
-        appName = "AnswerFlow";
+        appName = APP_NAME;
         if (isMac) {
           iconPath = app.isPackaged
             ? path.join(process.resourcesPath, "answerflow.icns")
@@ -4685,7 +4689,7 @@ export class AppState {
     // 3. Update App User Model ID (Windows Taskbar grouping)
     if (isWin) {
       // Use unique AUMID per disguise to avoid grouping with the real app
-      app.setAppUserModelId(`com.answerflow.assistant.${mode}`);
+      app.setAppUserModelId(`${APP_ID}.${mode}`);
     }
 
     // 4. Update Icons
@@ -4794,13 +4798,25 @@ async function initializeApp() {
   // register a dock entry (app.setName, BrowserWindow creation, etc.).
   // We read isUndetectable directly from settings here — AppState singleton isn't
   // constructed yet, so we cannot call appState.getUndetectable().
+  let isUndetectableOnStartup = false;
   if (process.platform === 'darwin') {
     // SettingsManager is already statically imported — no require() needed.
-    const isUndetectableOnStartup = SettingsManager.getInstance().get('isUndetectable') ?? false;
+    isUndetectableOnStartup = SettingsManager.getInstance().get('isUndetectable') ?? false;
     if (isUndetectableOnStartup) {
       app.dock.hide();
     } else {
       app.setActivationPolicy('accessory');
+    }
+  }
+
+  process.title = APP_NAME;
+  if (process.platform === 'win32') {
+    app.setAppUserModelId(APP_ID);
+  }
+  if (process.platform !== 'darwin' || !isUndetectableOnStartup) {
+    app.setName(APP_NAME);
+    if (process.platform === 'darwin') {
+      process.env.CFBundleName = APP_NAME;
     }
   }
 
