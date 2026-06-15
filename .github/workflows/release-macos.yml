@@ -45,10 +45,10 @@ jobs:
     runs-on: macos-14 # Apple Silicon runner; builds both arches via NATIVELY_BUILD_ALL_MAC_ARCHES
     timeout-minutes: 90
     steps:
-      - name: Checkout (with submodules)
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
           # Defaults to the triggering ref (tag on push, selected ref on dispatch).
           # No untrusted-input ref interpolation.
 
