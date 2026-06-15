@@ -101,6 +101,13 @@ const TEXT_BASELINE_MODELS: Record<TextModelFamily, string> = {
   [TextModelFamily.GROQ]: 'llama-3.3-70b-versatile',
 };
 
+const ALLOWED_CLAUDE_MODELS = new Set([
+  'claude-opus-4-8',
+  'claude-opus-4-7',
+  'claude-opus-4-6',
+  'claude-sonnet-4-6',
+]);
+
 /** Vision-capable model ordering for screenshot analysis */
 export const VISION_PROVIDER_ORDER: ModelFamily[] = [
   ModelFamily.OPENAI,
@@ -271,8 +278,8 @@ export function classifyModel(modelId: string): ModelFamily | null {
     return ModelFamily.GEMINI_PRO;
   }
 
-  // Claude vision-capable models (sonnet, opus, haiku)
-  if (lower.startsWith('claude-') && (lower.includes('sonnet') || lower.includes('opus') || lower.includes('haiku'))) {
+  // Claude is intentionally limited to the latest three Opus models plus Sonnet 4.6.
+  if (ALLOWED_CLAUDE_MODELS.has(lower)) {
     return ModelFamily.CLAUDE;
   }
 
@@ -306,8 +313,8 @@ export function classifyTextModel(modelId: string): TextModelFamily | null {
     return TextModelFamily.GEMINI_PRO;
   }
 
-  // Claude text models (sonnet, opus, haiku — all text-capable)
-  if (lower.startsWith('claude-') && (lower.includes('sonnet') || lower.includes('opus') || lower.includes('haiku'))) {
+  // Claude is intentionally limited to the latest three Opus models plus Sonnet 4.6.
+  if (ALLOWED_CLAUDE_MODELS.has(lower)) {
     return TextModelFamily.CLAUDE;
   }
 

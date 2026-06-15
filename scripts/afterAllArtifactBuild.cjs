@@ -6,7 +6,7 @@
  *
  *  (1) electron-builder's own DMG-creation CORRUPTS the embedded app signature.
  *      Apple's notary log on the eb-built DMG reported:
- *        "The signature of the binary is invalid" @ Natively.app/Contents/MacOS/Natively
+ *        "The signature of the binary is invalid" @ AnswerFlow.app/Contents/MacOS/AnswerFlow
  *      Verified: the standalone .app and the .app inside the ZIP pass
  *      `codesign --verify --deep --strict`, but the .app inside the eb DMG does NOT
  *      (even after ditto-copying it back out) — so eb's DMG layout step breaks it.
@@ -163,7 +163,7 @@ function verifyZipManifest(outDir) {
  */
 function buildStyledDmg({ appPath, outDmg, identity }) {
   // Stage ONLY the .app in an isolated temp dir so create-dmg's window contains
-  // exactly [Natively.app, Applications-droplink] and nothing stray.
+  // exactly [AnswerFlow.app, Applications-droplink] and nothing stray.
   const stage = fs.mkdtempSync(path.join(os.tmpdir(), 'natively-dmg-'));
   const stagedApp = path.join(stage, path.basename(appPath));
   execFileSync('ditto', [appPath, stagedApp], { stdio: 'inherit' }); // ditto preserves signatures

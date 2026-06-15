@@ -12,7 +12,7 @@ if (!app.isPackaged) {
  * Whether THIS build carries a real Developer ID signature.
  *
  * The signed release path (`electron-builder.signed.cjs`) bakes
- * `nativelySigned: true` into the packaged app's package.json via
+ * `answerflowSigned: true` into the packaged app's package.json via
  * `extraMetadata`. The default/dev build leaves it absent. We read the flag
  * once from the bundled package.json (inside the asar) and cache it.
  *
@@ -24,7 +24,7 @@ function isSignedBuild(): boolean {
   try {
     const pkgPath = path.join(app.getAppPath(), 'package.json')
     const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
-    _cachedSignedBuild = pkg?.nativelySigned === true
+    _cachedSignedBuild = pkg?.answerflowSigned === true || pkg?.nativelySigned === true
   } catch {
     _cachedSignedBuild = false
   }
@@ -4685,7 +4685,7 @@ export class AppState {
     // 3. Update App User Model ID (Windows Taskbar grouping)
     if (isWin) {
       // Use unique AUMID per disguise to avoid grouping with the real app
-      app.setAppUserModelId(`com.natively.assistant.${mode}`);
+      app.setAppUserModelId(`com.answerflow.assistant.${mode}`);
     }
 
     // 4. Update Icons

@@ -63,7 +63,7 @@ module.exports = {
   // false there and the manual download-fallback path is used instead.
   extraMetadata: {
     ...(base.extraMetadata || {}),
-    nativelySigned: true,
+    answerflowSigned: true,
   },
   // Rebuild styled DMGs from the pristine signed .app (create-dmg), then notarize +
   // staple them, then patch latest*.yml dmg hashes and assert the updater ZIP manifest.

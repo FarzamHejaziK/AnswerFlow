@@ -21,9 +21,9 @@ export const STANDARD_CLOUD_MODELS: Record<string, {
     },
     claude: {
         hasKeyCheck: (creds) => !!creds?.hasClaudeKey,
-        ids: ['claude-sonnet-4-6'],
-        names: ['Sonnet 4.6'],
-        descs: ['Anthropic'],
+        ids: ['claude-opus-4-8', 'claude-opus-4-7', 'claude-opus-4-6', 'claude-sonnet-4-6'],
+        names: ['Opus 4.8', 'Opus 4.7', 'Opus 4.6', 'Sonnet 4.6'],
+        descs: ['Anthropic • Highest reasoning', 'Anthropic • Opus', 'Anthropic • Opus', 'Anthropic • Sonnet'],
         pmKey: 'claudePreferredModel'
     },
     groq: {
@@ -40,6 +40,12 @@ export const STANDARD_CLOUD_MODELS: Record<string, {
         descs: ['Fast • Text-only', 'Reasoning • Text-only'],
         pmKey: 'deepseekPreferredModel'
     },
+};
+
+export const isAllowedStandardCloudModel = (provider: string, modelId: string): boolean => {
+    const config = STANDARD_CLOUD_MODELS[provider];
+    if (!config) return true;
+    return config.ids.includes(modelId);
 };
 
 export const CODEX_CLI_MODEL = {

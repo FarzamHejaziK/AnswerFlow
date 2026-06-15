@@ -148,7 +148,7 @@ const StartupSequence: React.FC<StartupSequenceProps> = ({ onComplete }) => {
                             fontWeight: 500
                         }}
                     >
-                        Welcome to Natively
+                        Welcome to AnswerFlow
                     </motion.h1>
 
                     <motion.p
@@ -156,7 +156,7 @@ const StartupSequence: React.FC<StartupSequenceProps> = ({ onComplete }) => {
                         className="text-[25px] text-center mb-12 text-[#a7a7ad]"
                         style={{ fontFamily: FONTS.celebLight, fontWeight: 300 }}
                     >
-                        The ultimate AI meeting assistant
+                        Prepare, run, and review interviews with AI
                     </motion.p>
 
                     {/* High-Fidelity "Continue" Button */}

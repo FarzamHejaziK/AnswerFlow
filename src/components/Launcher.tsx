@@ -62,6 +62,7 @@ type PreflightStep = 'providers' | 'permissions';
 type ProviderKeyId = 'openai' | 'claude' | 'gemini';
 type ProviderKeyDrafts = Record<ProviderKeyId, string>;
 type ProviderKeyStatus = Record<ProviderKeyId, boolean>;
+type LauncherUpdateStatus = 'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'error';
 
 interface SessionReadiness {
     aiProvider: string;
@@ -190,6 +191,12 @@ const permissionLabel = (value: PermissionValue) => {
     if (value === 'restricted') return 'Restricted';
     if (value === 'not-determined') return 'Not granted';
     return 'Unknown';
+};
+
+const getUpdateVersionLabel = (info: any) => {
+    const version = String(info?.version || '').trim();
+    if (!version) return '';
+    return version.startsWith('v') ? version : `v${version}`;
 };
 
 type TimelineRole = 'interviewer' | 'me' | 'ai';
@@ -1602,6 +1609,10 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
         actual: string | null;
         reason?: string;
     } | null>(null);
+    const [updateStatus, setUpdateStatus] = useState<LauncherUpdateStatus>('idle');
+    const [updateInfo, setUpdateInfo] = useState<any>(null);
+    const [updateProgress, setUpdateProgress] = useState(0);
+    const [updateError, setUpdateError] = useState<string | null>(null);
 
     // Global search state (for AI chat overlay)
     const [isGlobalChatOpen, setIsGlobalChatOpen] = useState(false);
@@ -1938,6 +1949,35 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
         }
     };
 
+    const handleUpdateAction = useCallback(async () => {
+        if (!window.electronAPI) return;
+
+        try {
+            setUpdateError(null);
+
+            if (updateStatus === 'ready') {
+                await window.electronAPI.restartAndInstall();
+                return;
+            }
+
+            if (updateStatus === 'available') {
+                setUpdateStatus('downloading');
+                setUpdateProgress(0);
+                await window.electronAPI.downloadUpdate();
+                return;
+            }
+
+            if (updateStatus === 'error' || updateStatus === 'idle') {
+                setUpdateStatus('checking');
+                await window.electronAPI.checkForUpdates();
+            }
+        } catch (error: any) {
+            console.error('[Launcher] update action failed:', error);
+            setUpdateStatus('error');
+            setUpdateError(error?.message || 'Update failed');
+        }
+    }, [updateStatus]);
+
     // Keybinds
     const { isShortcutPressed } = useShortcuts();
     const isLight = useResolvedTheme() === 'light';
@@ -2092,6 +2132,43 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
             });
         }
 
+        const updateUnsubs = [
+            window.electronAPI?.onUpdateChecking?.(() => {
+                if (!mounted) return;
+                setUpdateStatus('checking');
+                setUpdateError(null);
+            }),
+            window.electronAPI?.onUpdateAvailable?.((info: any) => {
+                if (!mounted) return;
+                setUpdateInfo(info);
+                setUpdateProgress(0);
+                setUpdateStatus('available');
+                setUpdateError(null);
+            }),
+            window.electronAPI?.onDownloadProgress?.((progress: any) => {
+                if (!mounted) return;
+                setUpdateStatus('downloading');
+                setUpdateProgress(Number(progress?.percent) || 0);
+            }),
+            window.electronAPI?.onUpdateDownloaded?.((info: any) => {
+                if (!mounted) return;
+                setUpdateInfo(info);
+                setUpdateProgress(100);
+                setUpdateStatus('ready');
+                setUpdateError(null);
+            }),
+            window.electronAPI?.onUpdateNotAvailable?.(() => {
+                if (!mounted) return;
+                setUpdateStatus('idle');
+                setUpdateError(null);
+            }),
+            window.electronAPI?.onUpdateError?.((error: string) => {
+                if (!mounted) return;
+                setUpdateStatus('error');
+                setUpdateError(error || 'Update failed');
+            }),
+        ].filter(Boolean) as Array<() => void>;
+
         return () => {
             mounted = false;
             if (removeMeetingsListener) removeMeetingsListener();
@@ -2102,6 +2179,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
             if (removeModelListener) removeModelListener();
             if (removeCredentialsListener) removeCredentialsListener();
             if (removeSttConfigListener) removeSttConfigListener();
+            updateUnsubs.forEach(unsub => unsub());
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Mount-only: stable setup that must run exactly once
@@ -2356,7 +2434,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
 
     const getPreferredPreflightModel = (status: ProviderKeyStatus) => {
         if (status.openai) return 'chat-latest';
-        if (status.claude) return 'claude-sonnet-4-6';
+        if (status.claude) return 'claude-opus-4-8';
         if (status.gemini) return 'gemini-3.5-flash';
         return null;
     };
@@ -2950,6 +3028,24 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
             }
             : null,
     ].filter(Boolean) as Array<{ key: string; label: string; detail: string; tab: string }>;
+    const showUpdateRow = ['available', 'downloading', 'ready'].includes(updateStatus) || (updateStatus === 'error' && Boolean(updateInfo));
+    const updateVersionLabel = getUpdateVersionLabel(updateInfo);
+    const updateRowLabel =
+        updateStatus === 'ready'
+            ? 'Restart to update'
+            : updateStatus === 'downloading'
+                ? 'Downloading update'
+                : updateStatus === 'error'
+                    ? 'Update failed'
+                    : 'Update available';
+    const updateRowDetail =
+        updateStatus === 'ready'
+            ? `${updateVersionLabel || 'New version'} downloaded`
+            : updateStatus === 'downloading'
+                ? `${Math.round(updateProgress)}% complete`
+                : updateStatus === 'error'
+                    ? updateError || 'Click to try again'
+                    : updateVersionLabel || 'Click to install';
 
     useEffect(() => {
         if (readiness.loading) return;
@@ -3530,6 +3626,54 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
                                             <div className="px-3 py-8 text-center text-[13px] text-text-tertiary">No interviews yet.</div>
                                         )}
                                     </div>
+                                    {showUpdateRow && (
+                                        <div className="shrink-0 px-3 py-3 border-t border-border-subtle">
+                                            <button
+                                                type="button"
+                                                onClick={handleUpdateAction}
+                                                disabled={updateStatus === 'downloading'}
+                                                className={`w-full rounded-md px-3 py-2.5 text-left transition-colors border ${
+                                                    updateStatus === 'error'
+                                                        ? isLight
+                                                            ? 'bg-red-50 border-red-200 hover:bg-red-100'
+                                                            : 'bg-red-500/10 border-red-500/25 hover:bg-red-500/15'
+                                                        : isLight
+                                                            ? 'bg-blue-50 border-blue-200 hover:bg-blue-100'
+                                                            : 'bg-blue-500/10 border-blue-500/25 hover:bg-blue-500/15'
+                                                } ${updateStatus === 'downloading' ? 'cursor-wait' : ''}`}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`h-7 w-7 rounded-md flex items-center justify-center ${
+                                                        updateStatus === 'error'
+                                                            ? 'text-red-500 bg-red-500/10'
+                                                            : 'text-blue-500 bg-blue-500/10'
+                                                    }`}>
+                                                        {updateStatus === 'downloading' ? (
+                                                            <RefreshCw size={15} className="animate-spin" />
+                                                        ) : updateStatus === 'ready' ? (
+                                                            <CheckCircle size={15} />
+                                                        ) : updateStatus === 'error' ? (
+                                                            <AlertCircle size={15} />
+                                                        ) : (
+                                                            <DownloadCloud size={15} />
+                                                        )}
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="truncate text-[12.5px] font-semibold text-text-primary">{updateRowLabel}</p>
+                                                        <p className="truncate text-[11px] text-text-tertiary">{updateRowDetail}</p>
+                                                    </div>
+                                                </div>
+                                                {updateStatus === 'downloading' && (
+                                                    <div className={`mt-2 h-1 rounded-full overflow-hidden ${isLight ? 'bg-blue-200/70' : 'bg-blue-500/15'}`}>
+                                                        <div
+                                                            className="h-full rounded-full bg-blue-500 transition-[width]"
+                                                            style={{ width: `${Math.max(2, Math.min(100, updateProgress))}%` }}
+                                                        />
+                                                    </div>
+                                                )}
+                                            </button>
+                                        </div>
+                                    )}
                                 </aside>
 
                                 <main className="min-h-0 flex flex-col">
@@ -3603,16 +3747,6 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
 	                                                </p>
                                                 )}
 		                                        </div>
-		                                        <div className="flex items-center gap-2">
-                                                {selectedMeeting ? (
-                                                    <button
-                                                        onClick={handleBack}
-                                                        className={`h-8 px-2.5 rounded-md flex items-center gap-1.5 text-[12px] font-medium text-text-secondary hover:text-text-primary transition-colors ${isLight ? 'hover:bg-black/8' : 'hover:bg-white/10'}`}
-                                                    >
-                                                        Clear
-                                                    </button>
-                                                ) : null}
-	                                        </div>
 	                                    </div>
 			                                    <div className="flex-1 min-h-0 p-5 overflow-hidden">
 		                                        <InterviewPrepPanel

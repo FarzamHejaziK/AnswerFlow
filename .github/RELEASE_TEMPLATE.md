@@ -1,6 +1,6 @@
 ## Summary
 
-Short one-line description of the release.
+Short one-line description of the AnswerFlow release.
 
 ## What's New
 
@@ -16,39 +16,43 @@ Short one-line description of the release.
 
 ## Fixes
 
-- Fixed issue with stealth activation
-- Resolved crash on startup
-- Corrected UI alignment issue
+- Fixed issue one
+- Resolved crash or packaging issue
+- Corrected UI alignment or naming issue
 
 ## Technical
 
 - Dependency updates
-- Refactored updater logic
+- Release pipeline updates
+- Updater metadata changes
 
-## ⚠️macOS Installation (Unsigned Build)
+## Platform Downloads
 
-Download the correct architecture .zip or .dmg file for your device (Apple Silicon or Intel).
+Choose the artifact for your operating system and CPU architecture.
 
-If you see "App is damaged":
+### macOS
 
-- **For .zip downloads:**
-  1. Move the app to your Applications folder.
-  2. Open Terminal and run: `xattr -cr /Applications/Natively.app`
+- Apple Silicon: `AnswerFlow-VERSION-arm64.dmg`
+- Intel: `AnswerFlow-VERSION.dmg`
+- Auto-update metadata: `latest-mac.yml`
 
-- **For .dmg downloads:**
-  1. Open Terminal and run:
-     ```bash
-     xattr -cr ~/Downloads/Natively-2.0.2-arm64.dmg
-     # Or for Intel Macs:
-     xattr -cr ~/Downloads/Natively-2.0.2-x64.dmg
-     ```
-  2. Install the natively.dmg
-  3. Open Terminal and run: `xattr -cr /Applications/Natively.app`
+If macOS says the app is damaged on an unsigned test build:
 
-## ⚠️Windows Installation (Unsigned Build)
+```bash
+xattr -cr ~/Downloads/AnswerFlow-VERSION-arm64.dmg
+xattr -cr /Applications/AnswerFlow.app
+```
 
-When running the installer on Windows, you might see a "Windows protected your PC" warning from Microsoft Defender SmartScreen saying it prevented an unrecognized app from starting. 
+### Windows
 
-Since this is an unsigned build, this is expected. You can safely ignore it by clicking **More info** and then **Run anyway**.
+- Intel x64 installer: `AnswerFlow-Setup-VERSION.exe`
+- Auto-update metadata: `latest.yml`
 
-\\ refer to change.md for detailed changes
+If Microsoft Defender SmartScreen warns about an unsigned test build, click **More info**, then **Run anyway**.
+
+### Linux
+
+- AppImage target: `AnswerFlow-VERSION.AppImage`
+- Debian package target: `answerflow_VERSION_amd64.deb`
+
+Linux artifacts are configured in the package build metadata. Attach them when a Linux build is produced.

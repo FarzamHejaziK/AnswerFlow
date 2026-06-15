@@ -4180,7 +4180,7 @@ Provide only the answer, nothing else.`;
                     : 'Vision failed';
                   const failureTitleMap: Record<string, string> = {
                     no_vision_provider:
-                      'No vision-capable provider is configured. Add a Natively, OpenAI, Claude, Gemini, or Groq key — or configure a local Ollama vision model.',
+                      'No vision-capable provider is configured. Add an AnswerFlow API, OpenAI, Claude, Gemini, or Groq key — or configure a local Ollama vision model.',
                     all_vision_failed:
                       'All configured vision providers failed for this turn. Check provider quotas and try again.',
                     privacy_blocked:
@@ -4304,7 +4304,7 @@ Provide only the answer, nothing else.`;
                                 ? wantsMicrophonePane
                                   ? 'Open macOS Microphone privacy settings'
                                   : 'Open macOS Screen Recording privacy settings'
-                                : 'Open Natively Settings'
+                                : 'Open AnswerFlow Settings'
                             }
                           >
                             {deepLinkUrl
@@ -4348,7 +4348,7 @@ Provide only the answer, nothing else.`;
                               }}
                               disabled={tccRepairing}
                               className="px-3 py-1.5 rounded-lg bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-700 dark:text-yellow-500 text-[11px] font-medium transition-all active:scale-95 border border-yellow-500/15 disabled:opacity-60 disabled:cursor-not-allowed"
-                              title="Reset macOS permission entries for Natively (you will need to grant them again after relaunch)"
+                              title="Reset macOS permission entries for AnswerFlow (you will need to grant them again after relaunch)"
                             >
                               {tccRepairing ? 'Resetting…' : 'Repair Permissions'}
                             </button>
@@ -4712,7 +4712,7 @@ Provide only the answer, nothing else.`;
                   >
                     <span className="overlay-text-primary flex-1">
                       Stealth typing needs Accessibility access. Grant it in System Settings, then
-                      restart Natively.
+                      restart AnswerFlow.
                     </span>
                     <button
                       onClick={() => window.electronAPI.stealthTapOpenSettings()}
@@ -4832,6 +4832,9 @@ Provide only the answer, nothing else.`;
                           if (m === 'gpt-5.5') return 'GPT 5.5';
                           if (m === 'gpt-5.5-thinking-low') return 'GPT 5.5 Thinking';
                           if (m === 'gpt-5.4') return 'GPT 5.4';
+                          if (m === 'claude-opus-4-8') return 'Opus 4.8';
+                          if (m === 'claude-opus-4-7') return 'Opus 4.7';
+                          if (m === 'claude-opus-4-6') return 'Opus 4.6';
                           if (m === 'claude-sonnet-4-6') return 'Sonnet 4.6';
                           return m;
                         })()}

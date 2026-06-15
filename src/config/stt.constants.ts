@@ -115,8 +115,8 @@ export const STT_PROVIDERS: Record<SttProviderId, SttProviderConfig> = {
     },
     natively: {
         id: 'natively',
-        name: 'Natively Pro (Managed)',
-        description: 'All-in-one managed STT via Natively API',
+        name: 'AnswerFlow Pro (Managed)',
+        description: 'All-in-one managed STT via AnswerFlow API',
         endpoint: '', 
         model: '',
         uploadType: 'websocket',
@@ -128,4 +128,3 @@ export const STT_PROVIDERS: Record<SttProviderId, SttProviderConfig> = {
 export const STT_PROVIDER_OPTIONS = Object.values(STT_PROVIDERS);
 
 export const DEFAULT_STT_PROVIDER: SttProviderId = 'google';
-

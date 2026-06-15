@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { Check, Loader2 } from 'lucide-react';
-import { CODEX_CLI_MODEL, CODEX_CLI_MODEL_PRESETS, codexCliSelectorId, getCodexCliModelDisplayName, STANDARD_CLOUD_MODELS, prettifyModelId } from '../utils/modelUtils';
+import { CODEX_CLI_MODEL, CODEX_CLI_MODEL_PRESETS, codexCliSelectorId, getCodexCliModelDisplayName, isAllowedStandardCloudModel, STANDARD_CLOUD_MODELS, prettifyModelId } from '../utils/modelUtils';
 import { useResolvedTheme } from '../hooks/useResolvedTheme';
 
 // Define Model Types
@@ -77,7 +77,7 @@ const ModelSelectorWindow = () => {
                 const models: ModelOption[] = [];
 
                 if (creds?.hasNativelyKey) {
-                    models.push({ id: 'natively', name: 'Natively API', type: 'cloud', provider: 'natively' });
+                    models.push({ id: 'natively', name: 'AnswerFlow API', type: 'cloud', provider: 'natively' });
                 }
 
                 // Cloud Models — standard models + unique preferred models
@@ -87,7 +87,7 @@ const ModelSelectorWindow = () => {
                         models.push({ id, name: cfg.names[i], type: 'cloud', provider: prov });
                     });
                     const pm = creds?.[cfg.pmKey];
-                    if (pm && !cfg.ids.includes(pm)) {
+                    if (pm && !cfg.ids.includes(pm) && isAllowedStandardCloudModel(prov, pm)) {
                         models.push({ id: pm, name: prettifyModelId(pm), type: 'cloud', provider: prov });
                     }
                 }

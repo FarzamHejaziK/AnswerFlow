@@ -91,7 +91,7 @@ export const NativelyQuotaBanner: React.FC = () => {
                     <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2">
                             <AlertTriangle size={14} className="text-amber-400 shrink-0 mt-[1px]" strokeWidth={2} />
-                            <span className="text-[13px] font-semibold text-[#E0E0E0]">Natively quota almost full</span>
+                            <span className="text-[13px] font-semibold text-[#E0E0E0]">AnswerFlow quota almost full</span>
                         </div>
                         <button
                             onClick={() => setVisible(false)}

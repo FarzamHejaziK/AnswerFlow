@@ -47,7 +47,7 @@ const MockupNativelyInterface = ({ opacity }: { opacity: number }) => {
 
     return (
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none bg-transparent">
-                {/* NativelyInterface Widget — opacity controlled by the slider */}
+                {/* Overlay widget — opacity controlled by the slider */}
                 <div
                     id="mockup-natively-interface"
                     className="flex flex-col items-center pointer-events-none -mt-56"
@@ -58,7 +58,7 @@ const MockupNativelyInterface = ({ opacity }: { opacity: number }) => {
                             <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden overlay-icon-surface" style={appearance.iconStyle}>
                                 <img
                                     src={icon}
-                                    alt="Natively"
+                                    alt="AnswerFlow"
                                     className="w-[24px] h-[24px] object-contain opacity-95 scale-105 force-black-icon"
                                     draggable="false"
                                 />
@@ -1941,7 +1941,6 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                                                                 try {
                                                                     // @ts-ignore
                                                                     await window.electronAPI.downloadUpdate();
-                                                                    onClose(); // Close settings to show the banner
                                                                 } catch (err) {
                                                                     console.error("Failed to start download:", err);
                                                                 }

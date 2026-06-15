@@ -1360,17 +1360,17 @@ export class DatabaseManager {
 
         const summaryMarkdown = `# Overview
 
-Natively is a real-time AI meeting assistant designed to help you stay focused, informed, and fast-moving during calls. Get live insights while you speak, instant answers to questions, and structured notes after every meeting.
+AnswerFlow is a real-time AI interview assistant designed to help you prepare context, stay focused during live interviews, and keep the conversation useful afterward. Get live transcription, answer support, and structured notes after every interview.
 
 # Getting Started
 
 ### Start a Session
-Click **Start Session** from the dashboard.
-Join a scheduled meeting and start directly from the meeting notification.
+Click **New Interview** from the sidebar.
+Add prep notes or documents, then start the live interview when you are ready.
 
 ### During a Meeting
 - Use the **five quick action buttons** for real-time assistance
-- Show or hide Natively at any time:
+- Show or hide AnswerFlow at any time:
   - **Mac**: Cmd + B
   - **Windows**: Ctrl + B
 - Move the widget anywhere on your screen by hovering over the top pill and dragging
@@ -1388,7 +1388,7 @@ Join a scheduled meeting and start directly from the meeting notification.
 - **Smart Note Taking**: Automatically captures key points, action items, and structured summaries.
 - **Summary**: A concise high-level brief of the entire meeting.
 - **Transcript**: Full real-time speech-to-text transcript, available during and after the call.
-- **Usage**: Track your interaction history and see how Natively assisted you.
+- **Usage**: Track your interaction history and see how AnswerFlow assisted you.
 
 ## Live Insights
 Click **Live Insights** during a call to view:
@@ -1405,7 +1405,7 @@ Click **Live Insights** during a call to view:
 - **Full Screen Screenshot**: Cmd + H
 - **Selective Screenshot**: Cmd + Shift + H
 
-# Making the Most of Natively
+# Making the Most of AnswerFlow
 
 ### Custom Context
 Upload resumes, project briefs, sales scripts, or other documents to tailor responses to your workflow. (coming soon).
@@ -1416,85 +1416,46 @@ Go to **Settings → Language Preferences** to:
 - Enable real-time translation during calls
 
 ### Undetectability
-Unlock the **Undetectability** add-on to keep Natively invisible during screen sharing.
+Use **Undetectable** mode to keep the overlay out of normal screen sharing when your operating system allows it.
 
 # Interface Basics
 
 - **Dashboard**: Start meetings and view recent activity
-- **Start Session**: Begin a new meeting instantly
+- **New Interview**: Prepare context, then begin the live interview
 - **Settings**: Configure API keys, language, and visibility
 - **History**: Review past meetings, notes, and transcripts
 
 # API Setup
 
 1. Open **Settings**
-2. Scroll to **Credentials**
+2. Open **AI Providers**
 3. Add your API keys:
+   - **OpenAI**
    - **Gemini**
-   - **Groq**
-4. To enable real-time transcription, select the location of your **Google Cloud service account JSON file**.
+   - **Anthropic**
+4. Real-time transcription uses the packaged local Moonshine Base model. Configure your microphone and output device in **Settings → Audio**.
 
-If you don’t already have one, follow the steps below to create it.
-
-# Creating a Google Speech-to-Text Service Account
-
-## 1. Create or Select a Project
-- Open **Google Cloud Console**
-- Create a new project or select an existing one
-- Ensure billing is enabled
-
-## 2. Enable Speech-to-Text API
-- Go to **APIs & Services → Library**
-- Enable **Speech-to-Text API**
-
-## 3. Create a Service Account
-- Navigate to **IAM & Admin → Service Accounts**
-- Click **Create Service Account**
-- **Name**: natively-stt
-- **Description**: optional
-
-## 4. Assign Permissions
-- Grant the following role: **Speech-to-Text User** (\`roles/speech.client\`)
-
-## 5. Create a JSON Key
-- Open the service account
-- Go to **Keys → Add Key → Create new key**
-- Select **JSON**
-- Download the file
-
-**Once downloaded, return to Settings → Credentials in Natively and select this file to complete setup.**
-
-# Free Google Cloud Credit (New Users)
-
-New Google Cloud accounts receive **$300 in free credits**, valid for 90 days.
-
-To activate:
-1. Visit [cloud.google.com](https://cloud.google.com)
-2. Click **Get started for free**
-3. Sign in with a Google account
-4. Add billing details (card required)
-5. Activate the free trial
-
-The credit can be used for Speech-to-Text and is sufficient for extended testing and regular usage.
+One working AI provider is enough to start. Add more providers only if you want
+model choice or backup routing.
 
 # Support
 
 If you need help with setup or usage, contact us anytime at:
-natively.contact@gmail.com`;
+support@answerflow.app`;
 
         const demoMeeting: Meeting = {
             id: demoId,
-            title: "Natively Demo & Guide",
+            title: "AnswerFlow Demo & Guide",
             date: today.toISOString(),
             duration: "5:00",
-            summary: "Complete guide to using Natively - your real-time AI meeting assistant.",
+            summary: "Complete guide to using AnswerFlow - your real-time AI interview assistant.",
             detailedSummary: {
                 overview: summaryMarkdown,
                 actionItems: [],
                 keyPoints: []
             },
             transcript: [
-                { speaker: 'interviewer', text: "Welcome to Natively! Let me show you how it works.", timestamp: 0 },
+                { speaker: 'interviewer', text: "Welcome to AnswerFlow! Let me show you how it works.", timestamp: 0 },
                 { speaker: 'user', text: "Thanks! I'm excited to try it out.", timestamp: 5000 },
                 { speaker: 'interviewer', text: "You have 5 quick action buttons. 'What to answer' listens to the conversation and suggests what you should say.", timestamp: 10000 },
                 { speaker: 'user', text: "That sounds helpful for interviews.", timestamp: 18000 },
@@ -1504,13 +1465,13 @@ natively.contact@gmail.com`;
                 { speaker: 'interviewer', text: "'Follow Up Questions' suggests questions you can ask. 'Answer' lets you speak a question and get an instant response.", timestamp: 35000 },
                 { speaker: 'user', text: "Can I take screenshots during calls?", timestamp: 45000 },
                 { speaker: 'interviewer', text: "Yes! Press Cmd+H for full screen or Cmd+Shift+H to select an area. The AI will analyze it and help you.", timestamp: 50000 },
-                { speaker: 'user', text: "How do I hide Natively during screen share?", timestamp: 60000 },
+                { speaker: 'user', text: "How do I hide AnswerFlow during screen share?", timestamp: 60000 },
                 { speaker: 'interviewer', text: "Press Cmd+B to toggle visibility anytime. You can also enable undetectable mode in settings.", timestamp: 65000 },
                 { speaker: 'user', text: "This is amazing. What happens after the call?", timestamp: 75000 },
                 { speaker: 'interviewer', text: "You get detailed meeting notes with action items, key points, full transcript, and a log of all AI interactions.", timestamp: 80000 }
             ],
             usage: [
-                { type: 'assist', timestamp: 15000, question: 'What features does Natively have?', answer: 'Natively offers 5 quick action buttons, screenshot analysis, real-time transcription, and comprehensive meeting notes.' },
+                { type: 'assist', timestamp: 15000, question: 'What features does AnswerFlow have?', answer: 'AnswerFlow offers interview prep chat, reusable document context, live transcription, quick answer actions, screenshot analysis, and post-interview chat.' },
                 { type: 'followup', timestamp: 40000, question: 'How do the action buttons work?', answer: 'Each button serves a specific purpose: suggest answers, clarify questions, recap conversations, generate follow-up questions, or get instant voice-to-answer responses.' }
             ],
             isProcessed: true

@@ -1,6 +1,6 @@
 {
   "name": "answerflow",
-  "version": "2.7.2",
+  "version": "2.7.3",
   "main": "dist-electron/electron/main.js",
   "description": "AnswerFlow is a live interview assistant that helps prepare context, transcribe conversations, and generate AI-guided answers.",
   "scripts": {
@@ -37,7 +37,7 @@
   },
   "build": {
     "generateUpdatesFilesForAllChannels": true,
-    "appId": "com.electron.meeting-notes",
+    "appId": "com.answerflow.desktop",
     "afterPack": "./scripts/ad-hoc-sign.js",
     "productName": "AnswerFlow",
     "files": [
@@ -154,7 +154,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "AGPL-3.0",
   "devDependencies": {
     "@electron/notarize": "^3.1.1",
     "@electron/rebuild": "^4.0.3",

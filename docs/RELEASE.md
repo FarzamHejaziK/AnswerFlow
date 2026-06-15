@@ -1,115 +1,86 @@
-# Release Process & Update Channels
+# AnswerFlow Release Process
 
-## Update Channels
+This app ships through GitHub Releases from the `FarzamHejaziK/AnswerFlow`
+release channel. The update metadata must point to this repository so installed
+apps never read update notes or installers from the upstream project.
 
-AnswerFlow supports two update channels:
+## Release Checklist
 
-| Channel | File | Description |
-|---------|------|-------------|
-| **stable** | `latest.yml` | Production releases for all users |
-| **beta** | `beta-latest.yml` | Pre-release testing for beta testers |
+1. Update the version in `package.json` and `package-lock.json`.
+2. Add a top entry to `CHANGELOG.md`.
+3. Add a release body under `.github/releases/vX.Y.Z.md`.
+4. Commit the app, docs, icon, and workflow changes.
+5. Push `main` and a matching `vX.Y.Z` tag.
+6. Let GitHub Actions build and attach platform installers.
+7. Verify the GitHub Release contains the artifacts below.
 
-### How It Works
+## Platform Artifacts
 
-The update channel is **auto-detected** based on the version suffix:
+| Platform | Artifact | Notes |
+| --- | --- | --- |
+| macOS Apple Silicon | `AnswerFlow-X.Y.Z-arm64.dmg` | Primary macOS build for Apple Silicon Macs |
+| macOS Intel | `AnswerFlow-X.Y.Z.dmg` | Intel x64 DMG when universal/all-arch release is enabled |
+| macOS update metadata | `latest-mac.yml` | Used by Electron updater |
+| Windows Intel x64 | `AnswerFlow-Setup-X.Y.Z.exe` | NSIS installer and updater target |
+| Windows update metadata | `latest.yml` | Used by Electron updater |
+| Linux AppImage | `AnswerFlow-X.Y.Z.AppImage` | Portable Linux app |
+| Linux Debian | `answerflow_X.Y.Z_amd64.deb` | Debian/Ubuntu package |
 
-```typescript
-// electron/main.ts - setupAutoUpdater()
-const currentVersion = app.getVersion()
-if (currentVersion.includes('beta')) {
-  autoUpdater.channel = 'beta'
-} else {
-  autoUpdater.channel = 'stable'
-}
-```
-
-| Version | Channel | Updates to |
-|---------|---------|------------|
-| `2.0.7` | stable | `2.0.8`, `2.1.0` |
-| `2.0.7-beta.1` | beta | `2.0.7-beta.2`, `2.0.8-beta.1` |
-| `2.0.8` | stable | `2.0.9`, `2.1.0` |
-
----
-
-## Release Workflow
-
-### 1. Beta Release (Testing)
+## Creating A Release
 
 ```bash
-# 1. Update version in package.json
-"version": "2.0.8-beta.1"
+npm version X.Y.Z --no-git-tag-version
 
-# 2. Build
-npm run dist
+git add package.json package-lock.json CHANGELOG.md .github/releases/vX.Y.Z.md
+git commit -m "Release AnswerFlow vX.Y.Z"
+git push origin main
 
-# 3. Upload to GitHub Release
-# - Tag: v2.0.8-beta.1
-# - Title: AnswerFlow v2.0.8-beta.1
-# - Mark as "Pre-release"
-# - Upload files from release/:
-#   - AnswerFlow Setup 2.0.8-beta.1.exe
-#   - AnswerFlow.2.0.8-beta.1.exe
-#   - beta-latest.yml  <-- important!
-#   - *.blockmap files
+git tag vX.Y.Z
+git push origin vX.Y.Z
 ```
 
-### 2. Stable Release (Production)
+If the release workflow is configured to create the GitHub Release from the tag,
+wait for Actions to finish. Otherwise create it manually:
 
 ```bash
-# 1. Update version in package.json
-"version": "2.0.8"
-
-# 2. Build
-npm run dist
-
-# 3. Upload to GitHub Release
-# - Tag: v2.0.8
-# - Title: AnswerFlow v2.0.8
-# - Upload files from release/:
-#   - AnswerFlow Setup 2.0.8.exe
-#   - AnswerFlow.2.0.8.exe
-#   - latest.yml  <-- important!
-#   - *.blockmap files
+gh release create vX.Y.Z \
+  --repo FarzamHejaziK/AnswerFlow \
+  --title "AnswerFlow vX.Y.Z" \
+  --notes-file .github/releases/vX.Y.Z.md
 ```
 
----
+## Update Behavior
 
-## Platform Behavior
+AnswerFlow checks the GitHub Releases feed for newer versions. Updates are shown
+inside the app as a quiet sidebar row, not as a modal promotion. Clicking the row
+downloads the newest installer/update metadata from the AnswerFlow release
+channel.
 
-### Windows
-- ✅ Full auto-update (check → download → install)
-- Uses NSIS installer
+Signed macOS builds can use the standard Electron updater flow. Unsigned macOS
+builds may require a manual install step after download:
 
-### macOS
-- ⚠️ Semi-automatic (check → download → manual install)
-- Opens download folder in Finder for unsigned apps
-- Requires Apple Developer ($99/year) for full auto-update
-
----
-
-## Version Numbering
-
-Follow [Semantic Versioning](https://semver.org/):
-
+```bash
+xattr -cr /Applications/AnswerFlow.app
 ```
-MAJOR.MINOR.PATCH[-PRERELEASE]
+
+Windows uses the NSIS installer and `latest.yml` metadata for in-place updates.
+
+## Versioning
+
+Use semantic versioning:
+
+```text
+MAJOR.MINOR.PATCH
+MAJOR.MINOR.PATCH-beta.N
+```
 
 Examples:
-2.0.7           - Stable release
-2.0.7-beta.1    - Beta pre-release
-2.0.7-beta.2    - Beta iteration
-2.1.0           - Minor feature release
-3.0.0           - Major breaking change
+
+```text
+2.7.3
+2.8.0
+3.0.0-beta.1
 ```
 
----
-
-## Files Created by Build
-
-| File | Purpose |
-|------|---------|
-| `latest.yml` | Stable channel manifest |
-| `beta-latest.yml` | Beta channel manifest |
-| `*.exe` | Windows installer |
-| `*.dmg` | macOS installer |
-| `*.blockmap` | Differential update support |
+Stable public builds should use a plain version. Pre-release builds should be
+marked as pre-release on GitHub.

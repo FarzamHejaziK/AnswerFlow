@@ -99,7 +99,7 @@ export function routeLLMProviders(options: ProviderRouteOptions): ProviderAttemp
 
     const natively: ProviderSpec = {
         provider: 'natively',
-        name: 'Natively API',
+        name: 'AnswerFlow API',
         model: models.natively,
         available: Boolean(availability.hasNatively),
         unavailableReason: 'missing_api_key',

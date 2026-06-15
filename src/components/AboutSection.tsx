@@ -1,52 +1,26 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import {
-    Github, Twitter, Shield, Cpu, Database,
-    Heart, Linkedin, Instagram, Mail, MicOff, Star, Bug, Globe, Sparkles, Zap, Camera, LayoutGrid, User, Volume2, Activity, MessageSquare, Link, Smartphone, Calendar, ListTodo, Users, WifiOff, Send
+    Bug,
+    Cpu,
+    Database,
+    DownloadCloud,
+    LayoutGrid,
+    MicOff,
+    Monitor,
+    Shield,
+    Star,
+    Volume2,
+    Zap,
 } from 'lucide-react';
-import evinProfile from '../assets/evin.png';
-import { useResolvedTheme } from '../hooks/useResolvedTheme';
-import { getPlatformShortcut } from '../utils/platformUtils';
+import packageJson from '../../package.json';
 
 interface AboutSectionProps { }
 
+const REPO_URL = 'https://github.com/FarzamHejaziK/AnswerFlow';
+
 export const AboutSection: React.FC<AboutSectionProps> = () => {
-    const isLight = useResolvedTheme() === 'light';
-    const donationClickTimeRef = useRef<number | null>(null);
-
-    // Initial check for donation status not needed for visuals anymore (since we removed key input)
-    // but we might want to hide the support button if donated? 
-    // User said "wont show if the user open the donate button" -> this refers to the toaster.
-    // For About section, usually validation/support button stays but maybe changes text?
-    // I'll keep it as is, just the logic change.
-
-    useEffect(() => {
-        const handleFocus = async () => {
-            if (donationClickTimeRef.current) {
-                const elapsed = Date.now() - donationClickTimeRef.current;
-                if (elapsed > 20000) { // 20 seconds
-                    console.log("User returned after >20s. Marking as donated.");
-                    await window.electronAPI?.setDonationComplete();
-                    donationClickTimeRef.current = null; // Reset
-                } else {
-                    console.log("User returned too quickly (<20s). Not confirming donation.");
-                    donationClickTimeRef.current = null;
-                }
-            }
-        };
-
-        window.addEventListener('focus', handleFocus);
-        return () => window.removeEventListener('focus', handleFocus);
-    }, []);
-
-    const handleOpenLink = (e: React.MouseEvent<HTMLAnchorElement>, url: string) => {
-        e.preventDefault();
-
-        // Special handling for donation link
-        if (url.includes('buymeacoffee.com')) {
-            donationClickTimeRef.current = Date.now();
-        }
-
-        // Use backend shell.openExternal
+    const handleOpenLink = (event: React.MouseEvent<HTMLAnchorElement>, url: string) => {
+        event.preventDefault();
         if (window.electronAPI?.openExternal) {
             window.electronAPI.openExternal(url);
         } else {
@@ -56,339 +30,202 @@ export const AboutSection: React.FC<AboutSectionProps> = () => {
 
     return (
         <div className="space-y-6 animated fadeIn pb-10">
-            {/* Header */}
             <div>
                 <h3 className="text-lg font-bold text-text-primary mb-1">About AnswerFlow</h3>
-                <p className="text-sm text-text-secondary">Designed to be invisible, intelligent, and trusted.</p>
+                <p className="text-sm text-text-secondary">
+                    A desktop interview workspace for preparation, live transcription, AI-guided answers, and post-interview follow-up.
+                </p>
+                <p className="mt-2 text-xs text-text-tertiary">Version {packageJson.version}</p>
             </div>
 
-            {/* What's New Section */}
             <div>
-                <h4 className="text-xs font-bold text-text-tertiary uppercase tracking-wider mb-2 px-1">What's New in v2.7</h4>
+                <h4 className="text-xs font-bold text-text-tertiary uppercase tracking-wider mb-2 px-1">What's New in v{packageJson.version}</h4>
                 <div className="bg-bg-item-surface rounded-xl border border-border-subtle overflow-hidden">
-                    {/* 1. Two New Meeting UI Styles */}
-                    <div className="p-3 border-b border-border-subtle bg-bg-card/50">
-                        <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400 shrink-0">
-                                <LayoutGrid size={20} />
-                            </div>
-                            <div>
-                                <h5 className="text-sm font-bold text-text-primary mb-1">Two New Meeting UI Styles</h5>
-                                <p className="text-xs text-text-secondary leading-relaxed">
-                                    Introduced two gorgeous, immersive interface themes, Liquid Glass and Modern Dark, to completely redefine your real-time overlay experience.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* 2. DeepSeek AI Integrated */}
-                    <div className="p-3 border-b border-border-subtle bg-bg-card/50">
-                        <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 rounded-lg bg-accent-secondary flex items-center justify-center text-accent-primary shrink-0">
-                                <Cpu size={20} />
-                            </div>
-                            <div>
-                                <h5 className="text-sm font-bold text-text-primary mb-1">DeepSeek AI Integrated</h5>
-                                <p className="text-xs text-text-secondary leading-relaxed">
-                                    Full support for DeepSeek's advanced reasoning models, delivering ultra-smart and cost-effective chat replies.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* 3. Audio & TCC Resolved */}
-                    <div className="p-3 border-b border-border-subtle bg-bg-card/50">
-                        <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center text-red-400 shrink-0">
-                                <Volume2 size={20} />
-                            </div>
-                            <div>
-                                <h5 className="text-sm font-bold text-text-primary mb-1">Audio &amp; TCC Resolved</h5>
-                                <p className="text-xs text-text-secondary leading-relaxed">
-                                    Hardened macOS system audio process tapping and security permission gates to guarantee robust capture streams.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* 4. Optimized Modes Manager */}
-                    <div className="p-3 border-b border-border-subtle bg-bg-card/50">
-                        <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400 shrink-0">
-                                <Activity size={20} />
-                            </div>
-                            <div>
-                                <h5 className="text-sm font-bold text-text-primary mb-1">Optimized Modes Manager</h5>
-                                <p className="text-xs text-text-secondary leading-relaxed">
-                                    Custom Instructions and interview context processing have been optimized for responsive, low-latency assistance.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* 5. In-App Updates */}
-                    <div className="p-3 bg-bg-card/50">
-                        <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 shrink-0">
-                                <Zap size={20} />
-                            </div>
-                            <div>
-                                <h5 className="text-sm font-bold text-text-primary mb-1">In-App Updates</h5>
-                                <p className="text-xs text-text-secondary leading-relaxed">
-                                    Enjoy seamless, single-click updates directly inside the desktop app with zero manual installation loops.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
+                    <FeatureRow
+                        icon={<LayoutGrid size={20} />}
+                        color="text-indigo-400"
+                        bg="bg-indigo-500/10"
+                        title="Interview-first workspace"
+                        description="The launcher now follows a three-pane interview flow with prep chat, selected documents, transcript history, and post-interview chat separated clearly."
+                    />
+                    <FeatureRow
+                        icon={<Volume2 size={20} />}
+                        color="text-blue-400"
+                        bg="bg-blue-500/10"
+                        title="Packaged local transcription"
+                        description="Audio setup is simplified around the bundled Moonshine Base transcription model, with input and output device controls shown where users need them."
+                    />
+                    <FeatureRow
+                        icon={<Cpu size={20} />}
+                        color="text-purple-400"
+                        bg="bg-purple-500/10"
+                        title="Focused model support"
+                        description="AI provider setup now centers on OpenAI, Google Gemini, and Anthropic, with Claude limited to supported Opus and Sonnet 4.6 models."
+                    />
+                    <FeatureRow
+                        icon={<DownloadCloud size={20} />}
+                        color="text-sky-400"
+                        bg="bg-sky-500/10"
+                        title="Inline app updates"
+                        description="AnswerFlow checks GitHub Releases and shows a quiet sidebar update row when a newer version is available."
+                        last
+                    />
                 </div>
             </div>
 
-            {/* Architecture Section */}
             <div>
                 <h4 className="text-xs font-bold text-text-tertiary uppercase tracking-wider mb-2 px-1">How AnswerFlow Works</h4>
                 <div className="bg-bg-item-surface rounded-xl border border-border-subtle overflow-hidden">
-                    <div className="p-3 border-b border-border-subtle bg-bg-card/50">
-                        <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 rounded-lg bg-accent-secondary flex items-center justify-center text-accent-primary shrink-0">
-                                <Cpu size={20} />
-                            </div>
-                            <div>
-                                <h5 className="text-sm font-bold text-text-primary mb-1">Hybrid Intelligence</h5>
-                                <p className="text-xs text-text-secondary leading-relaxed">
-                                    Seamlessly routes queries between ultra-fast models for instant speed and reasoning models (Gemini, OpenAI, Claude) for complex tasks. Powered by enterprise-grade speech recognition from 7+ providers.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="p-3 bg-bg-card/50">
-                        <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400 shrink-0">
-                                <Database size={20} />
-                            </div>
-                            <div>
-                                <h5 className="text-sm font-bold text-text-primary mb-1">Local RAG & Memory</h5>
-                                <p className="text-xs text-text-secondary leading-relaxed">
-                                    A purely local vector memory system allows AnswerFlow to recall details from past meetings. Embeddings and retrieval happen on-device via SQLite for maximum privacy.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
+                    <FeatureRow
+                        icon={<Database size={20} />}
+                        color="text-emerald-400"
+                        bg="bg-emerald-500/10"
+                        title="Context before the interview"
+                        description="Prep chat, uploaded documents, custom instructions, and selected document markdown become live interview context."
+                    />
+                    <FeatureRow
+                        icon={<Monitor size={20} />}
+                        color="text-cyan-400"
+                        bg="bg-cyan-500/10"
+                        title="Live interview assistance"
+                        description="AnswerFlow captures microphone and meeting audio, keeps interviewer and candidate transcript messages distinct, and generates fast answer support."
+                    />
+                    <FeatureRow
+                        icon={<Zap size={20} />}
+                        color="text-amber-400"
+                        bg="bg-amber-500/10"
+                        title="Follow-up after the interview"
+                        description="The saved interview can be reopened later with prep chat, selected docs, transcript, and AI responses available as chat context."
+                        last
+                    />
                 </div>
             </div>
 
-            {/* Privacy Section */}
             <div>
                 <h4 className="text-xs font-bold text-text-tertiary uppercase tracking-wider mb-2 px-1">Privacy & Data</h4>
                 <div className="bg-bg-item-surface rounded-xl border border-border-subtle p-5 space-y-4">
-                    <div className="flex items-start gap-3">
-                        <Shield size={16} className="text-green-400 mt-0.5" />
-                        <div>
-                            <h5 className="text-sm font-medium text-text-primary">Stealth & Control</h5>
-                            <p className="text-xs text-text-secondary mt-1 leading-relaxed">
-                                Features "Undetectable Mode" to hide from the dock and "Masquerading" to disguise as system apps. You control exactly what data leaves your device.
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                        <MicOff size={16} className="text-red-500 mt-0.5" />
-                        <div>
-                            <h5 className="text-sm font-medium text-text-primary">No Recording</h5>
-                            <p className="text-xs text-text-secondary mt-1 leading-relaxed">
-                                AnswerFlow listens only when active. It does not record video, take arbitrary screenshots without command, or perform background surveillance.
-                            </p>
-                        </div>
-                    </div>
+                    <InfoRow
+                        icon={<Shield size={16} className="text-green-400 mt-0.5" />}
+                        title="User-controlled context"
+                        description="You choose which documents, instructions, and interview notes are used. Local document ingestion converts supported files into markdown before they are added to context."
+                    />
+                    <InfoRow
+                        icon={<MicOff size={16} className="text-red-400 mt-0.5" />}
+                        title="No always-on recording"
+                        description="AnswerFlow listens only during active interview flows and does not take screenshots or analyze the screen without an explicit command."
+                    />
                 </div>
             </div>
 
-            {/* Community Section */}
             <div>
-                <h4 className="text-xs font-bold text-text-tertiary uppercase tracking-wider mb-2 px-1">Community</h4>
-                <div className="space-y-4">
-                    {/* 0. Official Website */}
-                    <div className="bg-bg-item-surface rounded-xl border border-border-subtle p-5 flex flex-col md:flex-row items-center justify-between gap-4">
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-500 shadow-sm shadow-indigo-500/5">
-                                <Globe size={18} className="opacity-80" />
-                            </div>
-                            <div>
-                                <h5 className="text-sm font-bold text-text-primary">Official Website</h5>
-                            </div>
-                        </div>
-                        <a
-                            href="https://natively.software"
-                            onClick={(e) => handleOpenLink(e, "https://natively.software")}
-                            className="whitespace-nowrap px-4 py-2 bg-text-primary hover:bg-white/90 text-bg-main text-xs font-bold rounded-lg transition-all shadow hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2"
-                        >
-                            <Globe size={14} />
-                            Visit Website
-                        </a>
-                    </div>
-
-                    {/* 0.5. Telegram Community */}
-                    <div className="bg-bg-item-surface rounded-xl border border-border-subtle p-5 flex flex-col md:flex-row items-center justify-between gap-4">
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-sky-500/10 flex items-center justify-center text-sky-500 shadow-sm shadow-sky-500/5">
-                                <Send size={18} className="opacity-80" />
-                            </div>
-                            <div>
-                                <h5 className="text-sm font-bold text-text-primary">Telegram Community</h5>
-                            </div>
-                        </div>
-                        <a
-                            href="https://t.me/nativelyaichat"
-                            onClick={(e) => handleOpenLink(e, "https://t.me/nativelyaichat")}
-                            className="whitespace-nowrap px-4 py-2 bg-text-primary hover:bg-white/90 text-bg-main text-xs font-bold rounded-lg transition-all shadow hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2"
-                        >
-                            <Send size={14} />
-                            Join Chat
-                        </a>
-                    </div>
-
-                    {/* 1. Founder Profile */}
-                    <div className="bg-bg-item-surface rounded-xl p-5">
-                        <div className="flex flex-col gap-4">
-                            <div className="flex items-start gap-4">
-                                <div className="w-12 h-12 rounded-full bg-bg-elevated border border-border-subtle flex items-center justify-center overflow-hidden shrink-0">
-                                    <img src={evinProfile} alt="Evin John" className="w-full h-full object-cover" />
-                                </div>
-                                <div className="pt-0.5">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <h5 className="text-sm font-bold text-text-primary">Evin John</h5>
-                                        <span className={`text-[10px] font-medium px-1.5 py-[1px] rounded-full ${isLight ? 'bg-amber-100 text-amber-700 border border-amber-300' : 'bg-yellow-400/10 text-yellow-200 border border-yellow-400/5'}`}>Creator</span>
-                                    </div>
-                                    <p className="text-xs text-text-secondary leading-relaxed max-w-lg">
-                                        I build software that stays out of the way.
-                                        <br />
-                                        <span className="font-bold text-text-primary">AnswerFlow</span> is made to feel fast, quiet, and respectful of your privacy.
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-4 pl-[60px]">
-                                <a
-                                    href="https://github.com/FarzamHejaziK/AnswerFlow"
-                                    onClick={(e) => handleOpenLink(e, "https://github.com/FarzamHejaziK/AnswerFlow")}
-                                    className="text-text-tertiary hover:text-text-primary transition-colors"
-                                    title="GitHub"
-                                >
-                                    <Github size={18} />
-                                </a>
-                                <a
-                                    href="https://x.com/evinjohnn"
-                                    onClick={(e) => handleOpenLink(e, "https://x.com/evinjohnn")}
-                                    className="text-text-tertiary hover:text-text-primary transition-colors"
-                                    title="Twitter"
-                                >
-                                    <Twitter size={18} />
-                                </a>
-                                <a
-                                    href="https://www.linkedin.com/in/evinjohn"
-                                    onClick={(e) => handleOpenLink(e, "https://www.linkedin.com/in/evinjohn")}
-                                    className="text-text-tertiary hover:text-text-primary transition-colors"
-                                    title="LinkedIn"
-                                >
-                                    <Linkedin size={18} />
-                                </a>
-                                <a
-                                    href="https://www.instagram.com/evinjohnn/"
-                                    onClick={(e) => handleOpenLink(e, "https://www.instagram.com/evinjohnn/")}
-                                    className="text-text-tertiary hover:text-text-primary transition-colors"
-                                    title="Instagram"
-                                >
-                                    <Instagram size={18} />
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* 2. Star & Report */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <a
-                            href="https://github.com/FarzamHejaziK/AnswerFlow"
-                            onClick={(e) => handleOpenLink(e, "https://github.com/FarzamHejaziK/AnswerFlow")}
-                            className="bg-bg-item-surface border border-border-subtle rounded-xl p-5 transition-all group flex items-center gap-4 h-full hover:bg-white/10"
-                        >
-                            <div className="w-10 h-10 rounded-lg bg-yellow-500/10 flex items-center justify-center text-yellow-500 shrink-0 group-hover:scale-110 transition-transform">
-                                <Star size={20} className="transition-all group-hover:fill-current" />
-                            </div>
-                            <div>
-                                <h5 className="text-sm font-bold text-text-primary">Star on GitHub</h5>
-                                <p className="text-xs text-text-secondary mt-0.5">Love AnswerFlow? Support us by starring the repo.</p>
-                            </div>
-                        </a>
-
-                        <a
-                            href="https://github.com/FarzamHejaziK/AnswerFlow/issues"
-                            onClick={(e) => handleOpenLink(e, "https://github.com/FarzamHejaziK/AnswerFlow/issues")}
-                            className="bg-bg-item-surface border border-border-subtle rounded-xl p-5 transition-all group flex items-center gap-4 h-full hover:bg-white/10"
-                        >
-                            <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center text-red-500 shrink-0 group-hover:scale-110 transition-transform">
-                                <Bug size={20} />
-                            </div>
-                            <div>
-                                <h5 className="text-sm font-bold text-text-primary">Report an Issue</h5>
-                                <p className="text-xs text-text-secondary mt-0.5">Found a bug? Let us know so we can fix it.</p>
-                            </div>
-                        </a>
-                    </div>
-
-                    {/* 3. Get in Touch */}
-                    <div className="bg-bg-item-surface rounded-xl border border-border-subtle p-5 flex flex-col md:flex-row items-center justify-between gap-4">
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-accent-secondary flex items-center justify-center text-accent-primary shadow-sm shadow-[0_6px_18px_rgba(249,115,22,0.08)]">
-                                <Mail size={18} className="opacity-80" />
-                            </div>
-                            <div>
-                                <h5 className="text-sm font-bold text-text-primary">Get in Touch</h5>
-                                <p className="text-xs text-text-secondary mt-0.5">Open for professional collaborations and job offers.</p>
-                            </div>
-                        </div>
-                        <a
-                            href="mailto:evinjohnignatious@gmail.com"
-                            onClick={(e) => handleOpenLink(e, "mailto:evinjohnignatious@gmail.com")}
-                            className="whitespace-nowrap px-4 py-2 bg-text-primary hover:bg-white/90 text-bg-main text-xs font-bold rounded-lg transition-all shadow hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2"
-                        >
-                            <Mail size={14} />
-                            Contact Me
-                        </a>
-                    </div>
-
-                    {/* 4. Support */}
-                    <div className="bg-bg-item-surface rounded-xl border border-border-subtle p-5 flex flex-col md:flex-row items-center justify-between gap-4">
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-pink-500/10 flex items-center justify-center text-pink-500 shadow-sm shadow-pink-500/5">
-                                <Heart size={18} fill="currentColor" className="opacity-80" />
-                            </div>
-                            <div>
-                                <h5 className="text-sm font-bold text-text-primary">Support Development</h5>
-                                <p className="text-xs text-text-secondary mt-0.5">AnswerFlow is independent open-source software.</p>
-                            </div>
-                        </div>
-                        <a
-                            href="https://buymeacoffee.com/evinjohnn"
-                            onClick={(e) => handleOpenLink(e, "https://buymeacoffee.com/evinjohnn")}
-                            className="whitespace-nowrap px-4 py-2 bg-text-primary hover:bg-white/90 text-bg-main text-xs font-bold rounded-lg transition-all shadow hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0"
-                        >
-                            Support Project
-                        </a>
-                    </div>
+                <h4 className="text-xs font-bold text-text-tertiary uppercase tracking-wider mb-2 px-1">Platforms</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <PlatformCard title="macOS" detail="Apple Silicon and Intel builds via DMG and ZIP." />
+                    <PlatformCard title="Windows" detail="Intel x64 NSIS installer with in-place updates." />
+                    <PlatformCard title="Linux" detail="AppImage and Debian package targets remain configured." />
                 </div>
             </div>
 
-            {/* Credits */}
+            <div>
+                <h4 className="text-xs font-bold text-text-tertiary uppercase tracking-wider mb-2 px-1">Project</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ActionCard
+                        href={REPO_URL}
+                        onOpen={handleOpenLink}
+                        icon={<Star size={20} className="transition-all group-hover:fill-current" />}
+                        title="Star on GitHub"
+                        description="Follow AnswerFlow development and releases."
+                        color="text-yellow-500"
+                        bg="bg-yellow-500/10"
+                    />
+                    <ActionCard
+                        href={`${REPO_URL}/issues`}
+                        onOpen={handleOpenLink}
+                        icon={<Bug size={20} />}
+                        title="Report an Issue"
+                        description="Found a bug or release problem? Open an issue."
+                        color="text-red-500"
+                        bg="bg-red-500/10"
+                    />
+                </div>
+            </div>
+
             <div className="pt-4 border-t border-border-subtle">
-                <div>
-                    <h4 className="text-xs font-bold text-text-tertiary uppercase tracking-wider mb-3">Core Technology</h4>
-                    <div className="flex flex-wrap gap-2">
-                        {['Groq', 'Gemini', 'OpenAI', 'Deepgram', 'ElevenLabs', 'Electron', 'React', 'Rust', 'Sharp', 'TypeScript', 'Tailwind CSS', 'Vite', 'Google Cloud', 'SQLite'].map(tech => (
-                            <span key={tech} className="px-2.5 py-1 rounded-md bg-bg-input border border-border-subtle text-[11px] font-medium text-text-secondary">
-                                {tech}
-                            </span>
-                        ))}
-                    </div>
+                <h4 className="text-xs font-bold text-text-tertiary uppercase tracking-wider mb-3">Core Technology</h4>
+                <div className="flex flex-wrap gap-2">
+                    {['Electron', 'React', 'Rust', 'Sharp', 'TypeScript', 'Tailwind CSS', 'Vite', 'SQLite', 'OpenAI', 'Gemini', 'Claude'].map(tech => (
+                        <span key={tech} className="px-2.5 py-1 rounded-md bg-bg-input border border-border-subtle text-[11px] font-medium text-text-secondary">
+                            {tech}
+                        </span>
+                    ))}
                 </div>
             </div>
-        </div >
+        </div>
     );
 };
+
+const FeatureRow: React.FC<{
+    icon: React.ReactNode;
+    color: string;
+    bg: string;
+    title: string;
+    description: string;
+    last?: boolean;
+}> = ({ icon, color, bg, title, description, last = false }) => (
+    <div className={`p-3 bg-bg-card/50 ${last ? '' : 'border-b border-border-subtle'}`}>
+        <div className="flex items-start gap-4">
+            <div className={`w-10 h-10 rounded-lg ${bg} flex items-center justify-center ${color} shrink-0`}>
+                {icon}
+            </div>
+            <div>
+                <h5 className="text-sm font-bold text-text-primary mb-1">{title}</h5>
+                <p className="text-xs text-text-secondary leading-relaxed">{description}</p>
+            </div>
+        </div>
+    </div>
+);
+
+const InfoRow: React.FC<{
+    icon: React.ReactNode;
+    title: string;
+    description: string;
+}> = ({ icon, title, description }) => (
+    <div className="flex items-start gap-3">
+        {icon}
+        <div>
+            <h5 className="text-sm font-medium text-text-primary">{title}</h5>
+            <p className="text-xs text-text-secondary mt-1 leading-relaxed">{description}</p>
+        </div>
+    </div>
+);
+
+const PlatformCard: React.FC<{ title: string; detail: string }> = ({ title, detail }) => (
+    <div className="bg-bg-item-surface border border-border-subtle rounded-xl p-4">
+        <h5 className="text-sm font-bold text-text-primary">{title}</h5>
+        <p className="mt-1 text-xs leading-relaxed text-text-secondary">{detail}</p>
+    </div>
+);
+
+const ActionCard: React.FC<{
+    href: string;
+    onOpen: (event: React.MouseEvent<HTMLAnchorElement>, url: string) => void;
+    icon: React.ReactNode;
+    title: string;
+    description: string;
+    color: string;
+    bg: string;
+}> = ({ href, onOpen, icon, title, description, color, bg }) => (
+    <a
+        href={href}
+        onClick={(event) => onOpen(event, href)}
+        className="bg-bg-item-surface border border-border-subtle rounded-xl p-5 transition-all group flex items-center gap-4 h-full hover:bg-white/10"
+    >
+        <div className={`w-10 h-10 rounded-lg ${bg} flex items-center justify-center ${color} shrink-0 group-hover:scale-110 transition-transform`}>
+            {icon}
+        </div>
+        <div>
+            <h5 className="text-sm font-bold text-text-primary">{title}</h5>
+            <p className="text-xs text-text-secondary mt-0.5">{description}</p>
+        </div>
+    </a>
+);

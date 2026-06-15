@@ -766,7 +766,7 @@ export function ProfileIntelligenceSettings({ onClose }: { onClose: () => void }
                                                         </h4>
                                                         <p className="text-xs text-text-secondary leading-relaxed pr-2">
                                                             {!hasProfileAccess
-                                                                ? 'Resume ingestion is a Natively Pro feature. The Custom Context box below stays free.'
+                                                                ? 'Resume ingestion is an AnswerFlow Pro feature. The Custom Context box below stays free.'
                                                                 : 'Provide a resume file to seed the intelligence engine.'}
                                                         </p>
                                                     </div>
@@ -860,7 +860,7 @@ export function ProfileIntelligenceSettings({ onClose }: { onClose: () => void }
                                                         ) : (
                                                             <p className="text-xs text-text-secondary leading-relaxed pr-2">
                                                                 {!hasProfileAccess
-                                                                    ? 'Job description parsing is a Natively Pro feature. The Custom Context box below stays free.'
+                                                                    ? 'Job description parsing is an AnswerFlow Pro feature. The Custom Context box below stays free.'
                                                                     : 'Upload a JD to enable persona tuning and company research.'}
                                                             </p>
                                                         )}

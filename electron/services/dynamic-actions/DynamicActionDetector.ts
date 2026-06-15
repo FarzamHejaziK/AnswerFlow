@@ -90,7 +90,7 @@ const SALES_TRIGGERS: ActionTrigger[] = [
         priority: 0.85,
         label: 'Handle competitor comparison',
         promptInstruction:
-            "You are in Sales mode. The prospect mentioned a competitor. Position Natively's advantages confidently without disparaging the competitor.",
+            "You are in Sales mode. The prospect mentioned a competitor. Position AnswerFlow's advantages confidently without disparaging the competitor.",
         answerStyle: { maxWords: 100, format: 'bullets', tone: 'confident' },
     },
     {

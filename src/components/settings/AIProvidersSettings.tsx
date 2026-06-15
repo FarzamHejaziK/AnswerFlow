@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
-import { STANDARD_CLOUD_MODELS, prettifyModelId } from '../../utils/modelUtils';
+import { isAllowedStandardCloudModel, STANDARD_CLOUD_MODELS, prettifyModelId } from '../../utils/modelUtils';
 import { ProviderCard } from './ProviderCard';
 
 type ProviderId = 'openai' | 'gemini' | 'claude';
@@ -135,7 +135,7 @@ export const AIProvidersSettings: React.FC = () => {
                     const nextPreferred: Record<string, string> = {};
                     if (creds.openaiPreferredModel) nextPreferred.openai = creds.openaiPreferredModel;
                     if (creds.geminiPreferredModel) nextPreferred.gemini = creds.geminiPreferredModel;
-                    if (creds.claudePreferredModel) nextPreferred.claude = creds.claudePreferredModel;
+                    if (creds.claudePreferredModel && isAllowedStandardCloudModel('claude', creds.claudePreferredModel)) nextPreferred.claude = creds.claudePreferredModel;
                     setPreferredModels(nextPreferred);
                 }
 
@@ -173,7 +173,7 @@ export const AIProvidersSettings: React.FC = () => {
             });
 
             const preferredModel = preferredModels[provider];
-            if (preferredModel && !config.ids.includes(preferredModel)) {
+            if (preferredModel && !config.ids.includes(preferredModel) && isAllowedStandardCloudModel(provider, preferredModel)) {
                 options.push({ id: preferredModel, name: prettifyModelId(preferredModel) });
             }
         }

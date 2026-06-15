@@ -12,6 +12,13 @@ export interface ProviderModel {
 
 type Provider = 'gemini' | 'groq' | 'openai' | 'claude' | 'deepseek';
 
+const ALLOWED_CLAUDE_MODELS = new Set([
+    'claude-opus-4-8',
+    'claude-opus-4-7',
+    'claude-opus-4-6',
+    'claude-sonnet-4-6',
+]);
+
 /**
  * Fetch available models from a provider's API.
  * Returns a filtered, sorted array of { id, label } objects.
@@ -104,22 +111,10 @@ async function fetchAnthropicModels(apiKey: string): Promise<ProviderModel[]> {
 
     const models: any[] = response.data?.data || [];
 
-    // Only include Claude 3.5+ models (haiku, sonnet, opus)
+    // Keep the user-facing Claude list intentionally tight.
     const filtered = models.filter((m: any) => {
         const id = (m.id || '').toLowerCase();
-        if (!id.includes('claude')) return false;
-        
-        // Match models that are version 3.5, 3.7, 4.0, etc.
-        // e.g. claude-3-5-sonnet, claude-3-7-sonnet, claude-4-opus
-        const versionMatch = id.match(/claude-(\d+)-(\d+)?/);
-        if (versionMatch) {
-            const major = parseInt(versionMatch[1], 10);
-            const minor = versionMatch[2] ? parseInt(versionMatch[2], 10) : 0;
-            if (major > 3 || (major === 3 && minor >= 5)) {
-                return true;
-            }
-        }
-        return false;
+        return ALLOWED_CLAUDE_MODELS.has(id);
     });
 
     return filtered

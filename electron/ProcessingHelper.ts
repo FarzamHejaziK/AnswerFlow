@@ -88,7 +88,7 @@ export class ProcessingHelper {
 
     const nativelyKey = credManager.getNativelyApiKey();
     if (nativelyKey) {
-      console.log("[ProcessingHelper] Loading stored Natively API Key from CredentialsManager");
+      console.log("[ProcessingHelper] Loading stored AnswerFlow API Key from CredentialsManager");
       this.llmHelper.setNativelyKey(nativelyKey);
     }
 

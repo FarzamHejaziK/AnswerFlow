@@ -546,7 +546,7 @@ export function initializeIpcHandlers(appState: AppState): void {
         // Regex is `^...$` anchored, so non-probe questions cannot match.
         if (!imagePaths?.length && typeof message === 'string') {
           const identityHit = CREATOR_PROBE_RE.test(message)
-            ? 'I was developed by Evin John.'
+            ? 'AnswerFlow is maintained by the AnswerFlow project.'
             : IDENTITY_PROBE_RE.test(message)
               ? "I'm AnswerFlow, an AI assistant."
               : null;
@@ -3086,7 +3086,7 @@ export function initializeIpcHandlers(appState: AppState): void {
   //
   // Runs `tccutil reset Microphone <bundleId>` AND
   // `tccutil reset ScreenCapture <bundleId>` to clear stale macOS TCC entries
-  // for Natively. This is the user-facing self-service recovery for the
+  // for AnswerFlow. This is the user-facing self-service recovery for the
   // dominant "permissions appear granted in System Settings but capture is
   // silently zero-filled" failure mode — which is caused by TCC binding the
   // grant to a binary's cdhash, and the cdhash changing on every rebuild
@@ -3113,9 +3113,9 @@ export function initializeIpcHandlers(appState: AppState): void {
       //                  (== package.json build.appId for electron-builder)
       // !app.isPackaged → 'com.github.Electron' (the dev Electron binary's
       //                   bundle id; TCC entries land here in dev mode)
-      bundleId = app.isPackaged ? 'com.electron.meeting-notes' : 'com.github.Electron';
+      bundleId = app.isPackaged ? 'com.answerflow.desktop' : 'com.github.Electron';
     } catch {
-      bundleId = 'com.electron.meeting-notes';
+      bundleId = 'com.answerflow.desktop';
     }
 
     const { execFile } = require('node:child_process');

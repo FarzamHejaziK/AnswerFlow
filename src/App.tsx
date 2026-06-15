@@ -8,7 +8,6 @@ import ModelSelectorWindow from "./components/ModelSelectorWindow"
 import SettingsOverlay from "./components/SettingsOverlay"
 import StartupSequence from "./components/StartupSequence"
 import { AnimatePresence, motion } from "framer-motion"
-import UpdateBanner from "./components/UpdateBanner"
 import { SupportToaster } from "./components/SupportToaster"
 import { NativelyQuotaBanner } from "./components/NativelyQuotaBanner"
 import { FreeTrialBanner }      from "./components/trial/FreeTrialBanner"
@@ -17,7 +16,7 @@ import { TrialPromoToaster }    from "./components/trial/TrialPromoToaster"
 import { AlertCircle } from "lucide-react"
 import { clampOverlayOpacity, OVERLAY_OPACITY_DEFAULT, getDefaultOverlayOpacity } from "./lib/overlayAppearance"
 import { getMeetingInterfaceTheme, type MeetingInterfaceTheme } from './lib/meetingInterfaceTheme'
-import { SHOW_PROMOTIONAL_SURFACES, SHOW_UPDATE_PROMOTION } from './lib/promoSurfaceFlags'
+import { SHOW_PROMOTIONAL_SURFACES } from './lib/promoSurfaceFlags'
 import { isMac } from "./utils/platformUtils"
 import {
   JDAwarenessToaster,
@@ -604,7 +603,6 @@ const App: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {SHOW_UPDATE_PROMOTION && <UpdateBanner />}
       {SHOW_PROMOTIONAL_SURFACES && <SupportToaster />}
       {SHOW_PROMOTIONAL_SURFACES && <NativelyQuotaBanner />}
 

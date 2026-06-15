@@ -179,7 +179,7 @@ export const SupportToaster: React.FC<SupportToasterProps> = ({ className }) => 
                                 </h3>
                                 {/* Body */}
                                 <p className="text-[14px] leading-[1.6] text-white/60 max-w-[480px] font-medium antialiased">
-                                    Natively is built and maintained by one developer.<br />
+                                    AnswerFlow is built and maintained independently.<br />
                                     If it’s part of your daily workflow, your support keeps<br />
                                     it moving forward.
                                 </p>

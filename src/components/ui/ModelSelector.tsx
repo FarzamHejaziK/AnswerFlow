@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, Check, Cloud, Terminal, Monitor, Server, Plus } from 'lucide-react';
-import { getCodexCliModelDisplayName, STANDARD_CLOUD_MODELS, prettifyModelId } from '../../utils/modelUtils';
+import { getCodexCliModelDisplayName, isAllowedStandardCloudModel, STANDARD_CLOUD_MODELS, prettifyModelId } from '../../utils/modelUtils';
 
 interface ModelSelectorProps {
     currentModel: string;
@@ -54,13 +54,13 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({ currentModel, onSe
                 const cModels: { id: string; name: string; desc: string; provider: string }[] = [];
 
                 if (creds?.hasNativelyKey) {
-                    cModels.push({ id: 'natively', name: 'Natively API', desc: 'Managed AI • Fast execution', provider: 'natively' });
+                    cModels.push({ id: 'natively', name: 'AnswerFlow API', desc: 'Managed AI • Fast execution', provider: 'natively' });
                 }
                 for (const [prov, cfg] of Object.entries(STANDARD_CLOUD_MODELS)) {
                     if (!cfg.hasKeyCheck(creds)) continue;
                     cfg.ids.forEach((id, i) => cModels.push({ id, name: cfg.names[i], desc: cfg.descs[i], provider: prov }));
                     const pm = creds?.[cfg.pmKey];
-                    if (pm && !cfg.ids.includes(pm)) {
+                    if (pm && !cfg.ids.includes(pm) && isAllowedStandardCloudModel(prov, pm)) {
                         cModels.push({ id: pm, name: prettifyModelId(pm), desc: `${prov.charAt(0).toUpperCase() + prov.slice(1)} • Preferred`, provider: prov });
                     }
                 }
@@ -96,6 +96,9 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({ currentModel, onSe
         if (model === 'gpt-5.5') return 'GPT 5.5';
         if (model === 'gpt-5.5-thinking-low') return 'GPT 5.5 Thinking';
         if (model === 'gpt-5.4') return 'GPT 5.4';
+        if (model === 'claude-opus-4-8') return 'Opus 4.8';
+        if (model === 'claude-opus-4-7') return 'Opus 4.7';
+        if (model === 'claude-opus-4-6') return 'Opus 4.6';
         if (model === 'claude-sonnet-4-6') return 'Sonnet 4.6';
 
         // Check dynamic cloud models

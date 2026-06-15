@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import nativelyLogo from "../assets/logo.webp";
+import answerflowLogo from "./icon.png";
 import { getModifierSymbol } from "../utils/platformUtils";
 
 const DARK_GLASS = {
@@ -65,7 +65,7 @@ const NativelyInterfaceCard = ({ className = "", isMobile = false, isStatic = fa
             {/* Logo */}
             <div className="w-8 h-8 rounded-full flex items-center justify-center relative overflow-hidden" style={DARK_GLASS}>
               {GLOSS}
-              <img src={nativelyLogo} alt="Natively" className="w-[28px] h-[28px] object-contain relative" draggable={false} />
+              <img src={answerflowLogo} alt="AnswerFlow" className="w-[28px] h-[28px] object-contain relative" draggable={false} />
             </div>
 
             {/* Hide */}
@@ -172,7 +172,7 @@ const NativelyInterfaceCard = ({ className = "", isMobile = false, isStatic = fa
                     for Assist
                   </span>
                 ) : (
-                  "Ask anything — Natively knows your resume and this company..."
+                  "Ask anything — AnswerFlow knows your resume and this company..."
                 )}
               </div>
             </div>
@@ -191,7 +191,7 @@ const NativelyInterfaceCard = ({ className = "", isMobile = false, isStatic = fa
                   fontFamily: "var(--font-mono, monospace)"
                 }}
               >
-                Natively AI
+                AnswerFlow AI
                 <svg width="8" height="8" viewBox="0 0 10 10" fill="none"><path d="M3 4l2 2 2-2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /></svg>
               </button>
               <button className="w-[26px] h-[26px] rounded-full flex items-center justify-center relative overflow-hidden border border-white/20"
