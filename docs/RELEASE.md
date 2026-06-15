@@ -18,8 +18,8 @@ apps never read update notes or installers from the upstream project.
 
 | Platform | Artifact | Notes |
 | --- | --- | --- |
-| macOS Apple Silicon | `AnswerFlow-X.Y.Z-arm64.dmg` | Primary macOS build for Apple Silicon Macs |
-| macOS Intel | `AnswerFlow-X.Y.Z.dmg` | Intel x64 DMG when universal/all-arch release is enabled |
+| macOS Apple Silicon | `AnswerFlow-X.Y.Z-arm64-mac.zip` | Primary unsigned Apple Silicon build |
+| macOS Intel | `AnswerFlow-X.Y.Z.dmg`, `AnswerFlow-X.Y.Z-mac.zip` | Intel x64 DMG plus updater ZIP |
 | macOS update metadata | `latest-mac.yml` | Used by Electron updater |
 | Windows Intel x64 | `AnswerFlow-Setup-X.Y.Z.exe` | NSIS installer and updater target |
 | Windows update metadata | `latest.yml` | Used by Electron updater |

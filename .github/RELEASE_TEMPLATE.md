@@ -32,14 +32,14 @@ Choose the artifact for your operating system and CPU architecture.
 
 ### macOS
 
-- Apple Silicon: `AnswerFlow-VERSION-arm64.dmg`
-- Intel: `AnswerFlow-VERSION.dmg`
+- Apple Silicon: `AnswerFlow-VERSION-arm64-mac.zip`
+- Intel: `AnswerFlow-VERSION.dmg` or `AnswerFlow-VERSION-mac.zip`
 - Auto-update metadata: `latest-mac.yml`
 
 If macOS says the app is damaged on an unsigned test build:
 
 ```bash
-xattr -cr ~/Downloads/AnswerFlow-VERSION-arm64.dmg
+xattr -cr ~/Downloads/AnswerFlow-VERSION-arm64-mac.zip
 xattr -cr /Applications/AnswerFlow.app
 ```
 

@@ -27,6 +27,7 @@ AnswerFlow v2.7.3 completes the first AnswerFlow-branded release pass: new cross
 - Fixed Windows release packaging when Transformers.js downloads the Moonshine Base quantized graph successfully but ONNX runtime validation fails during install.
 - Added the missing macOS entitlements files required by both unsigned ad-hoc packaging and future signed/notarized builds.
 - Increased the macOS DMG filesystem size so Apple Silicon packages fit after embedding the local transcription model.
+- Adjusted unsigned macOS release packaging so Apple Silicon ships as the updater ZIP while Intel keeps the DMG target.
 - Removed the old update promotion popup path so update notices no longer look like promotional UI.
 - Removed the confusing `Clear` control from the interview header.
 
