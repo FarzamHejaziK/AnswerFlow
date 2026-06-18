@@ -1,6 +1,6 @@
 {
   "name": "answerflow",
-  "version": "2.7.3",
+  "version": "2.7.4",
   "main": "dist-electron/electron/main.js",
   "description": "AnswerFlow is a live interview assistant that helps prepare context, transcribe conversations, and generate AI-guided answers.",
   "scripts": {
