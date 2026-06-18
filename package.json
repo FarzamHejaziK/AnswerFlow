@@ -68,8 +68,8 @@
         "to": "answerflow.icns"
       },
       {
-        "from": "resources/models/",
-        "to": "models/"
+        "from": "resources/models/Xenova/",
+        "to": "models/Xenova/"
       }
     ],
     "mac": {

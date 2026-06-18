@@ -601,10 +601,10 @@ const MockProviderSelectionAnim = () => (
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                         <span className="text-[14px] font-semibold text-text-primary truncate leading-tight">Moonshine Base</span>
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide ${getBadgeStyle('green')}`}>Packaged</span>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide ${getBadgeStyle('green')}`}>Local</span>
                     </div>
                     <span className="text-[12px] text-text-secondary block leading-relaxed mt-1">
-                        Local transcription is built in. Configure only your microphone and meeting audio devices.
+                        Local transcription downloads during setup. Configure only your microphone and meeting audio devices.
                     </span>
                 </div>
             </div>
@@ -901,7 +901,7 @@ export const HelpSettings: React.FC = () => {
                                     <Globe size={14} className="text-green-500" /> Language & Regional Accents
                                 </h5>
                                 <p className="text-[11px] opacity-90 leading-relaxed text-text-secondary">
-                                    AnswerFlow uses the packaged local Moonshine Base transcription model. The main setup requirement is device routing: choose the microphone you speak into and the output device where meeting audio plays.
+                                    AnswerFlow uses the local Moonshine Base transcription model downloaded during setup. The main setup requirement is device routing: choose the microphone you speak into and the output device where meeting audio plays.
                                 </p>
                             </div>
                         </div>
@@ -940,7 +940,7 @@ export const HelpSettings: React.FC = () => {
 
                 <AccordionSection title="2. Audio Setup (Microphone and Meeting Audio)" icon={<Mic className="w-4 h-4" />}>
                     <div className="space-y-6">
-                        <p>AnswerFlow uses the packaged local Moonshine Base model for transcription. In the Audio tab, configure the microphone and the output device where your meeting audio is playing.</p>
+                        <p>AnswerFlow uses the local Moonshine Base model for transcription after it is downloaded during setup. In the Audio tab, configure the microphone and the output device where your meeting audio is playing.</p>
 
                         <MockProviderSelectionAnim />
 

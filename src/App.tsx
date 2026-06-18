@@ -499,7 +499,7 @@ const App: React.FC = () => {
                 <NativelyInterface
                   onEndMeeting={handleEndMeeting}
                   overlayOpacity={overlayOpacity}
-                  interfaceTheme={meetingInterfaceTheme}
+                  interfaceTheme="default"
                 />
               </div>
               <ToastViewport />

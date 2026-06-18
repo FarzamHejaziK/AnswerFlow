@@ -45,7 +45,7 @@ If only one provider key is saved, the active model should come from that provid
 
 ## Audio And Transcription
 
-AnswerFlow uses the packaged local Moonshine Base model for transcription. Users should not need to select a transcription model.
+AnswerFlow uses the local Moonshine Base model for transcription after it is downloaded during setup. Users should not need to select a transcription model.
 
 AnswerFlow needs two audio paths:
 
@@ -117,6 +117,8 @@ The prompt should ask:
 > What should I know about your interview? How should I answer the questions?
 
 Every prep-chat message should receive an assistant response.
+
+Prep chat is an intake/context-building space by default. If the user uploads a job description, resume, project notes, or other documents, AnswerFlow should acknowledge the material, extract useful interview context, and ask a few targeted setup questions. It should not generate practice questions, mock interviews, answer drills, or study plans unless the user explicitly asks for those.
 
 ## Documents
 

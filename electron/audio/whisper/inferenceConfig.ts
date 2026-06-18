@@ -50,7 +50,7 @@ const WHISPER_SAFE_DTYPE: Record<string, string> = {
  * consistent. The cacheDir lookup is lazy (avoids importing electron from
  * this leaf module).
  */
-export function buildWorkerInitMessage(modelId: string): {
+export function buildWorkerInitMessage(modelId: string, options: { allowRemoteModels?: boolean } = {}): {
     type: 'init';
     modelId: string;
     cacheDir: string;
@@ -61,13 +61,12 @@ export function buildWorkerInitMessage(modelId: string): {
     // Late require — modelManager imports electron, which isn't available
     // when this module is first loaded in some contexts (test harnesses).
     const { getModelsDir } = require('./modelManager');
-    const { app } = require('electron');
     const { executionProviders, dtype } = resolveInferenceConfig();
     return {
         type: 'init',
         modelId,
         cacheDir: getModelsDir(),
-        allowRemoteModels: !app.isPackaged,
+        allowRemoteModels: options.allowRemoteModels ?? false,
         executionProviders,
         dtype,
     };

@@ -74,7 +74,6 @@ import ReactMarkdown from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
-import { useResolvedTheme } from '../hooks/useResolvedTheme';
 import { genMessageId } from '../utils/messageId';
 import { useShortcuts } from '../hooks/useShortcuts';
 import { analytics, detectProviderType } from '../lib/analytics/analytics.service';
@@ -389,7 +388,7 @@ const NativelyInterface: React.FC<NativelyInterfaceProps> = ({
   overlayOpacity = OVERLAY_OPACITY_DEFAULT,
   interfaceTheme = 'default',
 }) => {
-  const isLightTheme = useResolvedTheme() === 'light';
+  const isLightTheme = false;
   const isGlassTheme = interfaceTheme === 'liquid-glass';
   const isModernTheme = interfaceTheme === 'modern';
   const shellRef = React.useRef<HTMLDivElement>(null);
@@ -4111,7 +4110,7 @@ Provide only the answer, nothing else.`;
     <div
       ref={contentRef}
       data-interface-theme={isGlassTheme ? 'liquid-glass' : isModernTheme ? 'modern' : undefined}
-      className="flex flex-col items-center w-fit mx-auto h-fit min-h-0 bg-transparent p-0 rounded-[24px] font-sans gap-2 overlay-text-primary"
+      className="overlay-force-dark flex flex-col items-center w-fit mx-auto h-fit min-h-0 bg-transparent p-0 rounded-[24px] font-sans gap-2 overlay-text-primary"
     >
       <AnimatePresence initial={false}>
         {isExpanded && (

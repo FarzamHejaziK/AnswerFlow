@@ -8,24 +8,35 @@ name: Release (macOS signed + notarized)
 # electron-builder's built-in `mac.notarize: true` (notarytool under the hood),
 # and the DMGs are signed + notarized + stapled by scripts/afterAllArtifactBuild.cjs.
 # The only difference vs local is credential delivery: locally we use the
-# `natively-notary` keychain profile; in CI we use an App Store Connect API key
-# (APPLE_API_KEY / APPLE_API_KEY_ID / APPLE_API_ISSUER), the recommended
-# non-interactive path. Both built-in notarize and the DMG hook read those env vars.
+# `answerflow-notary` keychain profile; in CI we can use either an App Store
+# Connect API key (recommended) or the Apple ID + app-specific password style
+# already used by ClickCherry. Both built-in notarize and the DMG hook read
+# those env vars.
 #
 # ── REQUIRED REPOSITORY SECRETS ────────────────────────────────────────────
-#   MACOS_CERT_P12_BASE64   base64 of the exported "Developer ID Application" .p12
-#                           (export from Keychain Access; then `base64 -i cert.p12 | pbcopy`)
-#   MACOS_CERT_PASSWORD     password set when exporting the .p12
-#   KEYCHAIN_PASSWORD       any throwaway password for the temporary CI keychain
-#   APPLE_API_KEY_P8_BASE64 base64 of the App Store Connect API key .p8 file
-#   APPLE_API_KEY_ID        the key id (e.g. T9GPZ92M7K)
-#   APPLE_API_ISSUER        the issuer UUID (App Store Connect → Users and Access → Integrations)
+#   Certificate, either AnswerFlow-style:
+#     MACOS_CERT_P12_BASE64   base64 of exported "Developer ID Application" .p12
+#     MACOS_CERT_PASSWORD     password set when exporting the .p12
+#   or ClickCherry-style:
+#     APPLE_DEVELOPER_ID_APPLICATION_CERT_BASE64
+#     APPLE_DEVELOPER_ID_APPLICATION_CERT_PASSWORD
+#
+#   Notarization, either API-key style:
+#     APPLE_API_KEY_P8_BASE64 base64 of the App Store Connect API key .p8 file
+#     APPLE_API_KEY_ID        key id
+#     APPLE_API_ISSUER        issuer UUID
+#   or ClickCherry-style:
+#     APPLE_ID
+#     APPLE_APP_SPECIFIC_PASSWORD
+#     APPLE_TEAM_ID
+#
+#   Optional:
+#     KEYCHAIN_PASSWORD       throwaway password for the temporary CI keychain
 #
 # Notes:
-#   - We do NOT use the local `natively-notary` keychain profile in CI — that
-#     profile only exists on the developer's machine. The api-key env vars
-#     (APPLE_API_KEY / APPLE_API_KEY_ID / APPLE_API_ISSUER) are consumed by
-#     electron-builder's built-in notarytool (app) and afterAllArtifactBuild.cjs (DMG).
+#   - We do NOT use the local `answerflow-notary` keychain profile in CI — that
+#     profile only exists on the developer's machine. CI credentials are supplied
+#     by GitHub Actions secrets.
 #   - electron-builder imports the signing cert from CSC_LINK (the .p12) and
 #     auto-discovers the Developer ID identity, so we do NOT set
 #     NATIVELY_SIGN_IDENTITY here (the .signed.cjs config treats undefined as
@@ -68,18 +79,19 @@ jobs:
 
       - name: Import Developer ID signing certificate
         env:
-          MACOS_CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
-          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          MACOS_CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 || secrets.APPLE_DEVELOPER_ID_APPLICATION_CERT_BASE64 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD || secrets.APPLE_DEVELOPER_ID_APPLICATION_CERT_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
           set -euo pipefail
-          if [ -z "${MACOS_CERT_P12_BASE64:-}" ] || [ -z "${MACOS_CERT_PASSWORD:-}" ] || [ -z "${KEYCHAIN_PASSWORD:-}" ]; then
+          if [ -z "${MACOS_CERT_P12_BASE64:-}" ] || [ -z "${MACOS_CERT_PASSWORD:-}" ]; then
             echo "::warning::macOS signing secrets are not configured; building unsigned macOS artifacts."
             echo "MACOS_SIGNING_AVAILABLE=false" >> "$GITHUB_ENV"
             exit 0
           fi
+          KEYCHAIN_PASSWORD="${KEYCHAIN_PASSWORD:-$(openssl rand -hex 16)}"
           CERT_PATH="$RUNNER_TEMP/developer_id.p12"
-          KEYCHAIN_PATH="$RUNNER_TEMP/natively-signing.keychain-db"
+          KEYCHAIN_PATH="$RUNNER_TEMP/answerflow-signing.keychain-db"
           echo "$MACOS_CERT_P12_BASE64" | base64 --decode > "$CERT_PATH"
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
@@ -97,30 +109,49 @@ jobs:
           echo "CSC_KEY_PASSWORD=$MACOS_CERT_PASSWORD" >> "$GITHUB_ENV"
           echo "MACOS_SIGNING_AVAILABLE=true" >> "$GITHUB_ENV"
 
-      - name: Write App Store Connect API key for notarytool
+      - name: Configure Apple notarization credentials
         env:
           APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
+          APPLE_ID_CI: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD_CI: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID_CI: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
-          if [ "${MACOS_SIGNING_AVAILABLE:-false}" != "true" ] || [ -z "${APPLE_API_KEY_P8_BASE64:-}" ]; then
-            echo "::warning::App Store Connect API key is not configured; notarization will be skipped."
-            echo "MACOS_SIGNING_AVAILABLE=false" >> "$GITHUB_ENV"
+          if [ "${MACOS_SIGNING_AVAILABLE:-false}" != "true" ]; then
+            echo "MACOS_NOTARIZATION_AVAILABLE=false" >> "$GITHUB_ENV"
             exit 0
           fi
-          API_KEY_PATH="$RUNNER_TEMP/AuthKey.p8"
-          echo "$APPLE_API_KEY_P8_BASE64" | base64 --decode > "$API_KEY_PATH"
-          echo "APPLE_API_KEY=$API_KEY_PATH" >> "$GITHUB_ENV"
+          if [ -n "${APPLE_API_KEY_P8_BASE64:-}" ]; then
+            API_KEY_PATH="$RUNNER_TEMP/AuthKey.p8"
+            echo "$APPLE_API_KEY_P8_BASE64" | base64 --decode > "$API_KEY_PATH"
+            echo "APPLE_API_KEY=$API_KEY_PATH" >> "$GITHUB_ENV"
+            echo "MACOS_NOTARIZATION_AVAILABLE=true" >> "$GITHUB_ENV"
+            echo "MACOS_NOTARIZATION_STRATEGY=api-key" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          if [ -n "${APPLE_ID_CI:-}" ] && [ -n "${APPLE_APP_SPECIFIC_PASSWORD_CI:-}" ] && [ -n "${APPLE_TEAM_ID_CI:-}" ]; then
+            echo "MACOS_NOTARIZATION_AVAILABLE=true" >> "$GITHUB_ENV"
+            echo "MACOS_NOTARIZATION_STRATEGY=apple-id" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          echo "::warning::Apple notarization secrets are not configured; building unsigned macOS artifacts."
+          echo "MACOS_NOTARIZATION_AVAILABLE=false" >> "$GITHUB_ENV"
 
       - name: Build macOS artifacts
         env:
           # App Store Connect API-key strategy (built-in notarytool + DMG hook):
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          # ClickCherry-compatible Apple ID strategy:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           # GH token for electron-builder publish (artifacts attach to the release on tag builds).
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          if [ "${MACOS_SIGNING_AVAILABLE:-false}" = "true" ] && [ -n "${APPLE_API_KEY_ID:-}" ] && [ -n "${APPLE_API_ISSUER:-}" ]; then
+          if [ "${MACOS_SIGNING_AVAILABLE:-false}" = "true" ] && [ "${MACOS_NOTARIZATION_AVAILABLE:-false}" = "true" ]; then
+            echo "Building signed + notarized macOS artifacts using ${MACOS_NOTARIZATION_STRATEGY:-unknown} notarization."
             npm run dist:signed
           else
             echo "::warning::Building unsigned macOS artifacts because signing/notarization secrets are incomplete."

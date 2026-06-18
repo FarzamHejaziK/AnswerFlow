@@ -2554,17 +2554,27 @@ export function initializeIpcHandlers(appState: AppState): void {
   });
 
   safeHandle('local-whisper-start-download', async (event, _modelId: string) => {
-    const { DEFAULT_LOCAL_TRANSCRIPTION_MODEL_ID } = require('./audio/whisper/modelManager');
+    const { DEFAULT_LOCAL_TRANSCRIPTION_MODEL_ID, isModelCached } = require('./audio/whisper/modelManager');
+    const { resolveInferenceConfig } = require('./audio/whisper/inferenceConfig');
     const modelId = DEFAULT_LOCAL_TRANSCRIPTION_MODEL_ID;
     if (activeWhisperDownloads.has(modelId)) {
       return { success: false, error: 'already-downloading' };
     }
+    const { dtype } = resolveInferenceConfig();
+    if (isModelCached(modelId, dtype)) {
+      setImmediate(() => {
+        if (!event.sender.isDestroyed()) {
+          event.sender.send('local-whisper-download-complete', { modelId });
+        }
+      });
+      return { success: true };
+    }
     activeWhisperDownloads.add(modelId);
     try {
       const { Worker } = require('worker_threads');
-      const nodePath = require('path');
       const { buildWorkerInitMessage } = require('./audio/whisper/inferenceConfig');
-      const workerPath = nodePath.join(__dirname, 'audio', 'whisper', 'whisperWorker.js');
+      const { resolveWhisperWorkerPath } = require('./audio/whisper/workerPathResolver');
+      const workerPath = resolveWhisperWorkerPath();
       const w = new Worker(workerPath);
       const sender = event.sender;
       w.on('message', (msg: any) => {
@@ -2587,7 +2597,7 @@ export function initializeIpcHandlers(appState: AppState): void {
           sender.send('local-whisper-download-error', { modelId, error: err.message });
         }
       });
-      w.postMessage(buildWorkerInitMessage(modelId));
+      w.postMessage(buildWorkerInitMessage(modelId, { allowRemoteModels: true }));
       return { success: true };
     } catch (e: any) {
       activeWhisperDownloads.delete(modelId);

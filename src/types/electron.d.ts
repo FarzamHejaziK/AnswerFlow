@@ -146,8 +146,16 @@ export interface ElectronAPI {
   onTrialEnded:   (cb: (data: { choice: string }) => void) => () => void
 
   // STT Provider Management
-  setSttProvider: (provider: 'none' | 'google' | 'groq' | 'openai' | 'deepgram' | 'elevenlabs' | 'azure' | 'ibmwatson' | 'soniox' | 'natively') => Promise<{ success: boolean; error?: string }>
+  setSttProvider: (provider: 'none' | 'google' | 'groq' | 'openai' | 'deepgram' | 'elevenlabs' | 'azure' | 'ibmwatson' | 'soniox' | 'natively' | 'local-whisper') => Promise<{ success: boolean; error?: string }>
   getSttProvider: () => Promise<string>
+  localWhisperGetModels: () => Promise<{ models: Array<{ id: string; name: string; sizeMb: number; status: 'available' | 'missing' | 'downloading' | 'error'; errorMessage?: string }>; activeModelId: string }>
+  localWhisperSetModel: (modelId: string) => Promise<{ success: boolean; error?: string }>
+  localWhisperDeleteModel: (modelId: string) => Promise<{ success: boolean; error?: string }>
+  localWhisperStartDownload: (modelId: string) => Promise<{ success: boolean; error?: string }>
+  onLocalWhisperDownloadProgress: (callback: (data: { modelId: string; progress: number }) => void) => () => void
+  onLocalWhisperDownloadComplete: (callback: (data: { modelId: string }) => void) => () => void
+  onLocalWhisperDownloadError: (callback: (data: { modelId: string; error: string }) => void) => () => void
+  localWhisperPreload: (modelId?: string) => Promise<{ success: boolean; reason?: string; error?: string }>
   setGroqSttApiKey: (apiKey: string) => Promise<{ success: boolean; error?: string }>
   setOpenAiSttApiKey: (apiKey: string) => Promise<{ success: boolean; error?: string }>
   setOpenAiSttBaseUrl: (url: string) => Promise<{ success: boolean; error?: string }>

@@ -12,7 +12,7 @@ const MODEL_CATALOG: WhisperModelInfo[] = [
   // ── Moonshine — streaming-native ASR. ~100× lower latency than Whisper Large v3.
   //     Encoder caching + decoder state reuse. English-only. Best choice for live use.
   { id: 'onnx-community/moonshine-tiny-ONNX', name: 'Moonshine Tiny',  sizeMb: 26,   speed: 'very-fast', accuracy: 'good',      multilingual: false, status: 'missing', streaming: true },
-  { id: 'onnx-community/moonshine-base-ONNX', name: 'Moonshine Base',  sizeMb: 60,   speed: 'very-fast', accuracy: 'very-high', multilingual: false, status: 'missing', streaming: true },
+  { id: 'onnx-community/moonshine-base-ONNX', name: 'Moonshine Base',  sizeMb: 280,  speed: 'very-fast', accuracy: 'very-high', multilingual: false, status: 'missing', streaming: true },
 
   // ── Distil-Whisper — same architecture as Whisper, distilled to 1/2 layers,
   //     ~6× faster CPU/GPU at near-equivalent WER. English-only.
@@ -36,17 +36,26 @@ const MODEL_CATALOG: WhisperModelInfo[] = [
 ];
 
 /**
- * Returns the directory where Whisper models are stored.
- * Uses the bundled resources/models directory so packaged builds ship with
- * the required transcription model instead of downloading it at runtime.
+ * Returns the writable directory where speech models are stored.
+ * Speech models are downloaded during preflight and cached in app data so
+ * installers stay small and app updates do not require another download.
  */
 export function getModelsDir(): string {
   // Use require to avoid issues with circular imports / early init
   const { app } = require('electron');
-  if (app.isPackaged && process.resourcesPath) {
-    return path.join(process.resourcesPath, 'models');
+  let modelsDir: string;
+  try {
+    modelsDir = path.join(app.getPath('userData'), 'models');
+  } catch {
+    // Test/dev fallback before Electron has fully initialized.
+    modelsDir = path.join(app.getAppPath(), 'resources', 'models');
   }
-  return path.join(app.getAppPath(), 'resources', 'models');
+  try {
+    fs.mkdirSync(modelsDir, { recursive: true });
+  } catch {
+    // The caller will surface the actual read/write failure.
+  }
+  return modelsDir;
 }
 
 /**
@@ -61,11 +70,10 @@ export function configureTransformersCache(): void {
   // rewriting import() → require() in the CommonJS output.
   (new Function('return import("@huggingface/transformers")')() as Promise<{ env: any }>)
     .then(({ env }) => {
-      const { app } = require('electron');
       const modelsDir = getModelsDir();
       env.cacheDir = modelsDir;
       env.localModelPath = modelsDir;
-      env.allowRemoteModels = !app.isPackaged;
+      env.allowRemoteModels = false;
     })
     .catch(() => {});
 }

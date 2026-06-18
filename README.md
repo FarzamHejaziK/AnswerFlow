@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/readme/answerflow-banner.png" alt="AnswerFlow Interview Assistant" width="100%">
+</p>
+
 # AnswerFlow
 
 AnswerFlow is a desktop interview assistant for preparing context, transcribing live interviews, and continuing the conversation afterward with the full interview history available as context.
@@ -16,7 +20,7 @@ AnswerFlow is focused on interview workflows, not a generic meeting dashboard.
 
 - **Preflight setup:** first-run setup guides the user through provider keys and required permissions.
 - **Provider keys:** Settings supports the main LLM providers: OpenAI, Google Gemini, and Anthropic Claude.
-- **Local transcription:** speech transcription uses the packaged local Moonshine Base model. Users should not need to choose a speech provider.
+- **Local transcription:** speech transcription uses the local Moonshine Base model downloaded during setup. Users should not need to choose a speech provider.
 - **Prep chat:** before an interview starts, the user can chat with the assistant to build interview context.
 - **Document context:** users can upload Markdown, TXT, PDF, and DOCX files. Files are ingested locally into Markdown, saved for reuse, and can be attached per interview.
 - **Custom instructions:** Settings includes Custom Instructions and AI Persona. Custom Instructions can also ingest one local file.

@@ -52,8 +52,8 @@ export const AboutSection: React.FC<AboutSectionProps> = () => {
                         icon={<Volume2 size={20} />}
                         color="text-blue-400"
                         bg="bg-blue-500/10"
-                        title="Packaged local transcription"
-                        description="Audio setup is simplified around the bundled Moonshine Base transcription model, with input and output device controls shown where users need them."
+                        title="Local transcription"
+                        description="Audio setup is simplified around the Moonshine Base model downloaded during setup, with input and output device controls shown where users need them."
                     />
                     <FeatureRow
                         icon={<Cpu size={20} />}

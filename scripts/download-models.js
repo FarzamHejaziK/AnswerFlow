@@ -22,6 +22,7 @@ const MIXED_ASR_DTYPE = {
     decoder_model_merged: 'q8',
     decoder_with_past_model: 'q8',
 };
+const SHOULD_DOWNLOAD_STT_RESOURCE_CACHE = process.env.ANSWERFLOW_DOWNLOAD_STT_MODEL === '1';
 
 function missingMoonshineBaseFiles() {
     return MOONSHINE_BASE_REQUIRED_FILES.filter((relativePath) => {
@@ -54,29 +55,32 @@ async function downloadModels() {
         await pipeline('zero-shot-classification', 'Xenova/mobilebert-uncased-mnli');
         console.log('[download-models] mobilebert-uncased-mnli downloaded.');
 
-        // 3. Packaged local speech transcription model.
-        // Download both dtype layouts used by app runtime:
-        // - fp32 for Apple Silicon/CoreML
-        // - mixed fp32/q8 for Windows/Intel Mac/Linux
-        console.log(`[download-models] Downloading ${MOONSHINE_BASE_MODEL} (fp32)...`);
-        await pipeline('automatic-speech-recognition', MOONSHINE_BASE_MODEL, { dtype: 'fp32' });
-        console.log(`[download-models] ${MOONSHINE_BASE_MODEL} fp32 downloaded.`);
+        if (SHOULD_DOWNLOAD_STT_RESOURCE_CACHE) {
+            // Optional developer cache mode. Normal releases download Moonshine
+            // during preflight into app data so installers stay small and
+            // updates don't replace the cached speech model.
+            console.log(`[download-models] Downloading ${MOONSHINE_BASE_MODEL} (fp32)...`);
+            await pipeline('automatic-speech-recognition', MOONSHINE_BASE_MODEL, { dtype: 'fp32' });
+            console.log(`[download-models] ${MOONSHINE_BASE_MODEL} fp32 downloaded.`);
 
-        console.log(`[download-models] Downloading ${MOONSHINE_BASE_MODEL} (mixed fp32/q8)...`);
-        try {
-            await pipeline('automatic-speech-recognition', MOONSHINE_BASE_MODEL, { dtype: MIXED_ASR_DTYPE });
-        } catch (mixedError) {
-            const missing = missingMoonshineBaseFiles();
-            if (missing.length > 0) {
-                throw mixedError;
+            console.log(`[download-models] Downloading ${MOONSHINE_BASE_MODEL} (mixed fp32/q8)...`);
+            try {
+                await pipeline('automatic-speech-recognition', MOONSHINE_BASE_MODEL, { dtype: MIXED_ASR_DTYPE });
+            } catch (mixedError) {
+                const missing = missingMoonshineBaseFiles();
+                if (missing.length > 0) {
+                    throw mixedError;
+                }
+                console.warn(
+                    '[download-models] Mixed Moonshine validation failed after download; ' +
+                    'continuing because all required package files are present.',
+                    mixedError?.message || mixedError,
+                );
             }
-            console.warn(
-                '[download-models] Mixed Moonshine validation failed after download; ' +
-                'continuing because all required package files are present.',
-                mixedError?.message || mixedError,
-            );
+            console.log(`[download-models] ${MOONSHINE_BASE_MODEL} mixed fp32/q8 downloaded.`);
+        } else {
+            console.log('[download-models] Skipping Moonshine Base bundle; it downloads during preflight.');
         }
-        console.log(`[download-models] ${MOONSHINE_BASE_MODEL} mixed fp32/q8 downloaded.`);
 
         console.log('[download-models] All models downloaded successfully!');
     } catch (e) {

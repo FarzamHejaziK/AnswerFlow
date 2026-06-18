@@ -753,7 +753,7 @@ export class LocalWhisperSTT extends EventEmitter {
                 }
                 if (msg.message.includes('Failed to load model')) {
                     this.emit('error', new Error(
-                        'Packaged Moonshine Base transcription model not found. Reinstall the app or rebuild the package with resources/models included.'
+                        'Moonshine Base transcription model is not downloaded. Open setup and download the local transcription model before starting an interview.'
                     ));
                 }
             }

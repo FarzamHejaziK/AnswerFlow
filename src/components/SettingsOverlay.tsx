@@ -31,6 +31,8 @@ import { KeyRecorder } from './ui/KeyRecorder';
 import { ProfileVisualizer, PremiumUpgradeModal } from '../premium';
 import icon from './icon.png';
 
+const AUDIO_DEVICES_CHANGED_EVENT = 'answerflow-audio-devices-changed';
+
 // ---------------------------------------------------------------------------
 // StarRating — renders filled/empty stars for culture ratings
 
@@ -2293,7 +2295,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                                                     </span>
                                                 </div>
                                                 <p className="text-xs text-text-secondary leading-relaxed">
-                                                    Audio transcription runs locally with the packaged Moonshine Base model. There are no cloud speech providers or transcription model choices to configure.
+                                                    Audio transcription runs locally with the Moonshine Base model downloaded during setup. There are no cloud speech providers or transcription model choices to configure.
                                                 </p>
                                             </div>
                                         </div>
@@ -2666,6 +2668,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                                                             localStorage.removeItem('preferredOutputDeviceId');
                                                             setSelectedOutput('default');
                                                         }
+                                                        window.dispatchEvent(new Event(AUDIO_DEVICES_CHANGED_EVENT));
                                                         setDeviceFallbackNotice(null);
                                                     }}
                                                     className="shrink-0 text-[11px] font-medium text-amber-400 hover:text-amber-300 transition-colors px-2 py-0.5 rounded-md bg-amber-500/15 hover:bg-amber-500/25"
@@ -2684,6 +2687,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                                                 onChange={(id) => {
                                                     setSelectedInput(id);
                                                     localStorage.setItem('preferredInputDeviceId', id);
+                                                    window.dispatchEvent(new Event(AUDIO_DEVICES_CHANGED_EVENT));
                                                 }}
                                                 placeholder="Default Microphone"
                                             />
@@ -2710,6 +2714,7 @@ const SettingsOverlay: React.FC<SettingsOverlayProps> = ({ isOpen, onClose, init
                                                 onChange={(id) => {
                                                     setSelectedOutput(id);
                                                     localStorage.setItem('preferredOutputDeviceId', id);
+                                                    window.dispatchEvent(new Event(AUDIO_DEVICES_CHANGED_EVENT));
                                                 }}
                                                 placeholder="Default Speakers"
                                             />
