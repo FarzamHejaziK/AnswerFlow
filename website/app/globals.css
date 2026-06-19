@@ -1,0 +1,254 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --bg: #f3f2fb;
+  --fg: #1b1830;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(124, 92, 240, 0.35) transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+/* ---------- Living aurora background (light) ---------- */
+.mesh {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 50% at 10% 6%, rgba(99, 118, 255, 0.30), transparent 60%),
+    radial-gradient(44% 54% at 90% 2%, rgba(236, 110, 200, 0.28), transparent 60%),
+    radial-gradient(48% 58% at 80% 70%, rgba(70, 150, 255, 0.20), transparent 62%),
+    radial-gradient(52% 62% at 18% 94%, rgba(150, 92, 246, 0.26), transparent 62%),
+    radial-gradient(60% 70% at 50% 50%, rgba(168, 85, 247, 0.10), transparent 70%),
+    var(--bg);
+  background-size: 180% 180%;
+  background-position: 0% 0%;
+  animation: meshdrift 28s ease-in-out infinite alternate;
+}
+@keyframes meshdrift {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 100% 100%;
+  }
+}
+
+/* Slowly rotating conic light for depth. */
+.mesh-rotate {
+  position: fixed;
+  left: 50%;
+  top: -20%;
+  z-index: -2;
+  height: 120vmax;
+  width: 120vmax;
+  margin-left: -60vmax;
+  border-radius: 9999px;
+  pointer-events: none;
+  opacity: 0.35;
+  filter: blur(48px);
+  background: conic-gradient(
+    from 0deg,
+    rgba(99, 118, 255, 0.22),
+    rgba(236, 110, 200, 0.2),
+    rgba(150, 92, 246, 0.22),
+    rgba(70, 150, 255, 0.18),
+    rgba(99, 118, 255, 0.22)
+  );
+  -webkit-mask: radial-gradient(closest-side, #000 25%, transparent 72%);
+  mask: radial-gradient(closest-side, #000 25%, transparent 72%);
+  animation: spin 60s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Airy highlight that brightens the top of the page. */
+.vignette {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(100% 70% at 50% -10%, rgba(255, 255, 255, 0.75), transparent 55%);
+}
+
+/* ---------- Gradient text ---------- */
+.gradient-text {
+  background: linear-gradient(100deg, #5b6bf5 0%, #7c5cf0 32%, #a855f7 60%, #ec4899 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: textshine 7s linear infinite;
+}
+@keyframes textshine {
+  to {
+    background-position: 200% center;
+  }
+}
+
+/* ---------- Background ambience (per-section aurora blobs) ---------- */
+.aurora {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.28;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.grid-overlay {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(rgba(27, 24, 48, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(27, 24, 48, 0.045) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
+  pointer-events: none;
+}
+
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  opacity: 0.025;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---------- Glass & cards ---------- */
+.glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.gcard {
+  position: relative;
+  isolation: isolate;
+  border-radius: 1.5rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.65));
+  border: 1px solid rgba(27, 24, 48, 0.07);
+  box-shadow: 0 1px 2px rgba(27, 24, 48, 0.04), 0 8px 24px -16px rgba(27, 24, 48, 0.18);
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.4s, box-shadow 0.4s;
+}
+.gcard::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(
+    240px circle at var(--mx, 50%) var(--my, -20%),
+    rgba(139, 108, 246, 0.16),
+    transparent 62%
+  );
+  opacity: 0;
+  transition: opacity 0.4s;
+  pointer-events: none;
+}
+.gcard:hover {
+  transform: translateY(-4px);
+  border-color: rgba(139, 108, 246, 0.4);
+  box-shadow: 0 24px 60px -22px rgba(124, 92, 240, 0.4);
+}
+.gcard:hover::before {
+  opacity: 1;
+}
+
+/* Glowing gradient ring */
+.glow-ring {
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(120deg, rgba(91, 107, 245, 0.6), rgba(236, 72, 153, 0.6));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Ambient light that trails the cursor */
+.cursor-glow {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 360px;
+  width: 360px;
+  margin: -180px 0 0 -180px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(139, 108, 246, 0.12), transparent 60%);
+  transform: translate(var(--gx, -9999px), var(--gy, -9999px));
+  pointer-events: none;
+  z-index: 30;
+}
+@media (pointer: coarse) {
+  .cursor-glow {
+    display: none;
+  }
+}
+
+/* ---------- Marquee ---------- */
+.marquee {
+  display: flex;
+  gap: 3rem;
+  width: max-content;
+  animation: marquee 22s linear infinite;
+}
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* ---------- Scroll reveal ---------- */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal.in {
+  opacity: 1;
+  transform: none;
+}
+
+section[id] {
+  scroll-margin-top: 90px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+  .marquee,
+  .gradient-text,
+  .aurora,
+  .mesh,
+  .mesh-rotate {
+    animation: none;
+  }
+}
