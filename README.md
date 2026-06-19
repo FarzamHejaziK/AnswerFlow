@@ -4,6 +4,21 @@
 
 # AnswerFlow
 
+**Open-source desktop interview assistant for prep, live transcription, real-time answer support, and post-interview follow-up.**
+
+[![License](https://img.shields.io/badge/License-AGPL--3.0-blue?style=flat-square)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-6D5DF6?style=flat-square)](https://github.com/FarzamHejaziK/AnswerFlow/releases)
+[![Latest Release](https://img.shields.io/github/v/release/FarzamHejaziK/AnswerFlow?style=flat-square&color=22C55E)](https://github.com/FarzamHejaziK/AnswerFlow/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/FarzamHejaziK/AnswerFlow/total?style=flat-square&color=success)](https://github.com/FarzamHejaziK/AnswerFlow/releases)
+[![Build Windows](https://img.shields.io/github/actions/workflow/status/FarzamHejaziK/AnswerFlow/build-windows.yml?branch=main&label=Windows%20build&style=flat-square)](https://github.com/FarzamHejaziK/AnswerFlow/actions/workflows/build-windows.yml)
+[![Release macOS](https://img.shields.io/github/actions/workflow/status/FarzamHejaziK/AnswerFlow/release-macos.yml?branch=main&label=macOS%20release&style=flat-square)](https://github.com/FarzamHejaziK/AnswerFlow/actions/workflows/release-macos.yml)
+
+[Download Latest Release](https://github.com/FarzamHejaziK/AnswerFlow/releases/latest) ·
+[Report an Issue](https://github.com/FarzamHejaziK/AnswerFlow/issues) ·
+[View Source](https://github.com/FarzamHejaziK/AnswerFlow)
+
+Requires macOS 12+ on Apple Silicon or Intel, or Windows 10/11 on Intel/AMD 64-bit.
+
 AnswerFlow is a desktop interview assistant for preparing context, transcribing live interviews, and continuing the conversation afterward with the full interview history available as context.
 
 It is designed around one flow:
@@ -13,6 +28,27 @@ It is designed around one flow:
 3. Build context in the prep chat and attach reusable documents.
 4. Start the live interview when your meeting app is ready.
 5. Review transcript, AI answers, and follow-up chat after the interview ends.
+
+## Download
+
+Installers are published from GitHub Releases.
+
+| Platform | Download | Notes |
+| --- | --- | --- |
+| Windows 10/11 x64 | [Latest release assets](https://github.com/FarzamHejaziK/AnswerFlow/releases/latest) | NSIS installer. Current builds are configured for Azure Artifact Signing with the `answerflow-windows` public-trust certificate profile. |
+| macOS Apple Silicon | [Latest release assets](https://github.com/FarzamHejaziK/AnswerFlow/releases/latest) | Use the Apple Silicon ZIP/DMG artifact when available. |
+| macOS Intel | [Latest release assets](https://github.com/FarzamHejaziK/AnswerFlow/releases/latest) | Use the Intel DMG/ZIP artifact when available. |
+
+If your operating system warns about an unsigned or newly signed build, make sure you downloaded it from the official AnswerFlow release page.
+
+## Why AnswerFlow?
+
+- **Interview-first flow:** prep chat, reusable docs, live interview transcript, AI answers, and post-interview follow-up all stay in one interview timeline.
+- **Bring your own provider key:** OpenAI, Google Gemini, and Anthropic Claude are supported from Settings.
+- **Local transcription path:** Moonshine Base runs locally after setup, so live transcription does not need a cloud speech provider.
+- **Reusable document context:** Markdown, TXT, PDF, and DOCX files are ingested into Markdown locally and can be attached across interviews.
+- **Persistent interview memory:** prep chat, selected docs, transcript, AI responses, and post-interview chat are saved so you can reopen an interview later.
+- **Light and dark UI:** the desktop app follows the AnswerFlow visual system with both themes available.
 
 ## Current Product Shape
 
