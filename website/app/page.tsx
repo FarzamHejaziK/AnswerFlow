@@ -80,7 +80,9 @@ export default async function Home() {
               <span className="absolute h-2 w-2 animate-ping rounded-full bg-green-500/60" />
               <span className="h-2 w-2 rounded-full bg-green-500" />
             </span>
-            {version} is live · Free &amp; open source
+            <span className="font-bold text-ink">100% free</span>
+            <span className="text-ink/30">·</span> open source
+            <span className="text-ink/30">·</span> {version}
             <span className="text-ink/40 transition group-hover:translate-x-0.5">→</span>
           </a>
         </Reveal>
@@ -95,9 +97,9 @@ export default async function Home() {
 
         <Reveal delay={160}>
           <p className="mx-auto mt-6 max-w-2xl text-balance text-lg text-ink/55 sm:text-xl">
-            AnswerCue hears your live interview, understands your prep, and helps you answer in real
-            time. Bring your own model, upload your own docs, and control exactly what it remembers
-            and says.
+            <span className="font-semibold text-ink">Completely free.</span> AnswerCue hears your live
+            interview, understands your prep, and helps you answer in real time — with your own model,
+            your own docs, and full control over what it remembers and says.
           </p>
         </Reveal>
 
@@ -234,23 +236,39 @@ export default async function Home() {
                 </p>
               </div>
               <div className="grid gap-3">
+                {/* What YOU pay with AnswerCue */}
+                <div className="flex items-center justify-between rounded-2xl bg-brand-gradient px-5 py-4 text-white shadow-glow">
+                  <span className="flex items-center gap-2 font-bold">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 6 9 17l-5-5" />
+                    </svg>
+                    AnswerCue
+                  </span>
+                  <span className="font-extrabold">Always free</span>
+                </div>
+
+                {/* Competitors — explicitly labelled so nobody thinks these are our prices */}
+                <p className="mt-3 px-1 text-xs font-semibold uppercase tracking-[0.18em] text-ink/45">
+                  What other apps charge
+                </p>
                 {(
                   [
-                    ["AnswerCue", "Free · your own key", true],
-                    ["Typical interview copilot", "$60–$120 / mo", false],
-                    ["“Pro” annual plans", "$1,000s / yr", false],
+                    ["Typical interview copilot", "$60–$120 / mo"],
+                    ["“Pro” annual plans", "$1,000s / yr"],
                   ] as const
-                ).map(([name, price, good]) => (
+                ).map(([name, price]) => (
                   <div
                     key={name}
-                    className={`flex items-center justify-between rounded-2xl px-5 py-4 ${
-                      good ? "bg-brand-gradient text-white shadow-glow" : "bg-ink/[0.04] text-ink/70 ring-1 ring-black/5"
-                    }`}
+                    className="flex items-center justify-between rounded-2xl bg-ink/[0.04] px-5 py-4 ring-1 ring-black/5"
                   >
-                    <span className="font-semibold">{name}</span>
-                    <span className={good ? "font-bold" : "text-ink/50"}>{price}</span>
+                    <span className="font-semibold text-ink/60">{name}</span>
+                    <span className="text-ink/40 line-through decoration-ink/30">{price}</span>
                   </div>
                 ))}
+                <p className="px-1 text-xs leading-relaxed text-ink/45">
+                  Those are competitors’ prices — not ours. AnswerCue never charges you; you only pay
+                  your own AI provider for tokens.
+                </p>
               </div>
             </div>
           </div>
