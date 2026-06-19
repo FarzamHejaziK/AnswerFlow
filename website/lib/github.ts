@@ -21,11 +21,20 @@ const FALLBACK: LatestRelease = {
   assets: [],
 };
 
+type ReleaseFetchOptions = {
+  revalidate?: number | false;
+};
+
 /**
- * Fetch the latest GitHub release. Keep this cache short so download links pick
- * up newly attached release assets without making users wait.
+ * Fetch the latest GitHub release. Pages can use a short cache, while download
+ * redirects can opt out so newly attached assets are available immediately.
  */
-export async function getLatestRelease(): Promise<LatestRelease> {
+export async function getLatestRelease(options: ReleaseFetchOptions = {}): Promise<LatestRelease> {
+  const cacheOptions =
+    options.revalidate === false
+      ? { cache: "no-store" as const }
+      : { next: { revalidate: options.revalidate ?? 60 } };
+
   try {
     const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
       headers: {
@@ -33,7 +42,7 @@ export async function getLatestRelease(): Promise<LatestRelease> {
         "X-GitHub-Api-Version": "2022-11-28",
         ...(process.env.GITHUB_TOKEN ? { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` } : {}),
       },
-      next: { revalidate: 60 },
+      ...cacheOptions,
     });
     if (!res.ok) return FALLBACK;
     const data = await res.json();
