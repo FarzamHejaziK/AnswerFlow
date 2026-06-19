@@ -16,6 +16,12 @@ const hasAzureSigning = requiredAzureEnv.every((name) => Boolean(process.env[nam
 
 module.exports = {
   ...baseConfig,
+  toolsets: {
+    ...baseConfig.toolsets,
+    // Use the newer Windows signing toolset instead of the legacy
+    // Invoke-TrustedSigning PowerShell fallback, which is brittle in CI.
+    winCodeSign: "1.1.0",
+  },
   win: {
     ...baseConfig.win,
     ...(hasAzureSigning
