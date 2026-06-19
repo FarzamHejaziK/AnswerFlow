@@ -22,8 +22,8 @@ const FALLBACK: LatestRelease = {
 };
 
 /**
- * Fetch the latest GitHub release. Cached for 30 min so the site picks up new
- * releases automatically without hammering the API.
+ * Fetch the latest GitHub release. Keep this cache short so download links pick
+ * up newly attached release assets without making users wait.
  */
 export async function getLatestRelease(): Promise<LatestRelease> {
   try {
@@ -33,7 +33,7 @@ export async function getLatestRelease(): Promise<LatestRelease> {
         "X-GitHub-Api-Version": "2022-11-28",
         ...(process.env.GITHUB_TOKEN ? { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` } : {}),
       },
-      next: { revalidate: 1800 },
+      next: { revalidate: 60 },
     });
     if (!res.ok) return FALLBACK;
     const data = await res.json();

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getLatestRelease, pickAsset, Platform, REPO_URL } from "@/lib/github";
 
-export const revalidate = 1800;
+export const revalidate = 60;
 
 const VALID: Platform[] = ["mac", "mac-arm", "mac-intel", "windows"];
 
