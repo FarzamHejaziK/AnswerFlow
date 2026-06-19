@@ -1,7 +1,7 @@
 // Regression test for the "DefaultOutputWatcher interval leaks during quit"
 // bug.
 //
-// Symptom: quitting Natively mid-meeting extended shutdown by 1-2 seconds
+// Symptom: quitting AnswerCue mid-meeting extended shutdown by 1-2 seconds
 // because `_defaultOutputWatcherInterval` (a setInterval polling CoreAudio's
 // default output device) was only ever cleared inside `endMeeting()`. If the
 // user quit while a meeting was active, the interval kept firing while V8

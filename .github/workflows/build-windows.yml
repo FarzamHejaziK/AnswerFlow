@@ -64,7 +64,7 @@ jobs:
       - name: Upload Windows installer
         uses: actions/upload-artifact@v4
         with:
-          name: answerflow-windows-x64-installer
+          name: answercue-windows-x64-installer
           path: |
             release/*.exe
             release/latest.yml

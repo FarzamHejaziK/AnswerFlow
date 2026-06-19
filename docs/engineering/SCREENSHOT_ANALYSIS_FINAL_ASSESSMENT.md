@@ -56,7 +56,7 @@ Companion docs:
    `PromptAssembler.test.mjs:147-163` confirms the assembled block has the
    right trust tag.
 6. **Vision providers exist.** Gemini, OpenAI, Claude, Groq Llama-4-Scout,
-   AnswerFlow, Codex CLI, Ollama vision families, and custom cURL all have
+   AnswerCue, Codex CLI, Ollama vision families, and custom cURL all have
    working multimodal builders (`LLMHelper.ts:1698, 1786, 1907, 2160, 480,
    413, 1830`).
 7. **Privacy gates are wired.** `assertProviderDataScopes` runs before every
@@ -64,7 +64,7 @@ Companion docs:
    to Ollama (`ProviderRouter.ts:280-286`).
 8. **Permission UX is partial but exists.** Screen Recording denied surfaces
    a banner with an "Open Settings" deep link
-   (`AnswerFlowInterface.tsx:3111-3143`).
+   (`AnswerCueInterface.tsx:3111-3143`).
 
 ---
 
@@ -89,7 +89,7 @@ Companion docs:
    assertProviderDataScopes integration.
 8. **No symlink resolution.** STATUS: **FIXED** (2026-05-15) — `validateImagePath`
    now uses `fs.realpathSync` for symlink escape detection.
-9. **No image size cap for cloud providers other than AnswerFlow.** Still pending —
+9. **No image size cap for cloud providers other than AnswerCue.** Still pending —
    Sharp resize needs to be applied for all providers.
 
 ---
@@ -179,7 +179,7 @@ Tests to add:
 ### Step 2 — Wire "Answer from screen" to actually capture (P0; ~half a day)
 
 Files to edit:
-- `src/components/AnswerFlowInterface.tsx:3184-3187` — when the chip type is
+- `src/components/AnswerCueInterface.tsx:3184-3187` — when the chip type is
   `screen_coding_problem` (or any future screen-* type), call
   `window.electronAPI.takeScreenshot()` first, then pass that path into
   `generateWhatToSay`.
@@ -196,7 +196,7 @@ Tests to add:
 ### Step 3 — Add a top-level "Use current screen" button (P0; ~1 day)
 
 Files to add / edit:
-- `src/components/AnswerFlowInterface.tsx` — new pill in the action row that
+- `src/components/AnswerCueInterface.tsx` — new pill in the action row that
   triggers `takeScreenshot` → wait for path → `generateWhatToSay(undefined, [path])`.
   Update the screen-context chip to show "Looking at screen…" during the
   in-flight period.
@@ -229,7 +229,7 @@ Files to edit:
   rather than silently dropping the image.
 - `electron/LLMHelper.ts:2160-2190` — same for `generateWithGroqMultimodal`
   if the user-selected Groq model is not Scout.
-- `src/components/AnswerFlowInterface.tsx` — render the
+- `src/components/AnswerCueInterface.tsx` — render the
   `VisionUnsupportedError` as a non-blocking banner: "Active model doesn't
   see images. Switch to Gemini / GPT-4o / Claude?"
 
@@ -254,7 +254,7 @@ Files to edit:
 
 Files to add:
 - `electron/llm/__tests__/ProviderImagePayload.test.mjs` — for each of
-  Gemini / OpenAI / Claude / Groq / Ollama / AnswerFlow / custom cURL, build
+  Gemini / OpenAI / Claude / Groq / Ollama / AnswerCue / custom cURL, build
   a mock fetch / SDK and assert the body shape produced when given a
   fixture image. Snapshots are fine, but lock in the wire format.
 
@@ -263,7 +263,7 @@ Files to add:
 - Wire `assertOutboundScopes('custom', ...)` into `chatWithCurl`.
 - Add `escapePromptInjection` to `buildScreenContextBlock`.
 - Apply Sharp resize universally before sending to any cloud provider, not
-  just AnswerFlow.
+  just AnswerCue.
 - Clean stale screenshot files from `userData/screenshots/` on startup
   (older than 7 days).
 
@@ -271,24 +271,24 @@ Files to add:
 
 ## Final verdict
 
-1. **Is AnswerFlow currently doing OCR?**
+1. **Is AnswerCue currently doing OCR?**
    **Yes** — real Tesseract.js, with a perceptual-hash cache. But the
    pipeline is only invoked from one IPC handler (`generate-what-to-say`),
    and on macOS the path is silently blocked by the `validateImagePath` bug
    whenever the renderer supplies `imagePaths` — which is the only way the
    UI ever calls it.
 
-2. **Is AnswerFlow currently using vision LLMs for OCR?**
+2. **Is AnswerCue currently using vision LLMs for OCR?**
    **No.** Vision LLMs receive the raw image *alongside* the Tesseract OCR
    text (for "What should I say") or alone (for Code Hint / Brainstorm).
    No code path treats a vision LLM as the OCR engine.
 
-3. **Is AnswerFlow sending screenshots directly to LLMs?**
+3. **Is AnswerCue sending screenshots directly to LLMs?**
    **Yes.** When the multimodal path runs, the raw PNG bytes go to Gemini /
-   OpenAI / Claude / Groq Scout / Ollama / cURL (resized for AnswerFlow
+   OpenAI / Claude / Groq Scout / Ollama / cURL (resized for AnswerCue
    only). The OCR text rides alongside in the prompt, not as a substitute.
 
-4. **Is AnswerFlow screen analysis legacy overlay-level?**
+4. **Is AnswerCue screen analysis legacy overlay-level?**
    **No.** Three gaps disqualify it:
    - The marquee "Answer from screen" chip is theatrical — it does not
      capture the screen.
@@ -325,8 +325,8 @@ node --test \
 
 node -e "
 const { validateImagePath } = require('./dist-electron/electron/utils/curlUtils.js');
-const userData = '/Users/evin/Library/Application Support/AnswerFlow';
-console.log(validateImagePath('/Users/evin/Library/Application Support/AnswerFlow/screenshots/abc.png', userData));
+const userData = '/Users/evin/Library/Application Support/AnswerCue';
+console.log(validateImagePath('/Users/evin/Library/Application Support/AnswerCue/screenshots/abc.png', userData));
 "
 # { isValid: false, reason: 'Paths outside app directory are not allowed' }
 ```

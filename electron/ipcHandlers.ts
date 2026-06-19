@@ -19,7 +19,7 @@ import { TRIAL_SENTINEL_KEY } from './config/constants';
 import { AI_RESPONSE_LANGUAGES, RECOGNITION_LANGUAGES } from './config/languages';
 import { CHAT_MODE_PROMPT } from './llm/prompts';
 
-const DEBUG_LOG_FILE_NAME = 'answerflow_debug.log';
+const DEBUG_LOG_FILE_NAME = 'answercue_debug.log';
 
 export function initializeIpcHandlers(appState: AppState): void {
   const safeHandle = (
@@ -43,7 +43,7 @@ export function initializeIpcHandlers(appState: AppState): void {
    * Used to gate profile intelligence features (resume upload, JD upload, company research, etc.).
    */
   const isProOrTrialActive = (): boolean => {
-    // 1. Full premium license (Dodo / Gumroad / Natively API subscription)
+    // 1. Full premium license (Dodo / Gumroad / AnswerCue API subscription)
     try {
       const { LicenseManager } = require('../premium/electron/services/LicenseManager');
       if (LicenseManager.getInstance().isPremium()) return true;
@@ -253,7 +253,7 @@ export function initializeIpcHandlers(appState: AppState): void {
         !overlayWin.isDestroyed() &&
         overlayWin.webContents.id === senderWebContents.id
       ) {
-        // NativelyInterface logic - Resize ONLY the overlay window using dedicated method
+        // AnswerCueInterface logic - Resize ONLY the overlay window using dedicated method
         appState.getWindowHelper().setOverlayDimensions(width, height);
       } else if (
         launcherWin &&
@@ -414,7 +414,7 @@ export function initializeIpcHandlers(appState: AppState): void {
     return { success: true };
   });
 
-  // Generate suggestion from transcript - Natively-style text-only reasoning
+  // Generate suggestion from transcript - AnswerCue-style text-only reasoning
   safeHandle('generate-suggestion', async (event, context: string, lastQuestion: string) => {
     try {
       const suggestion = await appState.processingHelper
@@ -510,7 +510,7 @@ export function initializeIpcHandlers(appState: AppState): void {
   const _chatStreamsBySender = new Map<number, { streamId: number; controller: AbortController }>();
 
   // Matches narrow identity/meta probes only. Kept tight so coding/normal asks don't trip it.
-    // Prevents the small fast-mode model from over-firing the "I'm AnswerFlow" canned reply
+    // Prevents the small fast-mode model from over-firing the "I'm AnswerCue" canned reply
   // (which used to escape the prompt's hard rule for any ambiguous input).
   const IDENTITY_PROBE_RE =
     /^\s*(who\s+(are|r)\s+(you|u|this|natively)|what\s+(are|r)\s+(you|u)|are\s+you\s+(chatgpt|gpt[-\s]?\d?|claude|gemini|llama|an?\s+(ai|bot|llm|model|assistant))|what('?s|\s+is)\s+your\s+(name|model)|which\s+(ai|model|llm)\s+are\s+you|who\s+(made|built|created|developed|trained)\s+(you|this|natively)|what\s+model\s+(are\s+you|do\s+you\s+use)|introduce\s+yourself)\s*\??\s*$/i;
@@ -548,9 +548,9 @@ export function initializeIpcHandlers(appState: AppState): void {
         // Regex is `^...$` anchored, so non-probe questions cannot match.
         if (!imagePaths?.length && typeof message === 'string') {
           const identityHit = CREATOR_PROBE_RE.test(message)
-            ? 'AnswerFlow is maintained by the AnswerFlow project.'
+            ? 'AnswerCue is maintained by the AnswerCue project.'
             : IDENTITY_PROBE_RE.test(message)
-              ? "I'm AnswerFlow, an AI assistant."
+              ? "I'm AnswerCue, an AI assistant."
               : null;
           if (identityHit) {
             if (recordInSession) {
@@ -1099,7 +1099,7 @@ export function initializeIpcHandlers(appState: AppState): void {
   // Allowlist must mirror MeetingInterfaceTheme in src/lib/meetingInterfaceTheme.ts.
   // Any string that reaches a renderer via interface-theme:changed ends up in
   // a `data-interface-theme={value}` DOM attribute on the overlay's wrapper
-  // div (NativelyInterface.tsx). Without an allowlist, a compromised or buggy
+  // div (AnswerCueInterface.tsx). Without an allowlist, a compromised or buggy
   // renderer could broadcast an arbitrary string — at best CSS selector
   // mismatch (overlay falls back to default), at worst an attribute-injection
   // vector if any consumer ever switched from `setAttribute` to template
@@ -1358,11 +1358,11 @@ export function initializeIpcHandlers(appState: AppState): void {
       const { CredentialsManager } = require('./services/CredentialsManager');
       const cm = CredentialsManager.getInstance();
       const prevSttProvider = cm.getSttProvider();
-      cm.setNativelyApiKey(apiKey);
+      cm.setAnswerCueApiKey(apiKey);
 
       // Update LLMHelper immediately (same pattern as other provider keys)
       const llmHelper = appState.processingHelper.getLLMHelper();
-      llmHelper.setNativelyKey(apiKey || null);
+      llmHelper.setAnswerCueKey(apiKey || null);
 
       // Sync the model into LLMHelper and notify the UI whenever the effective default changed
       const defaultModel = cm.getDefaultModel();
@@ -1370,7 +1370,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       llmHelper.setModel(defaultModel, providers);
       appState.sendModelChanged(defaultModel);
 
-      // If setNativelyApiKey auto-promoted the STT provider to 'natively', reconfigure
+      // If setAnswerCueApiKey auto-promoted the STT provider to 'natively', reconfigure
       // the audio pipeline immediately — without this, the in-memory pipeline still uses
       // the old STT provider (e.g. Google) until the app restarts.
       const newSttProvider = cm.getSttProvider();
@@ -1381,7 +1381,7 @@ export function initializeIpcHandlers(appState: AppState): void {
         await appState.reconfigureSttProvider();
       }
 
-      // Auto-activate Natively Pro for pro/max/ultra API plans.
+      // Auto-activate AnswerCue Pro for pro/max/ultra API plans.
       // Skips silently if the user already has a Gumroad/Dodo lifetime license.
       if (apiKey) {
         try {
@@ -1437,7 +1437,7 @@ export function initializeIpcHandlers(appState: AppState): void {
 
       return { success: true };
     } catch (error: any) {
-      console.error('Error saving Natively API key:', error);
+      console.error('Error saving AnswerCue API key:', error);
       return { success: false, error: error.message };
     } finally {
       // Always bust the cache when the key changes so the next usage fetch is fresh
@@ -1471,7 +1471,7 @@ export function initializeIpcHandlers(appState: AppState): void {
   safeHandle('get-natively-usage', async () => {
     try {
       const { CredentialsManager } = require('./services/CredentialsManager');
-      const key = CredentialsManager.getInstance().getNativelyApiKey();
+      const key = CredentialsManager.getInstance().getAnswerCueApiKey();
       if (!key) return { ok: false, error: 'no_key' };
 
       // Return cached value if it's still fresh
@@ -1541,13 +1541,13 @@ export function initializeIpcHandlers(appState: AppState): void {
 
         // Auto-configure natively as the model + STT provider during trial
         const prevSttProvider = cm.getSttProvider();
-        cm.setNativelyApiKey(TRIAL_SENTINEL_KEY); // sentinel — activates natively model routing
+        cm.setAnswerCueApiKey(TRIAL_SENTINEL_KEY); // sentinel — activates natively model routing
         const newSttProvider = cm.getSttProvider();
         if (newSttProvider !== prevSttProvider) {
           await appState.reconfigureSttProvider();
         }
         const llmHelper = appState.processingHelper?.getLLMHelper?.();
-        if (llmHelper) llmHelper.setNativelyKey(TRIAL_SENTINEL_KEY);
+        if (llmHelper) llmHelper.setAnswerCueKey(TRIAL_SENTINEL_KEY);
       }
 
       const { trial_token, ...safeData } = data;
@@ -1643,9 +1643,9 @@ export function initializeIpcHandlers(appState: AppState): void {
       cm.clearTrialToken();
 
       // 3. Clear the trial sentinel key + revert model / STT to open defaults
-      cm.setNativelyApiKey('');
+      cm.setAnswerCueApiKey('');
       const llmHelper = appState.processingHelper?.getLLMHelper?.();
-      if (llmHelper) llmHelper.setNativelyKey(null);
+      if (llmHelper) llmHelper.setAnswerCueKey(null);
       await appState.reconfigureSttProvider();
 
       // 4. Deactivate Pro license (removes license.enc)
@@ -1920,7 +1920,7 @@ export function initializeIpcHandlers(appState: AppState): void {
         hasOpenaiKey: hasKey(creds.openaiApiKey),
         hasClaudeKey: hasKey(creds.claudeApiKey),
         hasDeepseekKey: hasKey(creds.deepseekApiKey),
-        hasNativelyKey: hasKey(creds.nativelyApiKey),
+        hasAnswerCueKey: hasKey(creds.nativelyApiKey),
         googleServiceAccountPath: creds.googleServiceAccountPath || null,
         sttProvider: 'local-whisper',
         groqSttModel: creds.groqSttModel || 'whisper-large-v3-turbo',
@@ -1960,7 +1960,7 @@ export function initializeIpcHandlers(appState: AppState): void {
         hasOpenaiKey: false,
         hasClaudeKey: false,
         hasDeepseekKey: false,
-        hasNativelyKey: false,
+        hasAnswerCueKey: false,
         googleServiceAccountPath: null,
         sttProvider: 'local-whisper',
         groqSttModel: 'whisper-large-v3-turbo',
@@ -3098,7 +3098,7 @@ export function initializeIpcHandlers(appState: AppState): void {
   //
   // Runs `tccutil reset Microphone <bundleId>` AND
   // `tccutil reset ScreenCapture <bundleId>` to clear stale macOS TCC entries
-  // for AnswerFlow. This is the user-facing self-service recovery for the
+  // for AnswerCue. This is the user-facing self-service recovery for the
   // dominant "permissions appear granted in System Settings but capture is
   // silently zero-filled" failure mode — which is caused by TCC binding the
   // grant to a binary's cdhash, and the cdhash changing on every rebuild
@@ -3125,9 +3125,9 @@ export function initializeIpcHandlers(appState: AppState): void {
       //                  (== package.json build.appId for electron-builder)
       // !app.isPackaged → 'com.github.Electron' (the dev Electron binary's
       //                   bundle id; TCC entries land here in dev mode)
-      bundleId = app.isPackaged ? 'com.answerflow.desktop' : 'com.github.Electron';
+      bundleId = app.isPackaged ? 'com.answercue.desktop' : 'com.github.Electron';
     } catch {
-      bundleId = 'com.answerflow.desktop';
+      bundleId = 'com.answercue.desktop';
     }
 
     const { execFile } = require('node:child_process');
@@ -3162,7 +3162,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       results,
       promptRelaunch: anyOk,
       message: anyOk
-        ? 'Permissions reset. Quit AnswerFlow completely (Cmd+Q) and reopen — macOS will ask you to grant Microphone and Screen Recording again. Approve both to restore audio capture.'
+        ? 'Permissions reset. Quit AnswerCue completely (Cmd+Q) and reopen — macOS will ask you to grant Microphone and Screen Recording again. Approve both to restore audio capture.'
         : `Permission reset failed for ${bundleId}. ${results
             .filter((r) => !r.ok)
             .map((r) => `${r.service}: ${r.output}`)
@@ -3232,7 +3232,7 @@ export function initializeIpcHandlers(appState: AppState): void {
   // which routes them through the vision provider fallback chain.
   // LEGACY OCR PATH DISABLED: the previous build called ScreenContextService.captureScreenFromPath
   // here to run Tesseract OCR before answering. That path is now removed from the runtime —
-  // Natively answers from the image directly via a vision-capable provider. Do not re-introduce
+  // AnswerCue answers from the image directly via a vision-capable provider. Do not re-introduce
   // OCR here unless a future explicit OCR-only mode is reintroduced.
   safeHandle(
     'generate-what-to-say',
@@ -4394,7 +4394,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       }
       const engine = orchestrator.getCompanyResearchEngine();
 
-      // Wire search provider: Tavily (user key) → Natively API (fallback) → none (LLM-only)
+      // Wire search provider: Tavily (user key) → AnswerCue API (fallback) → none (LLM-only)
       const { CredentialsManager } = require('./services/CredentialsManager');
       const cm = CredentialsManager.getInstance();
       const tavilyApiKey = cm.getTavilyApiKey();
@@ -4404,19 +4404,19 @@ export function initializeIpcHandlers(appState: AppState): void {
         } = require('../premium/electron/knowledge/TavilySearchProvider');
         engine.setSearchProvider(new TavilySearchProvider(tavilyApiKey));
       } else {
-        const nativelyKey = cm.getNativelyApiKey();
+        const nativelyKey = cm.getAnswerCueApiKey();
         if (nativelyKey) {
           const {
-            NativelySearchProvider,
-          } = require('../premium/electron/knowledge/NativelySearchProvider');
+            AnswerCueSearchProvider,
+          } = require('../premium/electron/knowledge/AnswerCueSearchProvider');
           // Pass the real trial token when key is the __trial__ sentinel so the
           // server can authenticate via x-trial-token instead of the invalid key.
           const trialToken = nativelyKey === TRIAL_SENTINEL_KEY ? cm.getTrialToken() : undefined;
           engine.setSearchProvider(
-            new NativelySearchProvider(nativelyKey, trialToken ?? undefined),
+            new AnswerCueSearchProvider(nativelyKey, trialToken ?? undefined),
           );
           console.log(
-            '[IPC] Company research: using Natively API search (no Tavily key configured)',
+            '[IPC] Company research: using AnswerCue API search (no Tavily key configured)',
           );
         }
       }

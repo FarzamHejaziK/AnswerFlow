@@ -2,7 +2,7 @@
  * Sentinel value stored in `nativelyApiKey` while a free trial is active.
  *
  * The trial token (`natively_trial_…`) is *not* a valid API key, but the
- * downstream code (LLMHelper, NativelyProSTT, ipcHandlers) needs to treat
+ * downstream code (LLMHelper, AnswerCueProSTT, ipcHandlers) needs to treat
  * "trial mode" identically to "key mode" for routing/auto-promotion. We store
  * this sentinel in CredentialsManager so the existing `if (nativelyApiKey)`
  * branches all light up, then swap the auth header to `x-trial-token` at the

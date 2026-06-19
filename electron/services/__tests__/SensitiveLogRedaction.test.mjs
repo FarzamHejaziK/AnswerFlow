@@ -53,7 +53,7 @@ test('STT providers log transcript metadata without transcript text', () => {
     'electron/audio/RestSTT.ts',
     'electron/audio/DeepgramStreamingSTT.ts',
     'electron/audio/OpenAIStreamingSTT.ts',
-    'electron/audio/NativelyProSTT.ts',
+    'electron/audio/AnswerCueProSTT.ts',
     'electron/audio/ElevenLabsStreamingSTT.ts',
   ];
 

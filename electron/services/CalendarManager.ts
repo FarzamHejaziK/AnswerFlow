@@ -13,9 +13,9 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "YOUR_CLIENT_ID_HERE";
 const REDIRECT_URI = "http://localhost:11111/auth/callback";
 const SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"];
 const TOKEN_PATH = path.join(app.getPath('userData'), 'calendar_tokens.enc');
-// Base URL for the natively-api proxy. Override with NATIVELY_API_URL for local dev
+// Base URL for the natively-api proxy. Override with ANSWERCUE_API_URL for local dev
 // (e.g. http://localhost:3000). Trailing slash is stripped to keep route concat clean.
-const NATIVELY_API_URL = (process.env.NATIVELY_API_URL || 'https://api.natively.software').replace(/\/+$/, '');
+const ANSWERCUE_API_URL = (process.env.ANSWERCUE_API_URL || 'https://api.natively.software').replace(/\/+$/, '');
 
 if (GOOGLE_CLIENT_ID === "YOUR_CLIENT_ID_HERE") {
     console.warn('[CalendarManager] GOOGLE_CLIENT_ID is using the default placeholder. Calendar features will not work until a valid client ID is provided via env var or build config.');
@@ -99,7 +99,7 @@ export class CalendarManager extends EventEmitter {
                         }
 
                         if (code) {
-                            res.end('Authentication successful! You can close this window and return to AnswerFlow.');
+                            res.end('Authentication successful! You can close this window and return to AnswerCue.');
                             // Exchange code for tokens. If this throws, still finish so the server closes.
                             try {
                                 await this.exchangeCodeForToken(code);
@@ -169,7 +169,7 @@ export class CalendarManager extends EventEmitter {
             // Fetch (vs. axios) so this call shares the global keep-alive pool with every other
             // request to api.natively.software and exposes the same error shape (res.ok / res.status)
             // as the rest of the codebase.
-            const response = await fetch(`${NATIVELY_API_URL}/api/calendar/exchange`, {
+            const response = await fetch(`${ANSWERCUE_API_URL}/api/calendar/exchange`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ code, redirect_uri: REDIRECT_URI }),
@@ -236,7 +236,7 @@ export class CalendarManager extends EventEmitter {
 
         try {
             // Proxied through natively-api so GOOGLE_CLIENT_SECRET never ships in the desktop app.
-            const response = await fetch(`${NATIVELY_API_URL}/api/calendar/refresh`, {
+            const response = await fetch(`${ANSWERCUE_API_URL}/api/calendar/refresh`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ refresh_token: this.refreshToken }),
@@ -343,7 +343,7 @@ export class CalendarManager extends EventEmitter {
         const { Notification } = require('electron');
         const notif = new Notification({
             title: 'Meeting starting soon',
-            body: `"${event.title}" starts in 2 minutes. Start AnswerFlow?`,
+            body: `"${event.title}" starts in 2 minutes. Start AnswerCue?`,
             actions: [
                 { type: 'button', text: 'Start Meeting' },
                 { type: 'button', text: 'Dismiss' }

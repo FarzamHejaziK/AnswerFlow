@@ -4,10 +4,10 @@
 **Owner:** TBD
 **Last updated:** 2026-05-15
 
-This is the design document for at-rest encryption of AnswerFlow's local SQLite
+This is the design document for at-rest encryption of AnswerCue's local SQLite
 database (meetings, transcripts, AI responses, reference files, mode metadata).
 The current implementation stores all of this in plaintext at
-`<userData>/answerflow.sqlite`.
+`<userData>/answercue.sqlite`.
 
 The retention controls shipped in Phase 9 (this pass) reduce **how long**
 plaintext lives on disk — encryption reduces **what an attacker with disk
@@ -60,7 +60,7 @@ substitutes.
 
 ### Phase 1 — key plumbing (no schema change yet)
 1. Generate a 256-bit master key on first launch using `crypto.randomBytes(32)`.
-2. Store it in keytar under service `answerflow`, account `db-master-key`.
+2. Store it in keytar under service `answercue`, account `db-master-key`.
 3. Add `DatabaseManager.getEncryptionKey()` that lazy-loads from keytar.
 4. Surface a setting `requirePasswordOnLaunch` (default off) — when on, derive
    the key from the password via `argon2id` instead of storing it raw.
@@ -75,7 +75,7 @@ substitutes.
 
 ### Phase 3 — migration
 1. On first launch with an existing plaintext DB:
-   1. Export with `VACUUM INTO 'answerflow-encrypted.sqlite'` after attaching with
+   1. Export with `VACUUM INTO 'answercue-encrypted.sqlite'` after attaching with
       the key.
    2. Atomically swap (rename old → `.bak`, rename encrypted → main).
    3. Schedule the `.bak` for deletion after 7 days (gives the user a recovery

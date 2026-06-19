@@ -82,7 +82,7 @@ test('scheduleRestart() debounces at 250ms and bails when no longer active', () 
   // 250ms debounce delay.
   assert.ok(
     /setTimeout\s*\([\s\S]*?,\s*250\s*\)/.test(body),
-    'BUG: scheduleRestart() must use a 250ms setTimeout (matches NativelyProSTT inline reconnect pattern).',
+    'BUG: scheduleRestart() must use a 250ms setTimeout (matches AnswerCueProSTT inline reconnect pattern).',
   );
   // pendingRestartTimer is cleared on re-entry.
   assert.ok(

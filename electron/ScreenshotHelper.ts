@@ -40,7 +40,7 @@ function assertScreenRecordingPermission(): void {
     case 'denied':
       throw new Error(
         'Screen Recording permission is denied. Enable it in System Settings > ' +
-        'Privacy & Security > Screen Recording, then restart AnswerFlow.'
+        'Privacy & Security > Screen Recording, then restart AnswerCue.'
       );
     case 'restricted':
       throw new Error(
@@ -54,7 +54,7 @@ function assertScreenRecordingPermission(): void {
       // appears behind other apps on macOS Sequoia). Tell the user to restart instead.
       throw new Error(
         'Screen Recording permission has not been granted yet. ' +
-        'Please restart AnswerFlow — you will be prompted to grant access on next launch.'
+        'Please restart AnswerCue — you will be prompted to grant access on next launch.'
       );
   }
 }
@@ -490,7 +490,7 @@ export class ScreenshotHelper {
         throw new Error(
           process.platform === 'darwin'
             ? 'Screen capture permission denied. Please grant screen recording permission in System Settings > Privacy & Security > Screen Recording.'
-            : 'Screen capture permission denied by the OS. Please try again or restart AnswerFlow.'
+            : 'Screen capture permission denied by the OS. Please try again or restart AnswerCue.'
         );
       }
       if ((error as NodeJS.ErrnoException).name === 'NotFoundError') {

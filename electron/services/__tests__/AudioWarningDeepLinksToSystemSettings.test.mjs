@@ -1,9 +1,9 @@
 // Regression test for UX3 fix (2026-05-28/29) in
-// src/components/NativelyInterface.tsx.
+// src/components/AnswerCueInterface.tsx.
 //
 // Pre-fix: the audio warning banner had a single "Open Settings" button
 // that always called toggleSettingsWindow(), forcing the user to navigate
-// from Natively's internal Settings into the macOS System Settings >
+// from AnswerCue's internal Settings into the macOS System Settings >
 // Privacy & Security > {Microphone|Screen Recording} pane themselves.
 //
 // Post-fix: the banner is channel-aware:
@@ -28,7 +28,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '../../..');
-const tsxPath = path.join(root, 'src/components/NativelyInterface.tsx');
+const tsxPath = path.join(root, 'src/components/AnswerCueInterface.tsx');
 const source = fs.readFileSync(tsxPath, 'utf8');
 
 // Locate the SystemAudioWarning type body. The type is a local alias
@@ -49,7 +49,7 @@ const CAPTURE_HANDLER_RE =
 describe('UX3: audio warning banner deep-links to the correct macOS System Settings pane', () => {
   it('SystemAudioWarning type includes an optional `channel: \'system\' | \'mic\'` field', () => {
     const m = source.match(TYPE_RE);
-    assert.ok(m, 'could not locate `type SystemAudioWarning = { ... };` in NativelyInterface.tsx');
+    assert.ok(m, 'could not locate `type SystemAudioWarning = { ... };` in AnswerCueInterface.tsx');
     const body = m[1];
     // Optional marker `?` is required so existing call sites that don't
     // pass channel still type-check, but the field itself must be there.
@@ -98,7 +98,7 @@ describe('UX3: audio warning banner deep-links to the correct macOS System Setti
       source.includes(
         'x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone',
       ),
-      'BUG: the macOS Microphone deep-link URL is missing from NativelyInterface.tsx. ' +
+      'BUG: the macOS Microphone deep-link URL is missing from AnswerCueInterface.tsx. ' +
         'Without it the mic-channel banner cannot one-click into the right pane (UX3).',
     );
   });
@@ -108,7 +108,7 @@ describe('UX3: audio warning banner deep-links to the correct macOS System Setti
       source.includes(
         'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture',
       ),
-      'BUG: the macOS Screen Recording deep-link URL is missing from NativelyInterface.tsx. ' +
+      'BUG: the macOS Screen Recording deep-link URL is missing from AnswerCueInterface.tsx. ' +
         'Without it the system-channel banner cannot one-click into the right pane (UX3).',
     );
   });

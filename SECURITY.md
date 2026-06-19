@@ -2,13 +2,13 @@
 
 _Last updated: June 14, 2026_
 
-AnswerFlow is a desktop interview assistant that handles sensitive local data: audio, transcript text, user documents, provider keys, screenshots when enabled, and interview history. Please treat security and privacy issues seriously.
+AnswerCue is a desktop interview assistant that handles sensitive local data: audio, transcript text, user documents, provider keys, screenshots when enabled, and interview history. Please treat security and privacy issues seriously.
 
 ## Supported Versions
 
 Security fixes target the current release line on GitHub:
 
-<https://github.com/FarzamHejaziK/AnswerFlow/releases>
+<https://github.com/FarzamHejaziK/AnswerCue/releases>
 
 Older versions may not receive fixes. Please reproduce issues on the latest release or current `main` before reporting when possible.
 
@@ -18,7 +18,7 @@ Do not report security vulnerabilities through public issues, public discussions
 
 Open a private GitHub security advisory draft here:
 
-<https://github.com/FarzamHejaziK/AnswerFlow/security/advisories>
+<https://github.com/FarzamHejaziK/AnswerCue/security/advisories>
 
 If GitHub advisories are unavailable, contact the repository owner through the GitHub profile associated with this repository and avoid posting exploit details publicly.
 
@@ -60,6 +60,6 @@ The following are normally out of scope unless they expose user data or enable l
 
 ## Privacy Boundary
 
-AnswerFlow should keep local data local unless the user explicitly uses a feature that sends prompt text to the selected LLM provider. The currently supported LLM provider keys are OpenAI, Google Gemini, and Anthropic Claude. Transcription uses the packaged local Moonshine Base model.
+AnswerCue should keep local data local unless the user explicitly uses a feature that sends prompt text to the selected LLM provider. The currently supported LLM provider keys are OpenAI, Google Gemini, and Anthropic Claude. Transcription uses the packaged local Moonshine Base model.
 
 If you find a path where transcript, document Markdown, screenshots, custom instructions, provider keys, or interview history are sent somewhere unexpected, report it as security-sensitive.

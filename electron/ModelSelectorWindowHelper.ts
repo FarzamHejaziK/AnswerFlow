@@ -148,7 +148,7 @@ export class ModelSelectorWindowHelper {
             // the user's foreground app.
             //
             // Close-on-outside is handled by the renderer's mousedown
-            // capture handler (NativelyInterface.tsx) dispatching the
+            // capture handler (AnswerCueInterface.tsx) dispatching the
             // `model-selector:close-if-open` IPC, guarded against the
             // toggle button via `data-model-selector-toggle`.
             ...(isMac ? { type: 'panel' as const } : {}),
@@ -181,8 +181,8 @@ export class ModelSelectorWindowHelper {
 
         this.window.once('ready-to-show', () => {
             // Apply NSPanel stealth attributes BEFORE any show() so clicking
-            // the model selector on the Natively overlay doesn't activate
-            // Natively and dim the user's foreground app (Zoom/browser) mid
+            // the model selector on the AnswerCue overlay doesn't activate
+            // AnswerCue and dim the user's foreground app (Zoom/browser) mid
             // meeting. Without this, model-switch was a regular focusable
             // window and every interaction stole focus. Failure non-fatal.
             //
@@ -218,7 +218,7 @@ export class ModelSelectorWindowHelper {
         // which races with the toggle button's open path and produced the
         // historical "first click does nothing, second click opens" bug.
         // Three orthogonal close paths cover the legitimate cases instead:
-        //   • renderer mousedown capture handler in NativelyInterface.tsx
+        //   • renderer mousedown capture handler in AnswerCueInterface.tsx
         //     dispatches `model-selector:close-if-open` for overlay-internal
         //     outside clicks (guarded by data-model-selector-toggle).
         //   • main.ts subscribes to app.on('did-resign-active') (macOS) /

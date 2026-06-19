@@ -19,7 +19,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const modPath = path.resolve(__dirname, '../../../dist-electron/electron/utils/curlUtils.js');
 const { validateImagePath } = await import(pathToFileURL(modPath).href);
 
-const MAC_USER_DATA = '/Users/alice/Library/Application Support/Natively';
+const MAC_USER_DATA = '/Users/alice/Library/Application Support/AnswerCue';
 
 describe('validateImagePath — macOS userData ordering (obs 2631)', () => {
   test('allows screenshot path inside userData even though it starts with /Users/', () => {

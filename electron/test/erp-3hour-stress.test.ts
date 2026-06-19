@@ -1044,7 +1044,7 @@ async function runAllTests(): Promise<void> {
 
   const allPassed = passedCount === totalCount;
   console.log(allPassed
-    ? '✅ ALL TESTS PASSED — Natively is ready for 3-hour ERP discovery meetings'
+    ? '✅ ALL TESTS PASSED — AnswerCue is ready for 3-hour ERP discovery meetings'
     : `❌ ${totalCount - passedCount} TEST(S) FAILED — see above for details`);
 }
 

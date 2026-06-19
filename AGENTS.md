@@ -2,7 +2,7 @@
 
 ## Git Workflow
 
-- This checkout tracks the public fork at `origin`: `https://github.com/FarzamHejaziK/AnswerFlow.git`.
+- This checkout tracks the public fork at `origin`: `https://github.com/FarzamHejaziK/AnswerCue.git`.
 - The original upstream project is configured as `upstream`; use `git remote -v` if you need the exact remote URL.
 - Push local work to `origin`, not `upstream`.
 - Keep the local `upstream` push URL disabled unless the user explicitly asks to change it.
@@ -21,7 +21,7 @@ git push origin main
 ## Repository Notes
 
 - The repository is AGPL-3.0. Public modified releases should keep the license notices and make corresponding source available.
-- Some submodule paths are not fully available from the public checkout: `premium` points to a private or unavailable repository, and `answerflow-api` is a gitlink without a matching `.gitmodules` entry.
+- Some submodule paths are not fully available from the public checkout: `premium` points to a private or unavailable repository, and `answercue-api` is a gitlink without a matching `.gitmodules` entry.
 
 ## Local Development
 

@@ -119,7 +119,7 @@ test('Windows selected-output mismatch has a specific system audio warning', () 
   );
   assert.match(
     main,
-    /Natively is listening to an output that is different from the Windows default/,
+    /AnswerCue is listening to an output that is different from the Windows default/,
     'output mismatch copy should tell Windows users why interviewer audio is silent',
   );
   assert.match(

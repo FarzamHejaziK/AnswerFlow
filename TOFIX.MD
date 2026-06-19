@@ -36,7 +36,7 @@ Launching all four agents in
   StealthKeyboardManager, RateLimiter,
    CalendarManager, RAGManager,
   EmbeddingPipeline, OllamaManager,
-  NativelyInterface. Same
+  AnswerCueInterface. Same
   FFI/timer/state-machine patterns.
   - test-engineer — Designs the
   behavioural test harness for the 4

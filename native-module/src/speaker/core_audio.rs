@@ -84,7 +84,7 @@ impl SpeakerInput {
         // CoreAudio only accepts `main_sub_device` when the same UID is also present in
         // `sub_device_list`; otherwise HAL silently leaves the main sub-device empty
         // and the tap can start without producing input buffers.
-        let agg_name = cf::String::from_str("NativelySystemAudioTap");
+        let agg_name = cf::String::from_str("AnswerCueSystemAudioTap");
         let agg_uid = cf::Uuid::new().to_cf_string();
 
         let sub_device = cf::DictionaryOf::with_keys_values(

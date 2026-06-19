@@ -18,7 +18,7 @@ const nullAdCampaigns = (
   _appStartTime?: number,
   _lastMeetingEndTime?: number | null,
   _isProcessingMeeting?: boolean,
-  _hasNativelyApi?: boolean
+  _hasAnswerCueApi?: boolean
 ) => ({
   activeAd: null as string | null,
   dismissAd: (_campaignId?: string) => {},
@@ -59,7 +59,7 @@ const _negotiationCard = import.meta.glob<any>(
   { eager: true }
 );
 const _nativelyApiPromo = import.meta.glob<any>(
-  '../../premium/src/NativelyApiPromoToaster.tsx',
+  '../../premium/src/AnswerCueApiPromoToaster.tsx',
   { eager: true }
 );
 const _maxUltraUpgradeToaster = import.meta.glob<any>(
@@ -102,8 +102,8 @@ export const useAdCampaigns: typeof nullAdCampaigns =
 export const NegotiationCoachingCard: React.FC<any> =
   get(_negotiationCard, 'NegotiationCoachingCard', NullComponent);
 
-export const NativelyApiPromoToaster: React.FC<any> =
-  get(_nativelyApiPromo, 'NativelyApiPromoToaster', NullComponent);
+export const AnswerCueApiPromoToaster: React.FC<any> =
+  get(_nativelyApiPromo, 'AnswerCueApiPromoToaster', NullComponent);
 
 export const MaxUltraUpgradeToaster: React.FC<any> =
   get(_maxUltraUpgradeToaster, 'MaxUltraUpgradeToaster', NullComponent);

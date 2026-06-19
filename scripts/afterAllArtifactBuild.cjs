@@ -6,7 +6,7 @@
  *
  *  (1) electron-builder's own DMG-creation CORRUPTS the embedded app signature.
  *      Apple's notary log on the eb-built DMG reported:
- *        "The signature of the binary is invalid" @ AnswerFlow.app/Contents/MacOS/AnswerFlow
+ *        "The signature of the binary is invalid" @ AnswerCue.app/Contents/MacOS/AnswerCue
  *      Verified: the standalone .app and the .app inside the ZIP pass
  *      `codesign --verify --deep --strict`, but the .app inside the eb DMG does NOT
  *      (even after ditto-copying it back out) — so eb's DMG layout step breaks it.
@@ -38,16 +38,17 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 
-const VOLNAME = 'AnswerFlow';
+const VOLNAME = 'AnswerCue';
 const BACKGROUND = path.resolve(__dirname, '..', 'assets', 'dmg-background.png');
-const VOLICON = path.resolve(__dirname, '..', 'assets', 'answerflow', 'answerflow.icns');
+const VOLICON = path.resolve(__dirname, '..', 'assets', 'answercue', 'answercue.icns');
 
 function sha512base64(file) {
   return crypto.createHash('sha512').update(fs.readFileSync(file)).digest('base64');
 }
 
 function resolveDeveloperIdIdentity() {
-  if (process.env.NATIVELY_SIGN_IDENTITY) return process.env.NATIVELY_SIGN_IDENTITY;
+  if (process.env.ANSWERCUE_SIGN_IDENTITY) return process.env.ANSWERCUE_SIGN_IDENTITY;
+  if (process.env.ANSWERCUE_SIGN_IDENTITY) return process.env.ANSWERCUE_SIGN_IDENTITY;
   if (process.env.CSC_NAME) return process.env.CSC_NAME;
   try {
     const out = execSync('security find-identity -v -p codesigning', { encoding: 'utf8' });
@@ -163,7 +164,7 @@ function verifyZipManifest(outDir) {
  */
 function buildStyledDmg({ appPath, outDmg, identity }) {
   // Stage ONLY the .app in an isolated temp dir so create-dmg's window contains
-  // exactly [AnswerFlow.app, Applications-droplink] and nothing stray.
+  // exactly [AnswerCue.app, Applications-droplink] and nothing stray.
   const stage = fs.mkdtempSync(path.join(os.tmpdir(), 'natively-dmg-'));
   const stagedApp = path.join(stage, path.basename(appPath));
   execFileSync('ditto', [appPath, stagedApp], { stdio: 'inherit' }); // ditto preserves signatures

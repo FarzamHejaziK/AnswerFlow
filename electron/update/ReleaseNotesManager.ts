@@ -18,7 +18,7 @@ export class ReleaseNotesManager {
     private static instance: ReleaseNotesManager;
     private cachedNotes: ParsedReleaseNotes | null = null;
     private readonly repoOwner = "FarzamHejaziK";
-    private readonly repoName = "AnswerFlow";
+    private readonly repoName = "AnswerCue";
 
     private constructor() { }
 

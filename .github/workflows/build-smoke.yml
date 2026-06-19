@@ -32,7 +32,7 @@ jobs:
 
   api-smoke:
     # Runs weekly (Monday 09:00 UTC) and on demand via workflow_dispatch.
-    # Requires secrets: NATIVELY_API_KEY (or NATIVELY_TRIAL_TOKEN) set in repo.
+    # Requires secrets: ANSWERCUE_API_KEY (or ANSWERCUE_TRIAL_TOKEN) set in repo.
     # Without credentials the suite is skipped cleanly via the env gate.
     name: API Smoke (weekly)
     runs-on: macos-latest
@@ -57,9 +57,9 @@ jobs:
         run: npm run build:electron
 
       - name: Run API smoke tests
-        run: npm test -- --test-name-pattern 'Natively API'
+        run: npm test -- --test-name-pattern 'AnswerCue API'
         env:
-          RUN_NATIVELY_API_E2E: ${{ secrets.RUN_NATIVELY_API_E2E }}
-          NATIVELY_API_KEY: ${{ secrets.NATIVELY_API_KEY }}
-          NATIVELY_TRIAL_TOKEN: ${{ secrets.NATIVELY_TRIAL_TOKEN }}
-          NATIVELY_API_BASE: ${{ secrets.NATIVELY_API_BASE }}
+          RUN_ANSWERCUE_API_E2E: ${{ secrets.RUN_ANSWERCUE_API_E2E }}
+          ANSWERCUE_API_KEY: ${{ secrets.ANSWERCUE_API_KEY }}
+          ANSWERCUE_TRIAL_TOKEN: ${{ secrets.ANSWERCUE_TRIAL_TOKEN }}
+          ANSWERCUE_API_BASE: ${{ secrets.ANSWERCUE_API_BASE }}

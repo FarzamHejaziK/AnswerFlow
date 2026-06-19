@@ -142,7 +142,7 @@ async function resolveMacScreenCaptureCapabilityTEST(
       capturable: false,
       effectiveDenied: true,
       sourceCount: 0,
-      message: 'Screen Recording is restricted by device policy. Interviewer audio will not be captured. Contact your administrator to allow screen capture for Natively.',
+      message: 'Screen Recording is restricted by device policy. Interviewer audio will not be captured. Contact your administrator to allow screen capture for AnswerCue.',
     };
   }
 

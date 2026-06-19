@@ -1,6 +1,6 @@
 /**
  * Pure helpers for imperative streaming token coalescing.
- * Used by NativelyInterface queueToken — extracted for unit tests.
+ * Used by AnswerCueInterface queueToken — extracted for unit tests.
  */
 
 import {
@@ -156,7 +156,7 @@ export function simulateSameIntentTokenStream(messages, tokens, intent, idFactor
 }
 
 /**
- * flushToken when streamingMsgIdRef is null (NativelyInterface ~1488-1492).
+ * flushToken when streamingMsgIdRef is null (AnswerCueInterface ~1488-1492).
  * Buffered text is discarded; no commitStreamingFlush runs.
  */
 export function discardStreamingBufferWhenNoMsgId(streamingText) {
@@ -220,7 +220,7 @@ export function simulatePrewiredPlaceholderWithSyncFinalize(
     intent,
     placeholderId,
   );
-  // Production mirrors this: NativelyInterface.finalizeStreamingByIntent captures
+  // Production mirrors this: AnswerCueInterface.finalizeStreamingByIntent captures
   // streamingMsgIdRef.current BEFORE calling flushToken (which clears the ref +
   // sets isStreaming=false on the row), then passes the captured id to
   // finalizeStreamingByIntentMessages so the byId path always wins.

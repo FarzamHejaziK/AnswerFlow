@@ -30,10 +30,10 @@ userData path:
 ```
 node -e "
 const { validateImagePath } = require('./dist-electron/electron/utils/curlUtils.js');
-const userData = '/Users/evin/Library/Application Support/AnswerFlow';
+const userData = '/Users/evin/Library/Application Support/AnswerCue';
 [
-  '/Users/evin/Library/Application Support/AnswerFlow/screenshots/abc.png',
-  '/Users/evin/Library/Application Support/AnswerFlow/extra_screenshots/sel.png',
+  '/Users/evin/Library/Application Support/AnswerCue/screenshots/abc.png',
+  '/Users/evin/Library/Application Support/AnswerCue/extra_screenshots/sel.png',
   '/Users/evin/Desktop/screenshots/img.png',
   '/etc/passwd',
   'C:\\Users\\v\\evil.png',
@@ -44,9 +44,9 @@ const userData = '/Users/evin/Library/Application Support/AnswerFlow';
 Output:
 
 ```
-/Users/evin/Library/Application Support/AnswerFlow/screenshots/abc.png
+/Users/evin/Library/Application Support/AnswerCue/screenshots/abc.png
   → { isValid: false, reason: 'Paths outside app directory are not allowed' }
-/Users/evin/Library/Application Support/AnswerFlow/extra_screenshots/sel.png
+/Users/evin/Library/Application Support/AnswerCue/extra_screenshots/sel.png
   → { isValid: false, reason: 'Paths outside app directory are not allowed' }
 /Users/evin/Desktop/screenshots/img.png
   → { isValid: false, reason: 'Paths outside app directory are not allowed' }
@@ -71,7 +71,7 @@ if (normalizedPath.startsWith('/etc/') ||
 
 `/Users/` is rejected **unconditionally** — before the function reaches the
 `startsWith(userDataPath)` allow-list at line 285. macOS `userData` is
-`/Users/<user>/Library/Application Support/AnswerFlow`, which always starts with
+`/Users/<user>/Library/Application Support/AnswerCue`, which always starts with
 `/Users/`. The allow-list is unreachable on macOS for this prefix.
 
 The downstream user-visible effect:
@@ -152,7 +152,7 @@ the file path only (`ScreenshotHelper.ts:564, 658, 703`).
   cloud screenshot upload per provider; `setProviderDataScopes`
   (`ipcHandlers.ts:763`) persists the policy.
 - **Bypass:** `LLMHelper.streamChat → streamChatWithGemini` calls
-  `streamWithAnswerFlow`, `streamWithCodexCli`, `streamWithOpenaiMultimodal`,
+  `streamWithAnswerCue`, `streamWithCodexCli`, `streamWithOpenaiMultimodal`,
   etc. with `imagePaths` directly. For Ollama the only path
   (`LLMHelper.ts:2484`) passes `imagePaths?.[0]` without any per-image scope
   check; this is safe because Ollama is local, but verify if the user
@@ -228,7 +228,7 @@ referencing the System Settings path. `desktopCapturer.getSources` errors
 
 **Status: risky.**
 
-- For AnswerFlow API uploads, images are downscaled with Sharp to ≤768 px on
+- For AnswerCue API uploads, images are downscaled with Sharp to ≤768 px on
   the long edge (`LLMHelper.ts:900-905`, "Compress before sending"). Good.
 - For OpenAI / Claude / Gemini / Ollama / cURL, the image bytes go straight
   in. No client-side size cap. A 5 MB Retina PNG triples in base64 and can
@@ -258,5 +258,5 @@ referencing the System Settings path. `desktopCapturer.getSources` errors
 | 4 | P1 | Custom cURL provider receives screenshots without scope-policy gate | Run `assertOutboundScopes('custom', ...)` in `chatWithCurl` |
 | 5 | P2 | OCR text is XML-escaped but not run through `escapePromptInjection` | Apply the same escape used for reference files in `buildScreenContextBlock` |
 | 6 | P2 | Wrong-display capture falls back silently to `sources[0]` | Emit a UI warning when display_id lookup falls back |
-| 7 | P2 | No image-size cap before sending to Claude/OpenAI/Gemini | Reuse the Sharp resize already used for AnswerFlow for every cloud path |
+| 7 | P2 | No image-size cap before sending to Claude/OpenAI/Gemini | Reuse the Sharp resize already used for AnswerCue for every cloud path |
 | 8 | P3 | Screenshots persist on disk if app exits without `clearQueues()` | Schedule a startup sweep of `userData/screenshots/` older than N days |

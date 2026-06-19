@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react" // forcing refresh
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { ToastProvider, ToastViewport } from "./components/ui/toast"
-import NativelyInterface from "./components/NativelyInterface"
+import AnswerCueInterface from "./components/AnswerCueInterface"
 import SettingsPopup from "./components/SettingsPopup" // Keeping for legacy/specific window support if needed
 import Launcher from "./components/Launcher"
 import ModelSelectorWindow from "./components/ModelSelectorWindow"
@@ -9,7 +9,7 @@ import SettingsOverlay from "./components/SettingsOverlay"
 import StartupSequence from "./components/StartupSequence"
 import { AnimatePresence, motion } from "framer-motion"
 import { SupportToaster } from "./components/SupportToaster"
-import { NativelyQuotaBanner } from "./components/NativelyQuotaBanner"
+import { AnswerCueQuotaBanner } from "./components/AnswerCueQuotaBanner"
 import { FreeTrialBanner }      from "./components/trial/FreeTrialBanner"
 import { FreeTrialModal }       from "./components/trial/FreeTrialModal"
 import { TrialPromoToaster }    from "./components/trial/TrialPromoToaster"
@@ -24,7 +24,7 @@ import {
   PremiumPromoToaster,
   RemoteCampaignToaster,
   PremiumUpgradeModal,
-  NativelyApiPromoToaster,
+  AnswerCueApiPromoToaster,
   MaxUltraUpgradeToaster,
   useAdCampaigns
 } from './premium'
@@ -132,7 +132,7 @@ const App: React.FC = () => {
   const [incompatibleWarning, setIncompatibleWarning] = useState<{count: number; oldProvider: string; newProvider: string} | null>(null);
   
   // API check
-  const [hasNativelyApi, setHasNativelyApi] = useState<boolean>(false);
+  const [hasAnswerCueApi, setHasAnswerCueApi] = useState<boolean>(false);
 
   // ── Promo toasters ───────────────────────────────────────
   const [showTrialPromo,         setShowTrialPromo]         = useState(false);
@@ -153,7 +153,7 @@ const App: React.FC = () => {
     appStartTime,
     lastMeetingEndTime,
     isProcessingMeeting,
-    hasNativelyApi
+    hasAnswerCueApi
   );
 
   // Preview shortcuts — Ctrl/Cmd+Shift+1-5 force-show any ad card.
@@ -205,9 +205,9 @@ const App: React.FC = () => {
         }
       });
 
-    // Also check for Natively API key
+    // Also check for AnswerCue API key
     window.electronAPI?.getStoredCredentials?.()
-      .then((creds) => setHasNativelyApi(!!creds?.hasNativelyKey))
+      .then((creds) => setHasAnswerCueApi(!!creds?.hasAnswerCueKey))
       .catch(() => {});
 
     // ── Trial: check stored token and start polling if active ──
@@ -496,7 +496,7 @@ const App: React.FC = () => {
                   transition: 'background-color 75ms ease, border-color 75ms ease, box-shadow 75ms ease'
                 } as React.CSSProperties}
               >
-                <NativelyInterface
+                <AnswerCueInterface
                   onEndMeeting={handleEndMeeting}
                   overlayOpacity={overlayOpacity}
                   interfaceTheme="default"
@@ -604,7 +604,7 @@ const App: React.FC = () => {
       </AnimatePresence>
 
       {SHOW_PROMOTIONAL_SURFACES && <SupportToaster />}
-      {SHOW_PROMOTIONAL_SURFACES && <NativelyQuotaBanner />}
+      {SHOW_PROMOTIONAL_SURFACES && <AnswerCueQuotaBanner />}
 
 
 
@@ -621,7 +621,7 @@ const App: React.FC = () => {
       {SHOW_PROMOTIONAL_SURFACES && (
         <TrialPromoToaster
           isOpen={showTrialPromo}
-          hasNativelyKey={hasNativelyApi}
+          hasAnswerCueKey={hasAnswerCueApi}
           hasTrialToken={!!activeTrial}
           onDismiss={() => setShowTrialPromo(false)}
           onStartTrial={async () => {
@@ -661,7 +661,7 @@ const App: React.FC = () => {
       {/* Ad toasters — render whenever activeAd is set (isLauncherMainView guard bypassed
           when triggered via preview shortcut so the card always surfaces) */}
       {SHOW_PROMOTIONAL_SURFACES && (isLauncherMainView || !!activeAd) && !isSettingsOpen && (
-        <NativelyApiPromoToaster
+        <AnswerCueApiPromoToaster
           isOpen={activeAd === 'natively_api'}
           onDismiss={() => dismissAd('natively_api')}
           onOpenSettings={(tab: string) => openSettingsExclusive(tab)}

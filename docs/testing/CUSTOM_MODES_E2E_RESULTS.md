@@ -83,7 +83,7 @@ Every deletion-cleanup test verifies that its chosen probe sentinel is uniquely 
 | # | Scenario | Expected retrieval | Result |
 |---|---|---|---|
 | 1 | Runtime TypeError on streamChat | `debug_error_log.txt` | PASS |
-| 2 | API auth/stream contract | `debug_api_contract.xml` (x-answerflow-stream) | PASS |
+| 2 | API auth/stream contract | `debug_api_contract.xml` (x-answercue-stream) | PASS |
 | 3 | Failing retriever test 5000ms | `debug_test_results.json` (EmbeddingPipeline mock) | PASS |
 | 4 | Performance regression on mode hot-swap | `debug_architecture_notes.md` (ownership rules) | PASS |
 | 5 | Unsafe undefined handling review | `debug_code_snippet.ts` (modePromptSuffix can be undefined) | PASS |

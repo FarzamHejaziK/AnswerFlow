@@ -2,7 +2,7 @@
 // =====================================================================
 // These routing tests assert the OLD screenUnderstandingMode enum
 // ('auto' | 'vision_only' | 'ocr_only' | 'private') and the OCR-first
-// behavior that has been removed from Natively's runtime in the
+// behavior that has been removed from AnswerCue's runtime in the
 // vision-first pivot. They are kept on disk so the legacy behavior can
 // be revived if a future opt-in OCR mode is reintroduced; until then
 // they should not run.
@@ -25,9 +25,9 @@ const test = (name, opts, fn) => {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '../../..');
 const screenDir = path.join(root, 'dist-electron/electron/services/screen');
-process.env.NATIVELY_TEST_USER_DATA = '/Users/alice/Library/Application Support/Natively';
+process.env.ANSWERCUE_TEST_USER_DATA = '/Users/alice/Library/Application Support/AnswerCue';
 
-const VALID_IMAGE = '/Users/alice/Library/Application Support/Natively/screenshots/test.png';
+const VALID_IMAGE = '/Users/alice/Library/Application Support/AnswerCue/screenshots/test.png';
 
 async function loadService() {
   const mod = await import(pathToFileURL(path.join(screenDir, 'ScreenUnderstandingService.js')).href);

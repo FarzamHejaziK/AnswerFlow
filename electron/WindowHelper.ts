@@ -259,8 +259,8 @@ export class WindowHelper {
         if (mode === 'none') {
           if (isMac) {
             return app.isPackaged
-              ? path.join(process.resourcesPath, 'answerflow.icns')
-              : path.resolve(__dirname, '../../assets/answerflow/answerflow.icns');
+              ? path.join(process.resourcesPath, 'answercue.icns')
+              : path.resolve(__dirname, '../../assets/answercue/answercue.icns');
           } else if (isWin) {
             return app.isPackaged
               ? path.join(process.resourcesPath, 'assets/icons/win/icon.ico')
@@ -346,7 +346,7 @@ export class WindowHelper {
       skipTaskbar: true, // Don't show separately in dock/taskbar
       hasShadow: false, // Prevent shadow from adding perceived size/artifacts
       // macOS NSPanel + nonactivating: lets the overlay become the key window
-      // (and receive keystrokes for the chat input) without activating Natively
+      // (and receive keystrokes for the chat input) without activating AnswerCue
       // in the dock / menu bar / screen-share, so the user's foreground app
       // stays "in front." Required for the chat:focusInput stealth-typing path.
       // Windows/Linux fall back to a regular focusable window.
@@ -380,7 +380,7 @@ export class WindowHelper {
       // promote the panel to key window → user's foreground app keeps key
       // state in the dock, menu bar, screen-share, focus-followers),
       // hidesOnDeactivate=NO, and the right collectionBehavior. Without this,
-      // ANY click on the overlay (button, input, anywhere) activates Natively
+      // ANY click on the overlay (button, input, anywhere) activates AnswerCue
       // and dims the user's foreground app — even with type:'panel' set.
       //
       // DEFERRED to `ready-to-show`: getNativeWindowHandle() returns the
@@ -680,7 +680,7 @@ export class WindowHelper {
     if (this.isWindowVisible) {
       this.hideMainWindow();
     } else {
-      // Always show without stealing focus — Natively is a ghost overlay.
+      // Always show without stealing focus — AnswerCue is a ghost overlay.
       // The user is in another app; show the window on top but leave OS focus alone.
       // They can click the window to focus it if they need to type.
       this.showMainWindow(true);

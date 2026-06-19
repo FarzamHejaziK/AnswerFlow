@@ -24,7 +24,7 @@ import sharp from 'sharp';
 const root = path.resolve(import.meta.dirname, '..');
 const screenDir = path.join(root, 'dist-electron/electron/services/screen');
 const iterations = Number.parseInt(process.env.SCREEN_UNDERSTANDING_BENCH_ITERATIONS || '5', 10);
-process.env.NATIVELY_TEST_USER_DATA = process.env.NATIVELY_TEST_USER_DATA || os.tmpdir();
+process.env.ANSWERCUE_TEST_USER_DATA = process.env.ANSWERCUE_TEST_USER_DATA || os.tmpdir();
 
 const { ImageOptimizer } = await import(pathToFileURL(path.join(screenDir, 'ImageOptimizer.js')).href);
 const { runVisionFallback } = await import(pathToFileURL(path.join(screenDir, 'VisionProviderFallbackChain.js')).href);
@@ -40,7 +40,7 @@ function round(n, digits = 2) {
   return Number(n.toFixed(digits));
 }
 
-// Build synthetic screenshots representative of the workloads Natively sees.
+// Build synthetic screenshots representative of the workloads AnswerCue sees.
 // We generate them on-disk once and re-use across iterations so the bench is
 // dominated by the optimizer/chain work, not by fixture creation.
 async function buildFixtures() {

@@ -23,10 +23,10 @@ export const FIXTURES = [
     fontSize: 44,
     lineHeight: 56,
     lines: [
-      'Hello Natively',
+      'Hello AnswerCue',
       'Screen understanding works',
     ],
-    expectedWords: ['Hello', 'Natively', 'Screen', 'understanding', 'works'],
+    expectedWords: ['Hello', 'AnswerCue', 'Screen', 'understanding', 'works'],
   },
   {
     id: 'ocr_code_problem',

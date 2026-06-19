@@ -77,7 +77,7 @@ export function buildTeamMeetContext() {
 
 export function buildGeneralFounderContext() {
   return [
-    'Founder of Natively. Series Seed.',
+    'Founder of AnswerCue. Series Seed.',
     'Investor sync this Friday with Hyperion Partners.',
     'Avoid revealing numbers not in the metrics sheet.',
   ].join('\n');

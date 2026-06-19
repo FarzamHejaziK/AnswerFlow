@@ -10,7 +10,7 @@
 Production signing lives in a **separate opt-in config file** so the default build is untouched:
 
 - **Default / dev build** (`npm run app:build` / `npm run dist`): **completely unchanged** — `package.json` `build.mac` still has `identity: null`, so electron-builder skips application signing and only the ad-hoc `scripts/ad-hoc-sign.js` signs. No Apple account needed. (We deliberately did NOT remove `identity: null` from package.json: on arm64 that would trigger electron-builder's own ad-hoc fallback and double-sign the bundle.)
-- **Production build** (`npm run app:build:signed` / `npm run dist:signed`): runs `electron-builder --config electron-builder.signed.cjs`. That config spreads the package.json `build` block and overrides only mac signing keys: `hardenedRuntime: true`, `entitlements: assets/entitlements.mac.plist`, `entitlementsInherit: assets/entitlements.mac.inherit.plist` (minimal helper entitlements), `gatekeeperAssess: false`, `notarize: false`, `identity` from `ANSWERFLOW_SIGN_IDENTITY`/`CSC_NAME` (or auto-discovered from `CSC_LINK`/keychain). It sets `ANSWERFLOW_PRODUCTION_SIGN=1` so `ad-hoc-sign.js` stands down (never clobbers the Developer ID signature) and wires `afterSign: scripts/notarize.js` to notarize + staple.
+- **Production build** (`npm run app:build:signed` / `npm run dist:signed`): runs `electron-builder --config electron-builder.signed.cjs`. That config spreads the package.json `build` block and overrides only mac signing keys: `hardenedRuntime: true`, `entitlements: assets/entitlements.mac.plist`, `entitlementsInherit: assets/entitlements.mac.inherit.plist` (minimal helper entitlements), `gatekeeperAssess: false`, `notarize: false`, `identity` from `ANSWERCUE_SIGN_IDENTITY`/`CSC_NAME` (or auto-discovered from `CSC_LINK`/keychain). It sets `ANSWERCUE_PRODUCTION_SIGN=1` so `ad-hoc-sign.js` stands down (never clobbers the Developer ID signature) and wires `afterSign: scripts/notarize.js` to notarize + staple.
 
 New files: `electron-builder.signed.cjs`, `assets/entitlements.mac.inherit.plist`, `scripts/notarize.js`.
 
@@ -29,9 +29,9 @@ New files: `electron-builder.signed.cjs`, `assets/entitlements.mac.inherit.plist
 
 ## Decision needed from you: appId
 
-Current `appId` is `com.electron.meeting-notes` (a stale Electron-sample-style id). For a professional notarized release you likely want something like `software.answerflow.desktop` or `com.answerflow.app`.
+Current `appId` is `com.electron.meeting-notes` (a stale Electron-sample-style id). For a professional notarized release you likely want something like `software.answercue.desktop` or `com.answercue.app`.
 
-⚠️ **Changing appId resets ALL macOS TCC permissions** (mic, screen recording, accessibility) for existing installs, because TCC keys grants by bundle id. It may also affect how `answerflow-api` associates installs/licenses if the backend keys anything to the bundle id. **Do this once, before the first notarized public release — not after.** Tell Claude the desired id and confirm the backend doesn't key on bundle id, and it will update `package.json` `build.appId`.
+⚠️ **Changing appId resets ALL macOS TCC permissions** (mic, screen recording, accessibility) for existing installs, because TCC keys grants by bundle id. It may also affect how `answercue-api` associates installs/licenses if the backend keys anything to the bundle id. **Do this once, before the first notarized public release — not after.** Tell Claude the desired id and confirm the backend doesn't key on bundle id, and it will update `package.json` `build.appId`.
 
 ---
 
@@ -67,7 +67,7 @@ npm run dist:signed
 ## Verification commands (run on the produced `.app` / `.dmg`)
 
 ```bash
-APP="release/mac-arm64/AnswerFlow.app"   # adjust arch/path
+APP="release/mac-arm64/AnswerCue.app"   # adjust arch/path
 
 # 1. Code signature is valid and from your Developer ID (not ad-hoc "-")
 codesign --verify --deep --strict --verbose=2 "$APP"
@@ -83,8 +83,8 @@ xcrun stapler validate "$APP"
 #   Expect: "The validate action worked!"
 
 # 4. DMG is also signed + stapled
-codesign --verify --verbose=2 "release/AnswerFlow-2.6.0-arm64.dmg"
-xcrun stapler validate "release/AnswerFlow-2.6.0-arm64.dmg"
+codesign --verify --verbose=2 "release/AnswerCue-2.6.0-arm64.dmg"
+xcrun stapler validate "release/AnswerCue-2.6.0-arm64.dmg"
 
 # 5. Entitlements actually present on the app
 codesign -d --entitlements :- "$APP"

@@ -33,18 +33,18 @@ The new tests added by this QA plan:
 | `electron/services/__tests__/ModeLongSession.test.mjs` | 100-turn synthetic transcript with mid-session correction | 3 |
 | `electron/services/__tests__/ModeRetrievalIsolation.test.mjs` | grounding-guard, fallback, customContext, citation, budget | 6 |
 | `electron/services/__tests__/ProfileIntelligenceGate.test.mjs` | profile:* IPC handlers enforce Pro/trial gate | 8 |
-| `electron/services/__tests__/AnswerFlowApiE2E.test.mjs` | real AnswerFlow API smoke (env-gated; entire suite skipped by default) | 0 reported (suite-level skip) |
+| `electron/services/__tests__/AnswerCueApiE2E.test.mjs` | real AnswerCue API smoke (env-gated; entire suite skipped by default) | 0 reported (suite-level skip) |
 | **Total new tests** | | **86** |
 
 ## Coverage summary
 
 | Mode | Scenarios shipped | Sentinel fact | Mode-bleeding pairs covered |
 |---|---|---|---|
-| general | 5 | "Q1 ARR run-rate $480k for AnswerFlow pilot" | general↔sales, general↔negotiation |
+| general | 5 | "Q1 ARR run-rate $480k for AnswerCue pilot" | general↔sales, general↔negotiation |
 | sales | 5 | "Acme enterprise discount floor 17%" | sales↔interview, sales↔lecture |
 | recruiting | 5 | "Backend Platform role: Kafka + PostgreSQL + incident response" | recruiting↔team-meet |
 | team-meet | 5 | "Sarah owns the launch checklist, due Friday" | team-meet↔general |
-| looking-for-work | 5 | "PriceX price-comparison website; scaled AnswerFlow to 10k users" | interview↔sales |
+| looking-for-work | 5 | "PriceX price-comparison website; scaled AnswerCue to 10k users" | interview↔sales |
 | technical-interview | 5 | "Interviewer prefers O(n log n) only if O(n) is impossible" | technical↔recruiting |
 | lecture | 5 | "Green's function is a likely 12-mark exam topic" | lecture↔technical |
 | negotiation (overlay) | 5 | "BATNA: competing offer $185k base + RSUs" | general↔negotiation |
@@ -61,10 +61,10 @@ The new tests added by this QA plan:
 | 2026-05-15 12:01 | `npm run test:modes:long` | 3 | 3 | 0 | 0 | 100-turn simulation, ~0.15ms retrieval at turn ~95 |
 | 2026-05-15 12:02 | `ModeBleedingMatrix.test.mjs + ModeBleeding.test.mjs` | 18 | 18 | 0 | 0 | No cross-mode bleed |
 | 2026-05-15 12:02 | `ModePersonaScenarios + ModeReferenceFormats + ModeRetrievalIsolation + ModeFixtureIntegrity` | 66 | 66 | 0 | 0 | 7 modes × 5 scenarios + format coverage |
-| 2026-05-15 12:05 | `RUN_ANSWERFLOW_API_E2E=1 AnswerFlowApiE2E.test.mjs` (real API) | 3 | 3 | 0 | 0 | After fixing FINDING-011 (wrong base URL + auth header) |
-| 2026-05-15 12:07 | `modes-live-response-eval.ts` (live AnswerFlow API baseline) | 45 | 40-45 | 0-5 | 0 | 0 creator-name leaks; remaining failures are over-narrow / over-broad harness regexes, not real prompt regressions |
-| 2026-05-15 12:50 | `modes-live-response-eval.ts` post-Phase-4 (live AnswerFlow API baseline) | 45 | 44 | 1 | 0 | 97.8% pass; only fail is FINDING-012 (real LLM bug, harness correctly caught it). 0 creator-name leaks. By mode: general 7/7, sales 7/7, recruiting 7/7, team-meet 6/6, looking-for-work 6/6, lecture 6/6, technical-interview 5/6 |
-| 2026-05-15 12:50 | `AnswerFlowApiE2E` (real API smoke) post-Phase-4 | 3 | 3 | 0 | 0 | Health endpoint 404 (intentional), invalid auth rejected, valid auth accepted |
+| 2026-05-15 12:05 | `RUN_ANSWERCUE_API_E2E=1 AnswerCueApiE2E.test.mjs` (real API) | 3 | 3 | 0 | 0 | After fixing FINDING-011 (wrong base URL + auth header) |
+| 2026-05-15 12:07 | `modes-live-response-eval.ts` (live AnswerCue API baseline) | 45 | 40-45 | 0-5 | 0 | 0 creator-name leaks; remaining failures are over-narrow / over-broad harness regexes, not real prompt regressions |
+| 2026-05-15 12:50 | `modes-live-response-eval.ts` post-Phase-4 (live AnswerCue API baseline) | 45 | 44 | 1 | 0 | 97.8% pass; only fail is FINDING-012 (real LLM bug, harness correctly caught it). 0 creator-name leaks. By mode: general 7/7, sales 7/7, recruiting 7/7, team-meet 6/6, looking-for-work 6/6, lecture 6/6, technical-interview 5/6 |
+| 2026-05-15 12:50 | `AnswerCueApiE2E` (real API smoke) post-Phase-4 | 3 | 3 | 0 | 0 | Health endpoint 404 (intentional), invalid auth rejected, valid auth accepted |
 
 ## Automated QA run: full sweep (2026-05-15 11:00–12:10)
 
@@ -77,13 +77,13 @@ The new tests added by this QA plan:
 | `npm run test:modes:long` | 3 | 3 | 0 | 0 |
 | `ModeBleedingMatrix + ModeBleeding` | 18 | 18 | 0 | 0 |
 | `ModePersona/Reference/Isolation/Fixture` | 66 | 66 | 0 | 0 |
-| `AnswerFlowApiE2E` (RUN_ANSWERFLOW_API_E2E=1) | 3 | 3 | 0 | 0 |
+| `AnswerCueApiE2E` (RUN_ANSWERCUE_API_E2E=1) | 3 | 3 | 0 | 0 |
 | `modes-live-response-eval` baseline (live API) | 45 | 40–45 (nondeterministic) | 0–5 | 0 |
 | `modePrompts + suggestionPromptAssembly` (prompt-safety) | 22 | 22 | 0 | 0 |
 
 **Top 5 longest deterministic tests:** see `electron/llm/__tests__/ConversationSummarizer.test.mjs` (`run: timeout is enforced ...` 503ms — intentional), `stream: AbortSignal aborts ...` (153ms), `run: AbortSignal aborts ...` (151ms), `runWhatShouldISay passes screenContext` (136ms), `validateExecutable: bare unfound name ...` (109ms).
 
-**Real bug found and fixed:** FINDING-011 — `electron/services/__tests__/AnswerFlowApiE2E.test.mjs` used the wrong base URL (`api.answerflow.app`, NXDOMAIN) and wrong auth header style (`Authorization: Bearer`). Production uses `https://api.github.com/FarzamHejaziK/AnswerFlow` and `x-answerflow-key`. After fix the smoke test resolves and returns 404 for `/v1/health` (route is intentionally absent), which the test accepts. Fix documented in BUGFIX_LOG.
+**Real bug found and fixed:** FINDING-011 — `electron/services/__tests__/AnswerCueApiE2E.test.mjs` used the wrong base URL (`api.answercue.app`, NXDOMAIN) and wrong auth header style (`Authorization: Bearer`). Production uses `https://api.github.com/FarzamHejaziK/AnswerCue` and `x-answercue-key`. After fix the smoke test resolves and returns 404 for `/v1/health` (route is intentionally absent), which the test accepts. Fix documented in BUGFIX_LOG.
 
 **Live LLM eval (`modes-live-response-eval.ts`) — observations across two consecutive runs with the same key:**
 
@@ -106,12 +106,12 @@ All 5 Run-B failures were harness regex artifacts, not real prompt regressions. 
 
 **Environment notes:**
 - `RUN_INTERNET_FIXTURE_COLLECTION` was NOT set; cached synthetic fixtures used.
-- `RUN_ANSWERFLOW_API_E2E=1` was set only for the targeted AnswerFlow API smoke run with the provided key passed via `ANSWERFLOW_API_KEY` env var. Key is never written to a log or committed.
+- `RUN_ANSWERCUE_API_E2E=1` was set only for the targeted AnswerCue API smoke run with the provided key passed via `ANSWERCUE_API_KEY` env var. Key is never written to a log or committed.
 - No new product code changed in this run except the test-file URL/header fix.
 
 ## Known limitations
 
-* Real AnswerFlow API tests are env-gated behind `RUN_ANSWERFLOW_API_E2E=1`. They are **skipped** by default to avoid burning trial quota and to keep CI hermetic. The skip path is exercised every run.
+* Real AnswerCue API tests are env-gated behind `RUN_ANSWERCUE_API_E2E=1`. They are **skipped** by default to avoid burning trial quota and to keep CI hermetic. The skip path is exercised every run.
 * PDF/DOCX parsing through Profile Intelligence (`KnowledgeOrchestrator.ingestDocument`) requires a premium gate (`isProOrTrialActive()`). When the gate is closed, ingestion is asserted to return `Pro license required` — that is success. When the gate is open we test ingestion end-to-end.
 * `EmbeddingPipeline.isReady()` is false in the test harness (no provider booted) so the hybrid retriever falls back to lexical. We assert `usedFallback === true` on hybrid calls, then exercise lexical paths directly.
 
@@ -123,7 +123,7 @@ See section "Final verdict" at the bottom of this document after the last test r
 
 * **Is Modes Manager production-ready?** Yes for the seven shipping templates. CRUD, isolation, prompt-prefix dedup, custom context, reference files, and active-mode switching are all verified by 86 new tests + 213 pre-existing tests. The note-section seeding for every template is exercised by `ModesManager.test.mjs`.
 * **Profile Intelligence working?** Yes when the Pro/trial gate opens. All 5 premium handlers (`profile:upload-resume`, `profile:upload-jd`, `profile:set-mode`, `profile:research-company`, `profile:generate-negotiation`) are verified to invoke `isProOrTrialActive()` *before* any data work, with the gate check ordered before the orchestrator call. `user_profile` and `resume_nodes` schema tables verified to exist. Live ingest path (DocumentReader / KnowledgeOrchestrator) is the next E2E layer — currently exercised by manual QA only; documented as a follow-up.
-* **Resume / JD / custom context correctly injected?** Yes at the ModesManager level: customContext appears as a retrievable source with `sourceType: 'custom_context'`, and the looking-for-work scenario asserts a resume sentinel "PriceX … scaled AnswerFlow to 10k users" is retrieved when the candidate is asked a behavioral question. Profile-Intelligence-side resume parsing into `<candidate_experience>` / `<candidate_projects>` blocks is integration-tested by the existing PromptAssembler suite via fixtures; this QA pass verified the gate, not the parser.
+* **Resume / JD / custom context correctly injected?** Yes at the ModesManager level: customContext appears as a retrievable source with `sourceType: 'custom_context'`, and the looking-for-work scenario asserts a resume sentinel "PriceX … scaled AnswerCue to 10k users" is retrieved when the candidate is asked a behavioral question. Profile-Intelligence-side resume parsing into `<candidate_experience>` / `<candidate_projects>` blocks is integration-tested by the existing PromptAssembler suite via fixtures; this QA pass verified the gate, not the parser.
 * **Reference files truly used?** Yes — 40 scenario tests prove that the right sentinel from the right file is retrieved per scenario, and 9 mode-bleeding-matrix tests prove that switching modes drops the prior mode's sentinels.
 * **Mode bleeding present?** No, under correct ModesManager usage. The retriever isolates by the file list it is handed (which is `getReferenceFiles(activeMode.id)`). Documented carefully in `ModeBleedingMatrix.test.mjs` — the safety boundary is the manager call, not the retriever, and the existing `ModeBleeding.test.mjs` covers the manager-level guard.
 * **Strongest mode by suite pass-rate:** sales — every objection scenario hits the right reference file (pricing, competitor, security, playbook, pipeline) and isolation holds under the foreign-sentinel matrix.
@@ -134,7 +134,7 @@ See section "Final verdict" at the bottom of this document after the last test r
   2. **FINDING-002 (low)** — apostrophe-stripping in the tokenizer collapses `Green's` to `green` + `s` (which is then dropped by the >2 char filter), losing one matching token for short academic phrases.
   3. **FINDING-003 (medium)** — `ModeHybridRetriever.retrieve` calls `getEmbedding` per chunk in a sequential loop (`electron/services/modes/ModeHybridRetriever.ts:391`); batch this for large mode-reference sets (one API roundtrip per chunk on cold start blocks the answer).
   4. **FINDING-004 (info)** — Premium ingest path (PDF/DOCX through `KnowledgeOrchestrator.ingestDocument`) is gated end-to-end but has no service-level test that asserts a parsed resume produces the right `<candidate_experience>` blocks downstream. Add a Pro-gated fixture test under `electron/services/__tests__/` once a Pro test account is available.
-  5. **FINDING-005 (low)** — AnswerFlow API smoke test exists but is suite-skipped by default; add a CI lane that runs it weekly with a dedicated test trial token to surface API regressions early.
+  5. **FINDING-005 (low)** — AnswerCue API smoke test exists but is suite-skipped by default; add a CI lane that runs it weekly with a dedicated test trial token to surface API regressions early.
   6. **FINDING-006 (info)** — No UI/Playwright/Spectron E2E exists; service-level tests cover the same logical surface, but a renderer-level test would catch IPC contract drift (currently we test the IPC handler source, not the live invoke).
   7. **FINDING-007 (low)** — `lexical-only fallback` is silent in production logs (only an `[ModeHybridRetriever]` warn). Promote to a telemetry event so support can confirm when embeddings are unavailable.
   8. **FINDING-008 (info)** — Long-session test runs at ~0.16ms/turn but is informational only; add an explicit threshold (e.g. <5ms/turn at p95) once we have real-world latency baselines.

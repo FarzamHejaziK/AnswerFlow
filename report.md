@@ -1,8 +1,8 @@
-# AnswerFlow vs legacy overlay Deep Codebase Audit
+# AnswerCue vs legacy overlay Deep Codebase Audit
 
 ## 1. Executive Summary
 
-AnswerFlow is not a toy. It already has real pieces of a legacy overlay-style desktop AI meeting assistant:
+AnswerCue is not a toy. It already has real pieces of a legacy overlay-style desktop AI meeting assistant:
 
 - Electron overlay app
 - Native audio capture
@@ -26,7 +26,7 @@ The biggest issue is that the product currently treats “modes” mostly as pro
 Mode = prompt + context policy + trigger rules + retrieval scope + actions + output templates + post-call workflow + telemetry + security policy
 ```
 
-AnswerFlow has the prompt/context/note-template part. It does not yet have first-class mode actions, per-mode retrieval policy, per-mode trigger rules, per-mode telemetry, per-mode privacy controls, or robust behavioral QA.
+AnswerCue has the prompt/context/note-template part. It does not yet have first-class mode actions, per-mode retrieval policy, per-mode trigger rules, per-mode telemetry, per-mode privacy controls, or robust behavioral QA.
 
 The second biggest issue is security. Several main-process IPC paths expose sensitive material or allow dangerous data flow:
 
@@ -39,21 +39,21 @@ The second biggest issue is security. Several main-process IPC paths expose sens
 
 The third biggest issue is reliability. The app has many STT/provider/reconnect/fallback paths, but test coverage is mostly structural/unit-level. There is not enough QA proving live meeting behavior under long sessions, provider failures, mode switching, reference-grounding, audio recovery, or hallucination pressure.
 
-Final verdict: AnswerFlow has strong raw ingredients, but the current implementation is best described as an advanced local AI meeting assistant prototype with serious product ambition, not yet a hardened legacy overlay-grade realtime meeting OS.
+Final verdict: AnswerCue has strong raw ingredients, but the current implementation is best described as an advanced local AI meeting assistant prototype with serious product ambition, not yet a hardened legacy overlay-grade realtime meeting OS.
 
 ---
 
 ## 2. Feature Parity Matrix
 
-| Capability | AnswerFlow current state | legacy overlay-style expectation | Gap severity |
+| Capability | AnswerCue current state | legacy overlay-style expectation | Gap severity |
 |---|---|---|---|
 | Live insights / answer suggestions | Real streaming suggestion system via `IntelligenceEngine.ts` and LLM wrappers | Continuous action/insight detection with lifecycle, confidence, evidence, and user action tracking | High |
 | Auto answer / Dynamic Actions | Partial. `PlannerDecision.ts` routes to answer/clarify/recap/follow-up/brainstorm | Action cards triggered by context, mode, confidence, and user command | High |
 | Modes | Real templates in `ModesManager.ts`; active prompt suffixes, custom context, reference files, note sections | Modes as full workflows with action policy, RAG policy, triggers, notes, telemetry, security | High |
 | Reference files | Real storage/injection; lexical retrieval via `ModeContextRetriever.ts` | Hybrid semantic RAG, citations, source ranking, ingestion, stale-index handling | High |
 | Meeting-history RAG | SQLite/sqlite-vec infrastructure exists via `RAGManager.ts` / `DatabaseManager.ts` | Integrated context engine across meetings, docs, profile, current call | Medium-high |
-| Audio/STT | Many providers implemented: AnswerFlow, Deepgram, OpenAI, Google, ElevenLabs, Local Whisper, REST, etc. | Battle-tested realtime capture with robust simulation/soak coverage | Medium-high |
-| Provider layer | Gemini/Groq/OpenAI/Claude/Ollama/AnswerFlow/custom cURL support in `LLMHelper.ts` | Policy-aware router by privacy, cost, latency, modality, health, mode | High |
+| Audio/STT | Many providers implemented: AnswerCue, Deepgram, OpenAI, Google, ElevenLabs, Local Whisper, REST, etc. | Battle-tested realtime capture with robust simulation/soak coverage | Medium-high |
+| Provider layer | Gemini/Groq/OpenAI/Claude/Ollama/AnswerCue/custom cURL support in `LLMHelper.ts` | Policy-aware router by privacy, cost, latency, modality, health, mode | High |
 | Overlay UX | Electron always-on-top/transparent/stealth behavior in `WindowHelper.ts` | Native-feeling overlay with reliable capture invisibility claims and clear caveats | Medium |
 | Post-call notes | Real mode-specific summary pipeline in `MeetingPersistence.ts` | Validated schemas, CRM/ATS/export workflows, evidence-linked notes | Medium |
 | Profile intelligence | Some profile/resume/JD/knowledge modules appear present | Strong entity/profile memory linked to live context and modes | Medium-high |
@@ -198,7 +198,7 @@ Needed tests:
 
 ## 5. Auto Answer / Dynamic Actions Audit
 
-AnswerFlow has an early version of dynamic action routing, but it is not legacy overlay-grade.
+AnswerCue has an early version of dynamic action routing, but it is not legacy overlay-grade.
 
 Evidence:
 
@@ -224,7 +224,7 @@ Evidence:
 
 What this means:
 
-- AnswerFlow can detect some answer opportunities.
+- AnswerCue can detect some answer opportunities.
 - It can route to answer/clarify/recap/follow-up/brainstorm.
 - It can begin speculative answer generation from interim transcript.
 
@@ -441,7 +441,7 @@ Evidence:
   - `electron/audio/SystemAudioCapture.ts`
   - `electron/audio/MicrophoneCapture.ts`
 - STT providers:
-  - `AnswerFlowProSTT.ts`
+  - `AnswerCueProSTT.ts`
   - `DeepgramStreamingSTT.ts`
   - `OpenAIStreamingSTT.ts`
   - `ElevenLabsStreamingSTT.ts`
@@ -455,7 +455,7 @@ Evidence:
 Strengths:
 
 - Multi-provider STT is real.
-- AnswerFlow hosted STT has WebSocket buffering and reconnect behavior.
+- AnswerCue hosted STT has WebSocket buffering and reconnect behavior.
 - Deepgram has reconnect constants and buffering.
 - Local Whisper exists.
 - Google STT appears to handle stream restarts.
@@ -469,7 +469,7 @@ Weaknesses:
 - No robust evidence that partial/final transcript ordering survives reconnect.
 - No robust evidence that stop/flush race is fixed across all providers.
 - No real-device matrix encoded in tests.
-- Hosted AnswerFlow STT sends audio to cloud, contradicting any broad “local-only” privacy claim unless clearly disclosed.
+- Hosted AnswerCue STT sends audio to cloud, contradicting any broad “local-only” privacy claim unless clearly disclosed.
 
 Critical QA cases missing:
 
@@ -495,7 +495,7 @@ Critical QA cases missing:
 
 Evidence:
 
-- Supports Gemini, Groq, OpenAI, Claude, AnswerFlow, Ollama, Codex CLI, custom providers.
+- Supports Gemini, Groq, OpenAI, Claude, AnswerCue, Ollama, Codex CLI, custom providers.
 - Contains provider clients and keys.
 - Handles prompt assembly, image handling, provider selection, streaming, fallback, custom cURL, caching, and knowledge interception.
 - `ProviderRouter.ts` exists and models provider availability/capabilities.
@@ -540,7 +540,7 @@ GeminiProvider
 OpenAIProvider
 ClaudeProvider
 GroqProvider
-AnswerFlowProvider
+AnswerCueProvider
 OllamaProvider
 CustomCurlProvider
 MediaPreprocessor
@@ -568,7 +568,7 @@ Recommended:
 
 ```ts
 interface ProviderPolicy {
-  privacy: 'local_only' | 'user_configured_cloud' | 'answerflow_cloud_allowed';
+  privacy: 'local_only' | 'user_configured_cloud' | 'answercue_cloud_allowed';
   latencyClass: 'realtime' | 'balanced' | 'quality';
   allowedProviders?: LLMProviderId[];
   disallowedProviders?: LLMProviderId[];
@@ -639,7 +639,7 @@ Product gap:
   - answer accept/dismiss
   - post-call continuity
 
-AnswerFlow has overlay foundations, but the product-level dynamic action UX appears incomplete.
+AnswerCue has overlay foundations, but the product-level dynamic action UX appears incomplete.
 
 ---
 
@@ -650,7 +650,7 @@ This is a major gap.
 Current state:
 
 - Many `console.log`, `console.warn`, `console.error` calls.
-- `main.ts` logs console output to `~/Documents/answerflow_debug.log`.
+- `main.ts` logs console output to `~/Documents/answercue_debug.log`.
 - Provider attempts are logged in places.
 - No strong evidence of structured telemetry.
 
@@ -868,11 +868,11 @@ Current lexical retrieval and fallback raw injection are not enough.
 
 ### 13.4 “Local/offline/private” claims need qualification
 
-AnswerFlow supports local paths, but also hosted AnswerFlow STT and cloud LLM/STT providers. Product copy must be precise:
+AnswerCue supports local paths, but also hosted AnswerCue STT and cloud LLM/STT providers. Product copy must be precise:
 
 - Local Whisper is local.
 - Ollama/Codex local-ish paths may be local depending config.
-- AnswerFlow API STT sends audio to hosted backend.
+- AnswerCue API STT sends audio to hosted backend.
 - Deepgram/OpenAI/Google/ElevenLabs send audio/text externally.
 
 ### 13.5 Post-call workflow is partial
@@ -1214,7 +1214,7 @@ electron/llm/providers/GeminiProvider.ts
 electron/llm/providers/OpenAIProvider.ts
 electron/llm/providers/ClaudeProvider.ts
 electron/llm/providers/GroqProvider.ts
-electron/llm/providers/AnswerFlowProvider.ts
+electron/llm/providers/AnswerCueProvider.ts
 electron/llm/providers/OllamaProvider.ts
 electron/llm/providers/CustomCurlProvider.ts
 ```
@@ -1268,7 +1268,7 @@ electron/telemetry/LocalTelemetrySink.ts
    - custom provider
    - Ollama
    - Codex if enabled
-   - AnswerFlow if available/mocked
+   - AnswerCue if available/mocked
 
 Assertions:
 
@@ -1317,11 +1317,11 @@ Assert:
 
 ### STT/audio tests
 
-15. AnswerFlowProSTT auth failure.
+15. AnswerCueProSTT auth failure.
 
-16. AnswerFlowProSTT DNS failure.
+16. AnswerCueProSTT DNS failure.
 
-17. AnswerFlowProSTT reconnect cap.
+17. AnswerCueProSTT reconnect cap.
 
 18. Deepgram reconnect and buffer behavior.
 
@@ -1381,7 +1381,7 @@ Assert:
 
 ## 18. Final Verdict
 
-AnswerFlow has impressive breadth. It already contains many systems that a legacy overlay competitor needs: overlay, audio capture, STT providers, LLM providers, modes, reference files, RAG infrastructure, screenshots, meeting persistence, and post-call summaries.
+AnswerCue has impressive breadth. It already contains many systems that a legacy overlay competitor needs: overlay, audio capture, STT providers, LLM providers, modes, reference files, RAG infrastructure, screenshots, meeting persistence, and post-call summaries.
 
 But the product is currently held back by five structural problems:
 
@@ -1399,6 +1399,6 @@ The highest-leverage product move is not “make auto-answer more automatic.” 
 Mode Runtime + Context Engine + Dynamic Actions + Hybrid RAG + Provider Policy + Telemetry
 ```
 
-That architecture would move AnswerFlow from “AI assistant with modes” toward “legacy overlay-style realtime meeting OS.”
+That architecture would move AnswerCue from “AI assistant with modes” toward “legacy overlay-style realtime meeting OS.”
 
 Until then, the current codebase should be marketed carefully: powerful, local-first-capable, extensible, and open-source, but not yet more complete or more reliable than legacy overlay in the areas that matter most during live meetings.

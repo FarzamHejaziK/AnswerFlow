@@ -1,6 +1,6 @@
 /**
  * Pure stealth focus / tap-engage guards (unit-tested).
- * Mirrors blockInputFocus and click-to-engage onMouseDown in NativelyInterface.
+ * Mirrors blockInputFocus and click-to-engage onMouseDown in AnswerCueInterface.
  */
 
 /** CGEventTap is only available on macOS — set synchronously from preload platform. */

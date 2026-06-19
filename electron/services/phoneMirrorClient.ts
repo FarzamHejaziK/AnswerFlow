@@ -9,7 +9,7 @@ export const PHONE_MIRROR_HTML = `<!doctype html>
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#050706" />
     <meta name="referrer" content="no-referrer" />
-    <title>AnswerFlow Mirror</title>
+    <title>AnswerCue Mirror</title>
     <style>
       :root {
         color-scheme: dark;
@@ -290,7 +290,7 @@ export const PHONE_MIRROR_HTML = `<!doctype html>
     <main class="app">
       <header class="topbar">
         <div class="title">
-          <h1>AnswerFlow Mirror</h1>
+          <h1>AnswerCue Mirror</h1>
           <div class="subtitle" id="subtitle">Connecting</div>
         </div>
         <div class="status" id="status">

@@ -4,20 +4,20 @@
 
 ### Summary
 
-AnswerFlow v2.7.3 completes the first AnswerFlow-branded release pass: new cross-platform logo assets, cleaner About text, focused model support, and inline in-app updates wired to the AnswerFlow GitHub release channel.
+AnswerCue v2.7.3 completes the first AnswerCue-branded release pass: new cross-platform logo assets, cleaner About text, focused model support, and inline in-app updates wired to the AnswerCue GitHub release channel.
 
 ### What's New
 
-- **New AnswerFlow logo system:** Added the flag-road mark as the app icon source and regenerated macOS `.icns`, Windows `.ico`, Linux PNG sizes, tray template, and in-app logo assets.
+- **New AnswerCue logo system:** Added the flag-road mark as the app icon source and regenerated macOS `.icns`, Windows `.ico`, Linux PNG sizes, tray template, and in-app logo assets.
 - **Inline update experience:** Added a Codex-style sidebar update row for available, downloading, and restart-to-install update states.
-- **Interview-first About page:** Rebuilt the About screen around AnswerFlow's prep, live interview, post-interview, privacy, and platform support story.
+- **Interview-first About page:** Rebuilt the About screen around AnswerCue's prep, live interview, post-interview, privacy, and platform support story.
 - **Focused Claude support:** Limited Anthropic selection to the latest Opus models plus Sonnet 4.6.
 
 ### Improvements
 
-- **AnswerFlow app identity:** Updated the packaged app id to `com.answerflow.desktop` and moved Windows taskbar grouping away from the old upstream identity.
-- **Release pipeline branding:** Updated macOS and Windows artifact names, release workflow labels, update instructions, and release templates to AnswerFlow.
-- **Update source isolation:** Confirmed updater metadata and release notes are pulled from `FarzamHejaziK/AnswerFlow`, not the upstream repository.
+- **AnswerCue app identity:** Updated the packaged app id to `com.answercue.desktop` and moved Windows taskbar grouping away from the old upstream identity.
+- **Release pipeline branding:** Updated macOS and Windows artifact names, release workflow labels, update instructions, and release templates to AnswerCue.
+- **Update source isolation:** Confirmed updater metadata and release notes are pulled from `FarzamHejaziK/AnswerCue`, not the upstream repository.
 - **Live interview context:** Included prep chat and selected document markdown in the live interview prompt context path.
 
 ### Fixes
@@ -34,8 +34,8 @@ AnswerFlow v2.7.3 completes the first AnswerFlow-branded release pass: new cross
 ### Technical
 
 - Bumped the package version to `2.7.3` for release detection.
-- Added `answerflowSigned` metadata for signed macOS auto-install gating while preserving compatibility with older `nativelySigned` builds.
-- Updated GitHub Actions Windows publishing so tagged releases can attach `AnswerFlow-Setup-VERSION.exe` and `latest.yml`.
+- Added `answercueSigned` metadata for signed macOS auto-install gating while preserving compatibility with older `nativelySigned` builds.
+- Updated GitHub Actions Windows publishing so tagged releases can attach `AnswerCue-Setup-VERSION.exe` and `latest.yml`.
 - Regenerated all platform icon outputs from the new logo source.
 
 ## [2.0.7] - 2026-03-20
@@ -114,8 +114,8 @@ Version 2.0.4 introduces a massive architectural overhaul to the native audio pi
 ### What's New
 
 - **Dynamic AI Model Selection:** Replaced static model lists with dynamic dropdowns. Your preferred models synced from providers (like OpenAI, Anthropic, Google) now automatically appear across the entire app.
-- **Multimodal Resilience:** Added a "Smart Dynamic Fallback" using Groq Llama 4 Scout. If default vision models fail or get rate-limited during screen analysis, AnswerFlow instantly reroutes the image to ensure uninterrupted performance.
-- **Multiple Screenshot Support:** The AnswerFlow Interface can now handle and process multiple attached screenshots simultaneously instead of just one.
+- **Multimodal Resilience:** Added a "Smart Dynamic Fallback" using Groq Llama 4 Scout. If default vision models fail or get rate-limited during screen analysis, AnswerCue instantly reroutes the image to ensure uninterrupted performance.
+- **Multiple Screenshot Support:** The AnswerCue Interface can now handle and process multiple attached screenshots simultaneously instead of just one.
 - **Improved Settings UX:** API keys now auto-save after 5 seconds of inactivity, and selecting a preferred model immediately updates the rest of the application without requiring a page reload.
 
 ### Architecture & Fixes
@@ -276,7 +276,7 @@ The Stealth & Intelligence Update: Enhances stealth capabilities, expands AI pro
 If you see "App is damaged":
 
 1. Move the app to your Applications folder.
-2. Open Terminal and run: `xattr -cr /Applications/AnswerFlow.app`
+2. Open Terminal and run: `xattr -cr /Applications/AnswerCue.app`
 
 ## [1.1.4] - 2026-02-12
 

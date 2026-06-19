@@ -30,7 +30,7 @@ import * as path from 'path';
 
 interface Turn {
   ts: string;    // MM:SS from start
-  speaker: 'I' | 'C';  // I = interviewer, C = candidate (Natively user)
+  speaker: 'I' | 'C';  // I = interviewer, C = candidate (AnswerCue user)
   text: string;
 }
 

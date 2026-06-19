@@ -65,8 +65,8 @@ interface ElectronAPI {
   setOpenaiApiKey: (apiKey: string) => Promise<{ success: boolean; error?: string }>;
   setClaudeApiKey: (apiKey: string) => Promise<{ success: boolean; error?: string }>;
   setDeepseekApiKey: (apiKey: string) => Promise<{ success: boolean; error?: string }>;
-  setNativelyApiKey: (apiKey: string) => Promise<{ success: boolean; error?: string }>;
-  getNativelyPricing: () => Promise<{
+  setAnswerCueApiKey: (apiKey: string) => Promise<{ success: boolean; error?: string }>;
+  getAnswerCuePricing: () => Promise<{
     ok: boolean;
     currency?: string;
     fetchedAt?: string;
@@ -85,7 +85,7 @@ interface ElectronAPI {
     error?: string;
     status?: number;
   }>;
-  getNativelyUsage: () => Promise<{
+  getAnswerCueUsage: () => Promise<{
     ok: boolean;
     plan?: string;
     quota?: {
@@ -104,7 +104,7 @@ interface ElectronAPI {
     hasOpenaiKey: boolean;
     hasClaudeKey: boolean;
     hasDeepseekKey: boolean;
-    hasNativelyKey: boolean;
+    hasAnswerCueKey: boolean;
     googleServiceAccountPath: string | null;
     sttProvider: string;
     hasSttGroqKey: boolean;
@@ -1099,9 +1099,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setOpenaiApiKey: (apiKey: string) => ipcRenderer.invoke('set-openai-api-key', apiKey),
   setClaudeApiKey: (apiKey: string) => ipcRenderer.invoke('set-claude-api-key', apiKey),
   setDeepseekApiKey: (apiKey: string) => ipcRenderer.invoke('set-deepseek-api-key', apiKey),
-  setNativelyApiKey: (apiKey: string) => ipcRenderer.invoke('set-natively-api-key', apiKey),
-  getNativelyPricing: () => ipcRenderer.invoke('get-natively-pricing'),
-  getNativelyUsage: () => ipcRenderer.invoke('get-natively-usage'),
+  setAnswerCueApiKey: (apiKey: string) => ipcRenderer.invoke('set-natively-api-key', apiKey),
+  getAnswerCuePricing: () => ipcRenderer.invoke('get-natively-pricing'),
+  getAnswerCueUsage: () => ipcRenderer.invoke('get-natively-usage'),
   getStoredCredentials: () => ipcRenderer.invoke('get-stored-credentials'),
 
   // Permissions
@@ -2088,7 +2088,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
 // Renderer-side console forwarding to main-process log file.
 // When verbose logging is on, patch console.log/warn/error so that renderer
-// output appears in ~/Documents/answerflow_debug.log alongside main-process logs.
+// output appears in ~/Documents/answercue_debug.log alongside main-process logs.
 (function patchRendererConsole() {
   let _verbose = false;
 

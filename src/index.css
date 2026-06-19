@@ -188,7 +188,7 @@
 
 /* ── Meeting Interface: Liquid Glass Theme ──────────────────────────────────
    Inspired by Apple's visionOS / macOS Sequoia liquid glass aesthetic.
-   Applied via data-interface-theme="liquid-glass" on the NativelyInterface
+   Applied via data-interface-theme="liquid-glass" on the AnswerCueInterface
    outer container. Works by overriding CSS variables so all overlay-* classes
    automatically adopt the glass look without changing their definitions.
    The transparent-window Electron context means backdrop-filter shows real
@@ -849,10 +849,10 @@
 
 /* ── Meeting Interface: Modern Theme ────────────────────────────────────────
    Polished dark slate/graphite glass with white gloss highlights and a accent
-   blue primary action. Modeled after the marketing-site NativelyInterfaceCard
+   blue primary action. Modeled after the marketing-site AnswerCueInterfaceCard
    (DARK_GLASS recipe). Distinct from liquid-glass: this panel is intentionally
    opaque-ish (low backdrop blur, 0.88–0.97 alpha base) rather than refractive.
-   Applied via data-interface-theme="modern" on the NativelyInterface outer
+   Applied via data-interface-theme="modern" on the AnswerCueInterface outer
    container. CSS variables drive everything else; per-surface jelly recipes
    below mirror the website card's gloss-strip pattern.
    ─────────────────────────────────────────────────────────────────────── */
@@ -1960,7 +1960,7 @@ html[data-platform="linux"] body {
 }
 
 /* ───────────────────────────────────────────────────────────────────────
-   Natively API - New Interactive Pricing switchboard (Liquid Glass)
+   AnswerCue API - New Interactive Pricing switchboard (Liquid Glass)
    ─────────────────────────────────────────────────────────────────────── */
 
 [data-interface-theme="liquid-glass"] .natively-api-selector-bar {
@@ -2317,7 +2317,7 @@ html[data-platform="linux"] body {
   pointer-events: none !important;
 }
 
-/* CTA buttons for Natively API pricing cards */
+/* CTA buttons for AnswerCue API pricing cards */
 [data-interface-theme="liquid-glass"] .natively-api-pricing-cta {
   border-radius: 9999px !important;
   padding: 12px 24px !important;
@@ -2531,7 +2531,7 @@ html[data-platform="linux"] body {
     0 4px 12px rgba(16, 185, 129, 0.35) !important;
 }
 
-/* ─── Natively API Pricing Card System - Modern Theme ─────────────────── */
+/* ─── AnswerCue API Pricing Card System - Modern Theme ─────────────────── */
 
 [data-interface-theme="modern"] .natively-api-selector-bar {
   background: rgba(0, 0, 0, 0.32) !important;
@@ -2779,7 +2779,7 @@ html[data-platform="linux"] body {
   pointer-events: none !important;
 }
 
-/* CTA buttons for Natively API pricing cards (Modern) */
+/* CTA buttons for AnswerCue API pricing cards (Modern) */
 [data-interface-theme="modern"] .natively-api-pricing-cta {
   border-radius: 9999px !important;
   padding: 12px 24px !important;
@@ -3037,7 +3037,7 @@ html[data-platform="linux"] body {
 }
 
 /* ───────────────────────────────────────────────────────────────────────
-   Natively Pro Purchase UI Redesign (Tactile 3D Jelly-Clay / Liquid-Glass)
+   AnswerCue Pro Purchase UI Redesign (Tactile 3D Jelly-Clay / Liquid-Glass)
    ─────────────────────────────────────────────────────────────────────── */
 
 .perspective-1000 {
@@ -4248,7 +4248,7 @@ html[data-platform="linux"] body {
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
-   ──── Natively Pro Pricing Interface: Light Mode Optimization Overrides ───
+   ──── AnswerCue Pro Pricing Interface: Light Mode Optimization Overrides ───
    ────────────────────────────────────────────────────────────────────────── */
 
 /* 1. Selector Segmented Control Bar */
@@ -4475,7 +4475,7 @@ html[data-platform="linux"] body {
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
-   ──── Natively Pro Pricing: Theme-Responsive Contrast & Glow Enhancements ─
+   ──── AnswerCue Pro Pricing: Theme-Responsive Contrast & Glow Enhancements ─
    ────────────────────────────────────────────────────────────────────────── */
 
 /* A. Default / Dark Mode Badge Text & Icons */
@@ -4622,7 +4622,7 @@ html[data-platform="linux"] body {
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
-   ──── Natively Pro Yearly & Lifetime Cards: Light Mode Overrides ──────────
+   ──── AnswerCue Pro Yearly & Lifetime Cards: Light Mode Overrides ──────────
    ────────────────────────────────────────────────────────────────────────── */
 
 /* 1. Card Backgrounds & Specular 3D Borders (No cheap flat white borders) */

@@ -17,7 +17,7 @@ In CI the suite uses `synthetic_fallback` content unless `RUN_INTERNET_FIXTURE_C
 | File | Type | Source | Sentinel facts | Retrieval queries | Answer must include | Answer must NOT include |
 |---|---|---|---|---|---|---|
 | `general_meeting_agenda.md` | md | synthetic_fallback | "Investor sync set for May 22 with Hyperion Partners" | "when is the investor sync" | the May 22 date | "next Tuesday" if not provided |
-| `general_metrics_sheet.csv` | csv | synthetic_fallback | "Q1 ARR run-rate $480k for AnswerFlow pilot" | "what is the Q1 ARR" | $480k figure | invented MRR numbers |
+| `general_metrics_sheet.csv` | csv | synthetic_fallback | "Q1 ARR run-rate $480k for AnswerCue pilot" | "what is the Q1 ARR" | $480k figure | invented MRR numbers |
 | `general_roadmap.json` | json | synthetic_fallback | "Q2 priority: multi-modal copilot beta" | "what is the Q2 priority" | multi-modal copilot beta | unrelated roadmap items |
 | `general_onboarding_checklist.txt` | txt | synthetic_fallback | "Step 4 requires audio device approval" | "how do I configure audio" | step 4 audio approval | OS-specific steps not in file |
 | `general_project_brief.html` | html-as-text | synthetic_fallback | "Project codename: Halcyon" | "what is the project codename" | Halcyon | other codenames |
@@ -56,7 +56,7 @@ In CI the suite uses `synthetic_fallback` content unless `RUN_INTERNET_FIXTURE_C
 
 | File | Type | Source | Sentinel facts | Retrieval queries | Answer must include | Answer must NOT include |
 |---|---|---|---|---|---|---|
-| `lfw_resume.txt` | txt | synthetic_fallback | "Built PriceX, a price-comparison website; scaled AnswerFlow to 10k users" | "tell me about a project you scaled" | PriceX or AnswerFlow scale | invented FAANG roles |
+| `lfw_resume.txt` | txt | synthetic_fallback | "Built PriceX, a price-comparison website; scaled AnswerCue to 10k users" | "tell me about a project you scaled" | PriceX or AnswerCue scale | invented FAANG roles |
 | `lfw_jd.md` | md | synthetic_fallback | "Role: AI Product Engineer at Helio Labs, hybrid SF" | "tell me about the role you're applying for" | AI Product Engineer at Helio Labs | invented job titles |
 | `lfw_star_stories.json` | json | synthetic_fallback | "Conflict story: chargeback escalation with payments vendor" | "tell me about a conflict you resolved" | chargeback escalation | invented conflicts |
 | `lfw_negotiation_context.xml` | xml-as-text | synthetic_fallback | "Target base $185k; BATNA competing offer at $180k" | "what should I counter with" | $185k target | offers below BATNA |

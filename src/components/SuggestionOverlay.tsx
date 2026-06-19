@@ -17,7 +17,7 @@ interface GeneratedSuggestion {
 }
 
 /**
- * Natively-style suggestion overlay component
+ * AnswerCue-style suggestion overlay component
  * Displays real-time transcripts and AI-generated suggestions
  */
 export const SuggestionOverlay: React.FC<SuggestionOverlayProps> = ({ className }) => {

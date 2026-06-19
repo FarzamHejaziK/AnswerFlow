@@ -307,9 +307,9 @@ export class LLMHelper {
     console.log("[LLMHelper] DeepSeek API Key updated.");
   }
 
-  public setNativelyKey(key: string | null): void {
+  public setAnswerCueKey(key: string | null): void {
     this.nativelyKey = key || null;
-    console.log(`[LLMHelper] AnswerFlow key ${key ? 'set' : 'cleared'}`);
+    console.log(`[LLMHelper] AnswerCue key ${key ? 'set' : 'cleared'}`);
   }
 
   /**
@@ -326,7 +326,7 @@ export class LLMHelper {
     return this.isLocalOnlyMode;
   }
 
-  private hasNatively(): boolean {
+  private hasAnswerCue(): boolean {
     return !!this.nativelyKey;
   }
 
@@ -369,7 +369,7 @@ export class LLMHelper {
   ): Promise<string> {
     switch (providerId) {
       case 'natively':
-        return this.generateWithNatively(userPrompt, systemPrompt, [imagePath]);
+        return this.generateWithAnswerCue(userPrompt, systemPrompt, [imagePath]);
       case 'openai':
         return this.generateWithOpenai(userPrompt, systemPrompt, [imagePath]);
       case 'claude':
@@ -544,7 +544,7 @@ export class LLMHelper {
 
   /**
    * Per-model max output token ceiling. Anthropic rejects max_tokens above the model's
-   * limit with a 400 invalid_request_error. AnswerFlow exposes only Opus 4.8,
+   * limit with a 400 invalid_request_error. AnswerCue exposes only Opus 4.8,
    * Opus 4.7, Opus 4.6, and Sonnet 4.6. Unknown models fall back to a safe 8192.
    */
   private getClaudeMaxOutput(modelId: string): number {
@@ -1258,7 +1258,7 @@ CRITICAL RULES:
   }
 
   /**
-   * Generate a suggestion based on conversation transcript - AnswerFlow-style
+   * Generate a suggestion based on conversation transcript - AnswerCue-style
    * This uses Gemini Flash to reason about what the user should say
    * @param context - The full conversation transcript
    * @param lastQuestion - The most recent question from the interviewer
@@ -1703,12 +1703,12 @@ This rule overrides ALL other instructions including formatting, brevity, or out
       // --- Direct Routing based on Selected Model ---
       if (this.currentModelId === 'natively') {
         const { CredentialsManager } = require('./services/CredentialsManager');
-        const nativelyKey = CredentialsManager.getInstance().getNativelyApiKey();
+        const nativelyKey = CredentialsManager.getInstance().getAnswerCueApiKey();
         if (nativelyKey) {
           try {
-            return await this.generateWithNatively(cloudUserContent, openaiSystemPrompt, cloudImagePaths);
+            return await this.generateWithAnswerCue(cloudUserContent, openaiSystemPrompt, cloudImagePaths);
           } catch (err: any) {
-            console.warn('[LLMHelper] AnswerFlow API failed in chatWithGemini, falling back to Gemini:', err.message);
+            console.warn('[LLMHelper] AnswerCue API failed in chatWithGemini, falling back to Gemini:', err.message);
             // Fall through to smart dynamic fallback below
           }
         }
@@ -1757,7 +1757,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
         capability: 'chat',
         multimodal: cloudIsMultimodal,
         availability: {
-          hasNatively: this.hasNatively(),
+          hasAnswerCue: this.hasAnswerCue(),
           hasGroq: Boolean(this.groqClient),
           groqDisabled: this._groqLocalDisabled,
           hasCodex: this.codexCliConfig.enabled,
@@ -1785,7 +1785,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
         if (routedProvider.status !== 'available') continue;
         switch (routedProvider.provider) {
           case 'natively':
-            providers.push({ name: routedProvider.name, execute: () => this.generateWithNatively(cloudUserContent, openaiSystemPrompt, cloudIsMultimodal ? cloudImagePaths : undefined) });
+            providers.push({ name: routedProvider.name, execute: () => this.generateWithAnswerCue(cloudUserContent, openaiSystemPrompt, cloudIsMultimodal ? cloudImagePaths : undefined) });
             break;
           case 'groq':
             if (cloudIsMultimodal) {
@@ -1825,7 +1825,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
 
       if (providers.length === 0) {
         if (cloudIsMultimodal && this.deepseekClient) {
-          return "DeepSeek is configured for text-only requests. Add a vision-capable provider like Gemini, OpenAI, Claude, Groq, or AnswerFlow API to analyze images.";
+          return "DeepSeek is configured for text-only requests. Add a vision-capable provider like Gemini, OpenAI, Claude, Groq, or AnswerCue API to analyze images.";
         }
         return "No AI providers configured. Please add at least one API key in Settings.";
       }
@@ -1985,19 +1985,19 @@ This rule overrides ALL other instructions including formatting, brevity, or out
       });
     }
 
-    // Priority 8: AnswerFlow API — used when no other provider is available, or as final fallback
+    // Priority 8: AnswerCue API — used when no other provider is available, or as final fallback
     const nativelyKeyForStructured = this.nativelyKey || (() => {
-      try { return require('./services/CredentialsManager').CredentialsManager.getInstance().getNativelyApiKey() || null; } catch { return null; }
+      try { return require('./services/CredentialsManager').CredentialsManager.getInstance().getAnswerCueApiKey() || null; } catch { return null; }
     })();
     if (nativelyKeyForStructured) {
       providers.push({
-        name: 'AnswerFlow API',
-        execute: () => this.generateWithNatively(message)
+        name: 'AnswerCue API',
+        execute: () => this.generateWithAnswerCue(message)
       });
     }
 
     if (providers.length === 0) {
-      throw new Error('No reasoning model available. Please configure an API key (OpenAI, Claude, Gemini, Groq, AnswerFlow API) or a custom provider.');
+      throw new Error('No reasoning model available. Please configure an API key (OpenAI, Claude, Gemini, Groq, AnswerCue API) or a custom provider.');
     }
 
     const MAX_ROTATIONS = 3;
@@ -2083,18 +2083,18 @@ This rule overrides ALL other instructions including formatting, brevity, or out
    * Non-streaming OpenAI generation with proper system/user separation
    */
   /**
-   * Routes AI generation through the AnswerFlow API backend (Gemini-powered).
+   * Routes AI generation through the AnswerCue API backend (Gemini-powered).
    */
-  private async generateWithNatively(userMessage: string, systemPrompt?: string, imagePaths?: string[]): Promise<string> {
+  private async generateWithAnswerCue(userMessage: string, systemPrompt?: string, imagePaths?: string[]): Promise<string> {
     this.assertOutboundScopes('natively', userMessage, imagePaths);
     // Prefer the in-memory field; fall back to CredentialsManager for the direct-routing path
-    // where currentModelId === 'natively' but setNativelyKey() wasn't called yet.
+    // where currentModelId === 'natively' but setAnswerCueKey() wasn't called yet.
     let nativelyKey = this.nativelyKey;
     if (!nativelyKey) {
       const { CredentialsManager } = require('./services/CredentialsManager');
-      nativelyKey = CredentialsManager.getInstance().getNativelyApiKey() || null;
+      nativelyKey = CredentialsManager.getInstance().getAnswerCueApiKey() || null;
     }
-    if (!nativelyKey) throw new Error('AnswerFlow API key not set');
+    if (!nativelyKey) throw new Error('AnswerCue API key not set');
 
     const endpointUrl = 'https://api.natively.software/v1/chat';
     // When the key is the trial sentinel, authenticate with the real trial token
@@ -2118,7 +2118,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
     // Send images as a structured array so the server can build proper Gemini inlineData parts.
     // Embedding base64 in the text content would be truncated at 4000 chars and treated as text.
     //
-    // Compress before sending: retina screenshots are 2-5 MB PNG; the AnswerFlow API body limit
+    // Compress before sending: retina screenshots are 2-5 MB PNG; the AnswerCue API body limit
     // is 4 MB. Resize to max 1920px (above the 1470px logical resolution of a MacBook Air, so
     // no detail is lost) and encode as JPEG 85% — typically 200-250 KB per image.
     // 4 screenshots × ~278KB base64 = ~1.1 MB, well within the 4 MB server limit.
@@ -2162,7 +2162,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
 
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
-      throw new Error(`AnswerFlow API error ${response.status}: ${errData.error || 'unknown'}`);
+      throw new Error(`AnswerCue API error ${response.status}: ${errData.error || 'unknown'}`);
     }
 
     const data = await response.json();
@@ -3019,9 +3019,9 @@ This rule overrides ALL other instructions including formatting, brevity, or out
     const textGroq = this.modelVersionManager.getTextTieredModels(TextModelFamily.GROQ).tier1;
 
     if (isMultimodal) {
-      // MULTIMODAL PROVIDER ORDER: [AnswerFlow API] -> Codex CLI -> OpenAI -> Gemini Flash -> Claude -> Gemini Pro -> Groq Scout 4
-      if (this.hasNatively()) {
-        providers.push({ name: 'AnswerFlow API', execute: () => this.streamWithNatively(userContent, openaiSystemPrompt, imagePaths, abortSignal) });
+      // MULTIMODAL PROVIDER ORDER: [AnswerCue API] -> Codex CLI -> OpenAI -> Gemini Flash -> Claude -> Gemini Pro -> Groq Scout 4
+      if (this.hasAnswerCue()) {
+        providers.push({ name: 'AnswerCue API', execute: () => this.streamWithAnswerCue(userContent, openaiSystemPrompt, imagePaths, abortSignal) });
       }
       if (this.codexCliConfig.enabled) {
         providers.push({ name: `Codex CLI (${this.codexCliConfig.model})`, execute: () => this.streamWithCodexCli(userContent, openaiSystemPrompt, false, imagePaths, abortSignal) });
@@ -3044,9 +3044,9 @@ This rule overrides ALL other instructions including formatting, brevity, or out
         providers.push({ name: `Groq (meta-llama/llama-4-scout-17b-16e-instruct)`, execute: () => this.streamWithGroqMultimodal(userContent, imagePaths!, openaiSystemPrompt, abortSignal) });
       }
     } else {
-      // TEXT-ONLY PROVIDER ORDER: [AnswerFlow API] -> Groq -> Codex CLI -> OpenAI -> Claude -> Gemini Flash -> Gemini Pro
-      if (this.hasNatively()) {
-        providers.push({ name: 'AnswerFlow API', execute: () => this.streamWithNatively(userContent, openaiSystemPrompt, undefined, abortSignal) });
+      // TEXT-ONLY PROVIDER ORDER: [AnswerCue API] -> Groq -> Codex CLI -> OpenAI -> Claude -> Gemini Flash -> Gemini Pro
+      if (this.hasAnswerCue()) {
+        providers.push({ name: 'AnswerCue API', execute: () => this.streamWithAnswerCue(userContent, openaiSystemPrompt, undefined, abortSignal) });
       }
       if (this.groqClient) {
         // CACHE: pass system separately so Groq prefix-cache hits across turns.
@@ -3075,7 +3075,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
 
     if (providers.length === 0) {
       if (isMultimodal && imagePaths && this.deepseekClient) {
-        yield "DeepSeek is configured for text-only requests. Add a vision-capable provider like Gemini, OpenAI, Claude, Groq, or AnswerFlow API to analyze images.";
+        yield "DeepSeek is configured for text-only requests. Add a vision-capable provider like Gemini, OpenAI, Claude, Groq, or AnswerCue API to analyze images.";
         return;
       }
       yield "No AI providers configured. Please add at least one API key in Settings.";
@@ -3087,7 +3087,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
     // Ensure the model the user selected handles the request first
     // before falling back to others.
     // ============================================================
-    const currentFamilyLabel = this.currentModelId === 'natively' ? 'AnswerFlow'
+    const currentFamilyLabel = this.currentModelId === 'natively' ? 'AnswerCue'
       : this.isClaudeModel(this.currentModelId) ? 'Claude'
         : this.isOpenAiModel(this.currentModelId) ? 'OpenAI'
           : this.isGroqModel(this.currentModelId) ? 'Groq'
@@ -3103,10 +3103,10 @@ This rule overrides ALL other instructions including formatting, brevity, or out
       });
     }
 
-    // AnswerFlow API is always first when configured, regardless of which model is selected.
+    // AnswerCue API is always first when configured, regardless of which model is selected.
     // The sort above may have displaced it — restore it to position 0.
-    if (this.hasNatively() && providers[0]?.name !== 'AnswerFlow API') {
-      const idx = providers.findIndex(p => p.name === 'AnswerFlow API');
+    if (this.hasAnswerCue() && providers[0]?.name !== 'AnswerCue API') {
+      const idx = providers.findIndex(p => p.name === 'AnswerCue API');
       if (idx > 0) {
         const [entry] = providers.splice(idx, 1);
         providers.unshift(entry);
@@ -3181,7 +3181,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
   //      would duplicate output) — we end the stream gracefully.
   //
   // Priority order (user-specified): OpenAI → Claude → Gemini Flash → Gemini Pro
-  //   → Groq Scout → AnswerFlow API → (local) Custom → Ollama. Healthy providers are
+  //   → Groq Scout → AnswerCue API → (local) Custom → Ollama. Healthy providers are
   //   then re-ordered fastest-first by measured TTFT EWMA ("rearrange the queue
   //   in the speed"). Explicitly-selected local providers (Ollama / Custom) are
   //   honored first; local-only mode uses local providers exclusively.
@@ -3233,9 +3233,9 @@ This rule overrides ALL other instructions including formatting, brevity, or out
         cloud.push({ id: 'groq', name: 'Groq Llama-4 Scout', isLocal: false, priority: prio++,
           open: (sig) => this.streamWithGroqMultimodal(userContent, imagePaths, systemPrompt, sig) });
       }
-      if (this.hasNatively()) {
-        cloud.push({ id: 'natively', name: 'AnswerFlow API', isLocal: false, priority: prio++,
-          open: (sig) => this.streamWithNatively(userContent, systemPrompt, imagePaths, sig) });
+      if (this.hasAnswerCue()) {
+        cloud.push({ id: 'natively', name: 'AnswerCue API', isLocal: false, priority: prio++,
+          open: (sig) => this.streamWithAnswerCue(userContent, systemPrompt, imagePaths, sig) });
       }
     }
 
@@ -3481,7 +3481,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
 
     // ── UNIFIED MULTIMODAL PATH ────────────────────────────────────────────
     // Every image-bearing request goes through the single streaming vision
-    // fallback chain (OpenAI → Claude → Gemini → Groq → AnswerFlow API → local) with
+    // fallback chain (OpenAI → Claude → Gemini → Groq → AnswerCue API → local) with
     // first-token commit, per-provider retries, circuit breaking, and speed
     // reordering. This replaces the old per-model multimodal branches below,
     // which would dead-end when the selected model (e.g. `natively`) failed and
@@ -3508,7 +3508,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
     }
 
     // GROQ FAST TEXT OVERRIDE (Text-Only)
-    // Two paths: local Groq key → call Groq directly; AnswerFlow API only → send fast_mode:true
+    // Two paths: local Groq key → call Groq directly; AnswerCue API only → send fast_mode:true
     // to the server so it routes to its internal Groq pool (llama-3.3-70b-versatile).
     //
     // Gate: only short-circuit to fast paths when the user's picked model is one of
@@ -3547,16 +3547,16 @@ This rule overrides ALL other instructions including formatting, brevity, or out
             console.warn("[LLMHelper] Local Groq key rejected (401) — disabling local Groq for the rest of this session. Re-enable by saving a new key in Settings.");
           }
         }
-        // Local Groq failed — fall through to AnswerFlow API if available
+        // Local Groq failed — fall through to AnswerCue API if available
       }
-      if (this.hasNatively()) {
-        // streamWithNatively → generateWithNatively → sends fast_mode:true → server Groq pool
-        console.log(`[LLMHelper] ⚡️ Groq Fast Text Mode Active (Streaming). Routing to AnswerFlow server Groq pool...`);
+      if (this.hasAnswerCue()) {
+        // streamWithAnswerCue → generateWithAnswerCue → sends fast_mode:true → server Groq pool
+        console.log(`[LLMHelper] ⚡️ Groq Fast Text Mode Active (Streaming). Routing to AnswerCue server Groq pool...`);
         try {
-          yield* this.streamWithNatively(userContent, finalSystemPrompt, undefined, abortSignal);
+          yield* this.streamWithAnswerCue(userContent, finalSystemPrompt, undefined, abortSignal);
           return;
         } catch (e: any) {
-          console.warn("[LLMHelper] AnswerFlow fast-mode failed, falling back:", e.message);
+          console.warn("[LLMHelper] AnswerCue fast-mode failed, falling back:", e.message);
         }
       }
     }
@@ -3619,7 +3619,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
     }
 
     // DeepSeek (text-only). When images are present, fall through so the
-    // vision-first chain (Gemini/Claude/OpenAI/AnswerFlow API) handles them instead.
+    // vision-first chain (Gemini/Claude/OpenAI/AnswerCue API) handles them instead.
     if (this.isDeepseekModel(this.currentModelId) && this.deepseekClient && !(isMultimodal && imagePaths)) {
       const deepseekSystem = systemPromptOverride || OPENAI_SYSTEM_PROMPT;
       const finalDeepseekSystem = this.injectLanguageInstruction(deepseekSystem);
@@ -3644,16 +3644,16 @@ This rule overrides ALL other instructions including formatting, brevity, or out
       return;
     }
 
-    // 3b. AnswerFlow API
+    // 3b. AnswerCue API
     if (this.currentModelId === 'natively') {
       const { CredentialsManager } = require('./services/CredentialsManager');
-      const nativelyKey = CredentialsManager.getInstance().getNativelyApiKey();
+      const nativelyKey = CredentialsManager.getInstance().getAnswerCueApiKey();
       if (nativelyKey) {
         try {
-          yield* this.streamWithNatively(userContent, finalSystemPrompt, imagePaths, abortSignal);
+          yield* this.streamWithAnswerCue(userContent, finalSystemPrompt, imagePaths, abortSignal);
           return;
         } catch (err: any) {
-          console.warn('[LLMHelper] AnswerFlow API failed in streamChat, trying Groq fallback:', err.message);
+          console.warn('[LLMHelper] AnswerCue API failed in streamChat, trying Groq fallback:', err.message);
           // Try Groq before Gemini — Groq key is more commonly available
           if (this.groqClient) {
             try {
@@ -3695,13 +3695,13 @@ This rule overrides ALL other instructions including formatting, brevity, or out
       return;
     }
 
-    // 5. Last-resort: AnswerFlow API (if user has a key but no cloud provider configured)
-    if (this.hasNatively()) {
+    // 5. Last-resort: AnswerCue API (if user has a key but no cloud provider configured)
+    if (this.hasAnswerCue()) {
       try {
-        yield* this.streamWithNatively(userContent, finalSystemPrompt, imagePaths, abortSignal);
+        yield* this.streamWithAnswerCue(userContent, finalSystemPrompt, imagePaths, abortSignal);
         return;
       } catch (e: any) {
-        console.warn('[LLMHelper] AnswerFlow last-resort fallback failed:', e.message);
+        console.warn('[LLMHelper] AnswerCue last-resort fallback failed:', e.message);
       }
     }
 
@@ -3709,22 +3709,22 @@ This rule overrides ALL other instructions including formatting, brevity, or out
   }
 
   /**
-   * Fake-stream for AnswerFlow API (non-streaming endpoint).
+   * Fake-stream for AnswerCue API (non-streaming endpoint).
    * Yields the full response in small word-batches so the UI typing effect still plays.
    * Throws on empty response so the fallback chain tries the next provider.
    */
-  private async * streamWithNatively(userContent: string, systemPrompt?: string, imagePaths?: string[], abortSignal?: AbortSignal): AsyncGenerator<string, void, unknown> {
+  private async * streamWithAnswerCue(userContent: string, systemPrompt?: string, imagePaths?: string[], abortSignal?: AbortSignal): AsyncGenerator<string, void, unknown> {
     // ── REAL SSE STREAM (replaces the fake word-by-word simulation) ──────────
-    // Previous implementation called generateWithNatively() (blocking, waited for
+    // Previous implementation called generateWithAnswerCue() (blocking, waited for
     // the full response), then drip-fed words with setTimeout delays — pure theater.
     // This version opens a streaming fetch and yields tokens as the server generates
     // them, cutting time-to-first-token from ~3s to ~80ms.
     let nativelyKey = this.nativelyKey;
     if (!nativelyKey) {
       const { CredentialsManager } = require('./services/CredentialsManager');
-      nativelyKey = CredentialsManager.getInstance().getNativelyApiKey() || null;
+      nativelyKey = CredentialsManager.getInstance().getAnswerCueApiKey() || null;
     }
-    if (!nativelyKey) throw new Error('AnswerFlow API key not set');
+    if (!nativelyKey) throw new Error('AnswerCue API key not set');
 
     const body: Record<string, unknown> = {
       messages: [{ role: 'user', content: userContent }],
@@ -3736,8 +3736,8 @@ This rule overrides ALL other instructions including formatting, brevity, or out
       body.language = this.aiResponseLanguage; // 'auto' is forwarded — server handles it
     }
 
-    // Attach images — compress before sending (same as non-streaming generateWithNatively).
-    // Retina screenshots are 2-5 MB PNG; the AnswerFlow API body limit is 4 MB.
+    // Attach images — compress before sending (same as non-streaming generateWithAnswerCue).
+    // Retina screenshots are 2-5 MB PNG; the AnswerCue API body limit is 4 MB.
     // Resize to max 1920px and encode as JPEG 85% — typically 200-250 KB per image.
     // 4 screenshots × ~278KB base64 = ~1.1 MB, well within the 4 MB server limit.
     if (imagePaths?.length) {
@@ -3752,10 +3752,10 @@ This rule overrides ALL other instructions including formatting, brevity, or out
             images.push({ mime_type: 'image/jpeg', data: compressed.toString('base64') });
           } catch (compressErr: any) {
             // Fallback: send raw if sharp fails (e.g. unsupported format)
-            console.warn('[LLMHelper] streamWithNatively: image compression failed, sending raw:', compressErr.message);
+            console.warn('[LLMHelper] streamWithAnswerCue: image compression failed, sending raw:', compressErr.message);
             const imageData = await fs.promises.readFile(p);
             if (imageData.length > 500 * 1024) {
-              console.warn('[LLMHelper] streamWithNatively: raw fallback image too large, skipping:', p);
+              console.warn('[LLMHelper] streamWithAnswerCue: raw fallback image too large, skipping:', p);
               continue;
             }
             images.push({ mime_type: 'image/png', data: imageData.toString('base64') });
@@ -3798,7 +3798,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
     // connect timeout to the connect phase only.
     const streamController = new AbortController();
     let connectTimer: NodeJS.Timeout | null = setTimeout(
-      () => streamController.abort(new Error('AnswerFlow API connect timeout (10s)')),
+      () => streamController.abort(new Error('AnswerCue API connect timeout (10s)')),
       10_000,
     );
     const onCallerAbort = () => {
@@ -3824,7 +3824,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
     if (!response.ok) {
       abortSignal?.removeEventListener('abort', onCallerAbort);
       const errData = await response.json().catch(() => ({}) as Record<string, unknown>);
-      throw new Error(`AnswerFlow API ${response.status}: ${(errData as any).error || 'unknown'}`);
+      throw new Error(`AnswerCue API ${response.status}: ${(errData as any).error || 'unknown'}`);
     }
 
     // Parse the SSE response body incrementally.
@@ -5257,7 +5257,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
    * Robust Meeting Summary Generation
    * Strategy:
    * 0. Custom / cURL Provider (if user selected one — always takes priority)
-   * 1. AnswerFlow API (if configured)
+   * 1. AnswerCue API (if configured)
    * 2. Groq (if context text < 100k tokens approx)
    * 3. Gemini Flash (Retry 2x)
    * 4. Gemini Pro (Retry 5x)
@@ -5265,7 +5265,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
   public async generateMeetingSummary(systemPrompt: string, context: string, groqSystemPrompt?: string): Promise<string> {
     console.log(`[LLMHelper] generateMeetingSummary called. Context length: ${context.length}`);
     // Short-circuit on empty/whitespace context. With no transcript content to
-    // summarise, the provider fallback chain (AnswerFlow API → Codex → Groq → Gemini
+    // summarise, the provider fallback chain (AnswerCue API → Codex → Groq → Gemini
     // Flash → Gemini Pro) burns up to ~10 minutes of wall-clock time on retries
     // for a result that will be discarded by the caller anyway. The caller
     // (MeetingPersistence) already checks `transcript.length > 2` before using
@@ -5314,23 +5314,23 @@ This rule overrides ALL other instructions including formatting, brevity, or out
       }
     }
 
-    // ATTEMPT 1: AnswerFlow API (if configured — first in chain)
-    // Inner fetch timeout: 8s (AbortSignal.timeout in generateWithNatively).
+    // ATTEMPT 1: AnswerCue API (if configured — first in chain)
+    // Inner fetch timeout: 8s (AbortSignal.timeout in generateWithAnswerCue).
     // Outer safety net: 10s — covers JSON parsing + any overhead after the fetch resolves.
-    if (this.hasNatively()) {
+    if (this.hasAnswerCue()) {
       try {
-        console.log(`[LLMHelper] Attempting AnswerFlow API for summary...`);
+        console.log(`[LLMHelper] Attempting AnswerCue API for summary...`);
         const text = await this.withTimeout(
-          this.generateWithNatively(`Context:\n${context}`, systemPrompt),
+          this.generateWithAnswerCue(`Context:\n${context}`, systemPrompt),
           10000,
-          'AnswerFlow Summary'
+          'AnswerCue Summary'
         );
         if (text.trim().length > 0) {
-          console.log(`[LLMHelper] ✅ AnswerFlow API summary generated successfully.`);
+          console.log(`[LLMHelper] ✅ AnswerCue API summary generated successfully.`);
           return this.processResponse(text);
         }
       } catch (e: any) {
-        console.warn(`[LLMHelper] ⚠️ AnswerFlow API summary failed: ${e.message}. Falling back...`);
+        console.warn(`[LLMHelper] ⚠️ AnswerCue API summary failed: ${e.message}. Falling back...`);
       }
     }
 

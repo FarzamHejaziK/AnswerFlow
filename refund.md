@@ -2,23 +2,23 @@
 
 _Last updated: April 25th 2026_
 
-This is the full refund policy for **AnswerFlow Pro** and the **AnswerFlow API** service. We've tried to write it like a person, not a lawyer — please give it a read before purchasing.
+This is the full refund policy for **AnswerCue Pro** and the **AnswerCue API** service. We've tried to write it like a person, not a lawyer — please give it a read before purchasing.
 
-If you have a question that isn't answered here, email us at **answerflow.contact@gmail.com**. We aim to reply within **24–72 hours on weekdays**. We may not respond on weekends or Indian public holidays — if you write in over a weekend, please expect a reply early the following week.
+If you have a question that isn't answered here, email us at **answercue.contact@gmail.com**. We aim to reply within **24–72 hours on weekdays**. We may not respond on weekends or Indian public holidays — if you write in over a weekend, please expect a reply early the following week.
 
 ---
 
 ## A heads-up before you read
 
-AnswerFlow is built and maintained by a single developer and integrates a wide range of third-party services — AI providers, speech-to-text engines, search APIs, payment processors, OS-level audio &amp; screen capture, and more. That gives the app a lot of capability, but it also means the surface area is wider than a typical closed-source product, and once in a while something may not behave exactly as expected.
+AnswerCue is built and maintained by a single developer and integrates a wide range of third-party services — AI providers, speech-to-text engines, search APIs, payment processors, OS-level audio &amp; screen capture, and more. That gives the app a lot of capability, but it also means the surface area is wider than a typical closed-source product, and once in a while something may not behave exactly as expected.
 
 If you run into something like that, **please report it rather than disputing the charge**. We read every report and fixes typically land in the next update. We'd much rather earn your trust by shipping a fix than have you walk away frustrated.
 
 ---
 
-## 1. AnswerFlow Pro
+## 1. AnswerCue Pro
 
-AnswerFlow Pro unlocks features such as the Profile Engine, Resume Intelligence, Context Intelligence, Negotiation Coaching, JD Intelligence, and Company Research. Pro is a digital product, delivered instantly, and tied to a single user.
+AnswerCue Pro unlocks features such as the Profile Engine, Resume Intelligence, Context Intelligence, Negotiation Coaching, JD Intelligence, and Company Research. Pro is a digital product, delivered instantly, and tied to a single user.
 
 ### 1.1 Please try the Free Trial first
 
@@ -32,9 +32,9 @@ Once a license is activated and Pro features have been used, the value can't rea
 
 Mistakes happen — wrong plan, accidental click, second thoughts the moment after checkout. If that's you, please email us within **1 hour of the order** and **before the license is activated**. We review each request individually, and where it's clearly an honest mistake (no activation, no usage, prompt contact) we're glad to reverse the charge.
 
-For the avoidance of doubt, **"activation" means the moment your license key is successfully validated by our license server** — which is the moment you click *Activate License* in **Settings → AnswerFlow Pro** and see the "Activated" confirmation. Once activation has succeeded, or any Pro feature has been used, the order is final.
+For the avoidance of doubt, **"activation" means the moment your license key is successfully validated by our license server** — which is the moment you click *Activate License* in **Settings → AnswerCue Pro** and see the "Activated" confirmation. Once activation has succeeded, or any Pro feature has been used, the order is final.
 
-If you accidentally **bought the wrong product** (for example, Pro when you meant AnswerFlow API, or Lifetime when you meant Yearly), please tell us in that same email and we'll either reverse the charge or, where you'd prefer, swap you to the right product (any difference in price is settled in either direction).
+If you accidentally **bought the wrong product** (for example, Pro when you meant AnswerCue API, or Lifetime when you meant Yearly), please tell us in that same email and we'll either reverse the charge or, where you'd prefer, swap you to the right product (any difference in price is settled in either direction).
 
 ### 1.4 Yearly subscriptions
 
@@ -46,19 +46,19 @@ Anything bought with a coupon (including `INSIDER25`), voucher, referral credit,
 
 ### 1.6 One license per person
 
-A license is meant for a single user across a small number of devices. If you're moving to a new computer, just deactivate the license on the old one in **Settings → AnswerFlow Pro** — that's fully supported.
+A license is meant for a single user across a small number of devices. If you're moving to a new computer, just deactivate the license on the old one in **Settings → AnswerCue Pro** — that's fully supported.
 
 Sharing keys, reselling them, listing them on resale platforms, or activating beyond the allowed device limit unfortunately means we'll have to deactivate the license, and a refund won't be possible in those situations.
 
 ---
 
-## 2. AnswerFlow API
+## 2. AnswerCue API
 
-The AnswerFlow API is our managed plan that bundles AI, speech-to-text, and search quotas into a simple monthly subscription. Plans are billed in advance and renew automatically until cancelled.
+The AnswerCue API is our managed plan that bundles AI, speech-to-text, and search quotas into a simple monthly subscription. Plans are billed in advance and renew automatically until cancelled.
 
 ### 2.1 24-hour refund window — first purchase only
 
-If you bought a AnswerFlow API plan **at full price** (no voucher, no promo code), you can request a full refund within **24 hours of the original purchase**.
+If you bought a AnswerCue API plan **at full price** (no voucher, no promo code), you can request a full refund within **24 hours of the original purchase**.
 
 To be clear about the scope:
 
@@ -121,7 +121,7 @@ A polite email almost always lands faster, and gets you a better outcome, than a
 If a chargeback or payment dispute is opened without contacting us first:
 
 - The license or API key may be paused while the payment processor investigates.
-- If the dispute is decided in your favour without us being given a chance to resolve it, the license may be **permanently deactivated** and the account blocked from future AnswerFlow services.
+- If the dispute is decided in your favour without us being given a chance to resolve it, the license may be **permanently deactivated** and the account blocked from future AnswerCue services.
 - In cases of clear fraud or bad-faith disputes, we reserve the right to recover the disputed amount and any related processor fees through legal means.
 
 ### 3.5 When we may issue a discretionary refund
@@ -130,7 +130,7 @@ There are a few cases where, even outside the windows above, we'll review your s
 
 - **Duplicate charges** caused by a payment-system glitch.
 - **Pro genuinely failing to activate** on every device you try, due to a confirmed bug on our side that we've been unable to resolve in a reasonable time.
-- **AnswerFlow API materially failing to deliver paid quota** due to a confirmed outage or bug on our side.
+- **AnswerCue API materially failing to deliver paid quota** due to a confirmed outage or bug on our side.
 
 These are not unconditional guarantees of a refund — we'll work with you in good faith and try to resolve the underlying issue first. **Claims under this section must be raised within 60 days of the relevant charge**, with your order ID. We may decline to act on claims raised outside that window.
 
@@ -140,7 +140,7 @@ These are not unconditional guarantees of a refund — we'll work with you in go
 
 ### 4.1 Purchases via app stores
 
-If you bought AnswerFlow or a AnswerFlow subscription through a **third-party app marketplace** (for example, Apple's App Store / Mac App Store, the Microsoft Store, Google Play, or Setapp), the **store's own refund policy** governs that purchase. We don't have direct visibility into those orders or the ability to issue a refund on the store's behalf. Please follow the refund flow inside that store:
+If you bought AnswerCue or a AnswerCue subscription through a **third-party app marketplace** (for example, Apple's App Store / Mac App Store, the Microsoft Store, Google Play, or Setapp), the **store's own refund policy** governs that purchase. We don't have direct visibility into those orders or the ability to issue a refund on the store's behalf. Please follow the refund flow inside that store:
 
 - **Apple App Store / Mac App Store** → reportaproblem.apple.com
 - **Microsoft Store** → account.microsoft.com → Order history
@@ -151,7 +151,7 @@ If the store declines and you believe it's our fault (a bug we caused, etc.), em
 
 ### 4.2 Gift purchases
 
-If someone bought AnswerFlow for you as a gift, the **person whose payment method was charged** is the one who can request a refund. Please ask them to email us with the order ID; we can't refund a payment to a card we never charged.
+If someone bought AnswerCue for you as a gift, the **person whose payment method was charged** is the one who can request a refund. Please ask them to email us with the order ID; we can't refund a payment to a card we never charged.
 
 ### 4.3 Bulk, team, or educational licenses
 
@@ -161,10 +161,10 @@ We sometimes provide bulk Pro licenses or educational discounts under a separate
 
 ## 5. How to request a refund
 
-Email **answerflow.contact@gmail.com** with:
+Email **answercue.contact@gmail.com** with:
 
 1. Your **order ID** (it's in the receipt email from the payment processor). **Refund requests without a verifiable order ID cannot be processed** — please don't omit this.
-2. The **product** (AnswerFlow Pro or AnswerFlow API) and the plan.
+2. The **product** (AnswerCue Pro or AnswerCue API) and the plan.
 3. A short note about **what happened** — a sentence or two is plenty.
 
 We aim to reply within **24–72 hours on weekdays**. Weekends and Indian public holidays may not be covered — please expect a reply early the following week if you write in over a weekend.
@@ -177,4 +177,4 @@ We may update this policy from time to time. The version that applies to your pu
 
 ---
 
-Thanks for supporting AnswerFlow — it genuinely means a lot.
+Thanks for supporting AnswerCue — it genuinely means a lot.

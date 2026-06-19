@@ -199,7 +199,7 @@ export class CredentialsManager {
         return this.credentials.defaultModel || 'gemini-3.5-flash';
     }
 
-    public getNativelyApiKey(): string | undefined {
+    public getAnswerCueApiKey(): string | undefined {
         return this.credentials.nativelyApiKey;
     }
 
@@ -216,7 +216,7 @@ export class CredentialsManager {
      * Used by ScreenUnderstandingService to gate vision_only / decide fallback.
      */
     public anyVisionProviderConfigured(): boolean {
-        if (this.credentials.nativelyApiKey) return true;       // Natively API supports vision
+        if (this.credentials.nativelyApiKey) return true;       // AnswerCue API supports vision
         if (this.credentials.openaiApiKey) return true;          // chat-latest / GPT vision
         if (this.credentials.claudeApiKey) return true;          // Claude vision
         if (this.credentials.geminiApiKey) return true;          // Gemini vision
@@ -383,7 +383,7 @@ export class CredentialsManager {
         console.log(`[CredentialsManager] Default Model set to: ${model}`);
     }
 
-    public setNativelyApiKey(key: string): void {
+    public setAnswerCueApiKey(key: string): void {
         const trimmed = key.trim();
         this.credentials.nativelyApiKey = trimmed || undefined;
 
@@ -411,16 +411,16 @@ export class CredentialsManager {
             // Key cleared — revert natively-auto-set defaults back to safe fallbacks
             if (this.credentials.defaultModel === 'natively') {
                 this.credentials.defaultModel = 'gemini-3.5-flash';
-                console.log('[CredentialsManager] Natively key cleared — reset default model to Gemini Flash');
+                console.log('[CredentialsManager] AnswerCue key cleared — reset default model to Gemini Flash');
             }
             if (this.credentials.sttProvider !== 'local-whisper') {
                 this.credentials.sttProvider = 'local-whisper';
-                console.log('[CredentialsManager] Natively key cleared — kept local-whisper STT provider');
+                console.log('[CredentialsManager] AnswerCue key cleared — kept local-whisper STT provider');
             }
         }
 
         this.saveCredentials();
-        console.log('[CredentialsManager] Natively API Key updated');
+        console.log('[CredentialsManager] AnswerCue API Key updated');
     }
 
     public getPreferredModel(provider: 'gemini' | 'groq' | 'openai' | 'claude' | 'deepseek'): string | undefined {

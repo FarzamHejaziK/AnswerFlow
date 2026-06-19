@@ -28,7 +28,7 @@ export interface VisionProviderBuildInputs {
 
 /**
  * Produce the ordered list of vision providers for the given mode. Order is:
- *   vision_first / vision_only: AnswerFlow API → OpenAI → Gemini Flash → Claude →
+ *   vision_first / vision_only: AnswerCue API → OpenAI → Gemini Flash → Claude →
  *                                Gemini Pro → Groq Scout → Ollama → Codex → Custom
  *   private_vision: Ollama → Codex → local Custom only
  */
@@ -58,10 +58,10 @@ export function buildVisionProviders(inputs: VisionProviderBuildInputs): VisionP
 // ─── Provider builders ────────────────────────────────────────────────────
 
 function natively(creds: CredentialsManager, _inputs: VisionProviderBuildInputs): VisionProviderConfig {
-  const apiKey = creds.getNativelyApiKey();
+  const apiKey = creds.getAnswerCueApiKey();
   return {
     id: 'natively',
-    displayName: 'AnswerFlow API',
+    displayName: 'AnswerCue API',
     modelId: 'natively',
     isLocal: false,
     isConfigured: !!apiKey,

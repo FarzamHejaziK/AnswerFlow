@@ -7,7 +7,7 @@ import interFont from '../font/Inter-4.1/web/Inter-Medium.woff2?url';
 import interLightFont from '../font/Inter-4.1/web/Inter-Light.woff2?url';
 
 import heroVideo from '../assets/hero.webm';
-import NativelyInterfaceCard from './NativelyInterfaceCard';
+import AnswerCueInterfaceCard from './AnswerCueInterfaceCard';
 
 interface StartupSequenceProps {
     onComplete: () => void;
@@ -148,7 +148,7 @@ const StartupSequence: React.FC<StartupSequenceProps> = ({ onComplete }) => {
                             fontWeight: 500
                         }}
                     >
-                        Welcome to AnswerFlow
+                        Welcome to AnswerCue
                     </motion.h1>
 
                     <motion.p
@@ -230,7 +230,7 @@ const StartupSequence: React.FC<StartupSequenceProps> = ({ onComplete }) => {
                 {/* 2. Content layers — stacked vertically, card overlaps video top */}
                 <div className="relative z-10 w-full flex flex-col items-center justify-center px-8" style={{ paddingBottom: '80px' }}>
 
-                    {/* A. NativelyInterfaceCard — slightly wider, on top */}
+                    {/* A. AnswerCueInterfaceCard — slightly wider, on top */}
                     <motion.div
                         initial={{ opacity: 0, y: -12 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -238,7 +238,7 @@ const StartupSequence: React.FC<StartupSequenceProps> = ({ onComplete }) => {
                         className="relative w-[95%] drop-shadow-[0_24px_48px_rgba(0,0,0,0.25)]"
                         style={{ zIndex: 2 }}
                     >
-                        <NativelyInterfaceCard isStatic={true} isMobile={false} spreadHotkeys />
+                        <AnswerCueInterfaceCard isStatic={true} isMobile={false} spreadHotkeys />
                     </motion.div>
 
                     {/* B. Hero Video — slightly narrower, below; negative margin to overlap under card */}

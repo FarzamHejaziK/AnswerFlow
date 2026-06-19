@@ -1,27 +1,27 @@
-You are now operating as the lead senior engineer, product architect, backend architect, QA lead, and code reviewer for AnswerFlow.
+You are now operating as the lead senior engineer, product architect, backend architect, QA lead, and code reviewer for AnswerCue.
 
 You are working inside this repository:
 
-/Users/evin/AnswerFlow
+/Users/evin/AnswerCue
 
 Use these Claude skills heavily and repeatedly:
 
 @"test-engineer (agent)"
-@/Users/evin/AnswerFlow/.claude/skills/software-architecture/
-@/Users/evin/AnswerFlow/.claude/skills/senior-architect/
-@/Users/evin/AnswerFlow/.claude/skills/senior-backend/
-@/Users/evin/AnswerFlow/.claude/skills/code-reviewer/
+@/Users/evin/AnswerCue/.claude/skills/software-architecture/
+@/Users/evin/AnswerCue/.claude/skills/senior-architect/
+@/Users/evin/AnswerCue/.claude/skills/senior-backend/
+@/Users/evin/AnswerCue/.claude/skills/code-reviewer/
 
 Use context7 and official documentation whenever needed for Electron, IPC security, sqlite/sqlite-vec, WebSocket STT, provider SDKs, PostHog/Axiom/Sentry, OCR/screenshot APIs, keytar, local encryption, React UI patterns, and any package-specific behavior.
 
 Mission:
-Fix the weaknesses found in the AnswerFlow vs legacy overlay audit and upgrade AnswerFlow into a legacy overlay-grade or better realtime AI meeting assistant.
+Fix the weaknesses found in the AnswerCue vs legacy overlay audit and upgrade AnswerCue into a legacy overlay-grade or better realtime AI meeting assistant.
 
 Do not just patch randomly.
 Work like a senior engineer shipping a production release.
 
 Core goal:
-Make AnswerFlow equal to or better than legacy overlay in these areas:
+Make AnswerCue equal to or better than legacy overlay in these areas:
 
 1. Security and privacy
 2. Mode runtime system
@@ -33,7 +33,7 @@ Make AnswerFlow equal to or better than legacy overlay in these areas:
 8. Telemetry and observability
 9. Post-call notes, coaching, and follow-up workflow
 10. UI/UX polish
-11. End-to-end testing using real-world AnswerFlow scenarios
+11. End-to-end testing using real-world AnswerCue scenarios
 
 The previous audit found these high-priority gaps:
 
@@ -81,11 +81,11 @@ Important working principles:
 12. Use existing architecture where good, but refactor god objects when necessary.
 13. Build real product behavior, not only backend plumbing.
 14. Always consider Mac and Windows behavior.
-15. Always consider hosted AnswerFlow API behavior and local provider behavior.
+15. Always consider hosted AnswerCue API behavior and local provider behavior.
 
 Start by creating a working file:
 
-docs/engineering/ANSWERFLOW_PARITY_FIX_LOG.md
+docs/engineering/ANSWERCUE_PARITY_FIX_LOG.md
 
 This file must be continuously updated after each completed fix.
 
@@ -108,7 +108,7 @@ For every issue fixed, record:
 
 Also create:
 
-docs/engineering/ANSWERFLOW_PARITY_ROADMAP.md
+docs/engineering/ANSWERCUE_PARITY_ROADMAP.md
 
 This should track everything not completed in this run.
 
@@ -117,7 +117,7 @@ Phase 0: Baseline and safety snapshot
 Before changing code:
 
 1. Inspect the repo structure.
-2. Read package.json, README, main Electron entrypoints, IPC handlers, LLM provider code, STT provider code, ModesManager, ModeContextRetriever, RAGManager, DatabaseManager, SessionTracker, IntelligenceEngine, PlannerDecision, AnswerFlowInterface, overlay components, settings components, tests, and docs.
+2. Read package.json, README, main Electron entrypoints, IPC handlers, LLM provider code, STT provider code, ModesManager, ModeContextRetriever, RAGManager, DatabaseManager, SessionTracker, IntelligenceEngine, PlannerDecision, AnswerCueInterface, overlay components, settings components, tests, and docs.
 3. Run:
    - git status
    - npm install only if needed
@@ -125,7 +125,7 @@ Before changing code:
    - npm run lint if available
    - npm run typecheck if available
    - npm run build if available
-4. Record failing baseline tests/build errors in ANSWERFLOW_PARITY_FIX_LOG.md.
+4. Record failing baseline tests/build errors in ANSWERCUE_PARITY_FIX_LOG.md.
 5. Do not hide pre-existing failures. Separate them into:
    - pre-existing
    - caused by current changes
@@ -442,7 +442,7 @@ UI requirements:
 - Cards must be dismissible.
 - Accepted card should show loading state and then stream answer.
 - Card should not block existing manual Ask AI flow.
-- Visual style must match AnswerFlow’s current UI.
+- Visual style must match AnswerCue’s current UI.
 - Add active mode badge near cards.
 
 Dynamic action examples:
@@ -633,7 +633,7 @@ Target modules:
 - OpenAIProvider
 - ClaudeProvider
 - GroqProvider
-- AnswerFlowProvider
+- AnswerCueProvider
 - OllamaProvider
 - CustomCurlProvider
 - MediaPreprocessor
@@ -661,7 +661,7 @@ Required behavior:
 - Realtime dynamic answers should prefer low-latency models.
 - Post-call summaries can use quality models.
 - Local-only mode must not call cloud providers.
-- AnswerFlow API mode must clearly disclose cloud usage.
+- AnswerCue API mode must clearly disclose cloud usage.
 
 Tests:
 - Rate limiter acquire called before provider request.
@@ -892,9 +892,9 @@ Screen:
 37. Screen permission missing UI.
 
 STT/audio:
-38. AnswerFlowProSTT auth failure.
-39. AnswerFlowProSTT DNS failure.
-40. AnswerFlowProSTT reconnect cap.
+38. AnswerCueProSTT auth failure.
+39. AnswerCueProSTT DNS failure.
+40. AnswerCueProSTT reconnect cap.
 41. Deepgram reconnect/buffer behavior.
 42. Google stream rollover.
 43. Local Whisper worker failure cleanup.
@@ -928,8 +928,8 @@ E2E:
 67. Provider failure shows actionable UI.
 68. Logs do not contain transcript/key sentinels.
 
-Real-world AnswerFlow API testing:
-- Use real AnswerFlow API only if credentials are configured locally.
+Real-world AnswerCue API testing:
+- Use real AnswerCue API only if credentials are configured locally.
 - Never print or log the key.
 - Test:
   - happy path STT
@@ -941,7 +941,7 @@ Real-world AnswerFlow API testing:
 
 Before/after reporting requirement:
 
-For every major phase, add a section to ANSWERFLOW_PARITY_FIX_LOG.md:
+For every major phase, add a section to ANSWERCUE_PARITY_FIX_LOG.md:
 
 ## Phase X Before
 - What was broken
@@ -994,7 +994,7 @@ When finished, produce:
 6. Remaining gaps vs legacy overlay.
 7. Next 7-day roadmap.
 8. Any risky areas needing manual review.
-9. Whether AnswerFlow is now:
+9. Whether AnswerCue is now:
    - individual-user legacy overlay parity
    - better than legacy overlay in some areas
    - still behind in enterprise areas

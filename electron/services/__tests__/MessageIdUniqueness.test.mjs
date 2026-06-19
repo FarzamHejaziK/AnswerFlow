@@ -1,6 +1,6 @@
 // Issue #253 — UI flickering / chat history loops on Windows + macOS.
 //
-// Root cause: src/components/NativelyInterface.tsx generated React list-item
+// Root cause: src/components/AnswerCueInterface.tsx generated React list-item
 // keys via `Date.now().toString()` at ~30 different call sites. Several
 // handlers (handleManualSubmit, handleWhatToSay, gemini-stream-error fallback,
 // etc.) append two messages back-to-back in a single synchronous tick — both

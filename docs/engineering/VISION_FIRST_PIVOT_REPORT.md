@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-17
 **Branch:** main (uncommitted)
-**Decision:** Make AnswerFlow's default screen-understanding path **vision-first**.
+**Decision:** Make AnswerCue's default screen-understanding path **vision-first**.
 OCR (Tesseract.js) is removed from the runtime default path and marked
 LEGACY-DISABLED behind an opt-in env flag.
 
@@ -24,7 +24,7 @@ LEGACY-DISABLED behind an opt-in env flag.
 - **Rewritten module:** `electron/services/screen/ScreenUnderstandingService.ts`
 - **Legacy modules retained for opt-in only:**
   - `OcrProvider.ts`, `OcrProviderManager.ts`, `ScreenContextService.ts` (header comments mark them legacy-disabled)
-  - 4 OCR-coupled test files gated behind `ANSWERFLOW_RUN_LEGACY_OCR_TESTS=1`
+  - 4 OCR-coupled test files gated behind `ANSWERCUE_RUN_LEGACY_OCR_TESTS=1`
 - **Tests:** 494 pass, 0 fail, 30 skipped (legacy OCR). Up from 504/504 pre-pivot.
   The 30 skipped tests are the OCR-specific suites that no longer reflect the
   runtime path.
@@ -41,8 +41,8 @@ LEGACY-DISABLED behind an opt-in env flag.
 | 5 | ScreenUnderstandingService rewrite | Done | New result shape; vision_direct / vision_extract; PromptAssembler-compat fields |
 | 6 | Vision-only prompts | Done | `visionPrompts.ts` with anti-injection language and JSON extraction schema |
 | 7 | Wire IPC handlers | Done | `generate-what-to-say` routes through vision pipeline; `generate-code-hint` and `generate-brainstorm` now pre-optimize images via Sharp before forwarding (technical / balanced profiles) |
-| 8 | Provider vision support | Done | AnswerFlow / OpenAI / Claude / Gemini Flash / Gemini Pro / Groq via `LLMHelper.runVisionRequest()`; Ollama via OpenAI-compatible `/v1/chat/completions`; **custom provider wired** through `executeCustomProvider` with local-host detection for `private_vision` mode. Codex CLI remains conservatively disabled (`supportsVision: false`) until end-to-end capability is verified against a real CLI install. |
-| 9 | UI settings + status chips | Done | `SettingsOverlay.tsx` has a "Screen understanding" radio (vision_first / vision_only / private_vision) + a "Technical interview direct vision" toggle; `AnswerFlowInterface.tsx:3103` chip rewritten to show `Vision: <provider>` on success, reason-aware error label on failure ("No vision provider", "Vision failed", "Private mode blocked vision", "Screenshots disabled", "Vision timed out"); all `OCR attached` / `OCR unavailable` / `Screen OCR failed` strings removed from the default UI |
+| 8 | Provider vision support | Done | AnswerCue / OpenAI / Claude / Gemini Flash / Gemini Pro / Groq via `LLMHelper.runVisionRequest()`; Ollama via OpenAI-compatible `/v1/chat/completions`; **custom provider wired** through `executeCustomProvider` with local-host detection for `private_vision` mode. Codex CLI remains conservatively disabled (`supportsVision: false`) until end-to-end capability is verified against a real CLI install. |
+| 9 | UI settings + status chips | Done | `SettingsOverlay.tsx` has a "Screen understanding" radio (vision_first / vision_only / private_vision) + a "Technical interview direct vision" toggle; `AnswerCueInterface.tsx:3103` chip rewritten to show `Vision: <provider>` on success, reason-aware error label on failure ("No vision provider", "Vision failed", "Private mode blocked vision", "Screenshots disabled", "Vision timed out"); all `OCR attached` / `OCR unavailable` / `Screen OCR failed` strings removed from the default UI |
 | 10 | E2E tests with fake providers | Done | 11 fallback-chain tests + 8 optimizer tests; full-electron E2E with fake provider stubs is deferred (see §Limitations) |
 | 11 | Sharp performance benchmarks | Done | `scripts/bench-screen-understanding.mjs` rewritten for the vision-first pipeline; results captured in `docs/testing/SCREEN_UNDERSTANDING_PERFORMANCE.md`. Cache hits <0.02ms; balanced profile @ 4K = 67ms; technical profile @ Retina coding = 240ms. |
 | 12 | Final reports | This file + `SCREEN_UNDERSTANDING_PERFORMANCE.md` |
@@ -75,7 +75,7 @@ closed in this order:
      `getScreenUnderstandingMode` / `setScreenUnderstandingMode` IPC plus both
      the new `…VisionFirst` channel and the deprecated `…DirectVision` alias for
      backward compat.
-   - `AnswerFlowInterface.tsx:3103` chip rewritten as a reason-aware status pill.
+   - `AnswerCueInterface.tsx:3103` chip rewritten as a reason-aware status pill.
      On success: `Vision: <provider>` with tooltip naming provider + model. On
      failure: one of five reason-specific labels with matching tooltips. The OCR
      labels are gone from the default UI.
@@ -113,7 +113,7 @@ closed in this order:
 **Tests**
 - `electron/services/__tests__/VisionProviderFallbackChain.test.mjs` (new) — 11 tests.
 - `electron/services/__tests__/ImageOptimizer.test.mjs` (new) — 8 tests.
-- Skipped behind `ANSWERFLOW_RUN_LEGACY_OCR_TESTS=1`:
+- Skipped behind `ANSWERCUE_RUN_LEGACY_OCR_TESTS=1`:
   - `ScreenUnderstandingMode.test.mjs`
   - `ScreenContextService.test.mjs`
   - `OcrRealFixtures.test.mjs`
@@ -129,11 +129,11 @@ closed in this order:
 | Are all image flows using vision provider fallback? | **`generate-what-to-say`: yes.** `generate-code-hint` and `generate-brainstorm` forward image paths to LLMHelper which already routes them multimodally — but they do NOT run through `ScreenUnderstandingService` so they don't get the optimized image / fallback chain. *Follow-up needed.* |
 | Does Technical Interview use direct vision? | **Yes.** `visionPrompts.ts` picks `TECHNICAL_INTERVIEW_SYSTEM_PROMPT` when `modeTemplateType` matches; `qualityMode` picks the `technical` optimization profile (1536px @ q88). |
 | Does Sharp optimize screenshots before provider calls? | **Yes**, via `ImageOptimizer` for every call routed through the fallback chain. Verified by tests showing JPEG output smaller than PNG input. |
-| Are all available vision providers tried safely? | **Yes**, in the order AnswerFlow → OpenAI → Gemini Flash → Claude → Gemini Pro → Groq Scout → Ollama → Codex (disabled) → Custom (stubbed). |
+| Are all available vision providers tried safely? | **Yes**, in the order AnswerCue → OpenAI → Gemini Flash → Claude → Gemini Pro → Groq Scout → Ollama → Codex (disabled) → Custom (stubbed). |
 | Does Ollama vision work? | **Wiring is in place** using OpenAI-compatible `/v1/chat/completions` with `data:` URL. **Live verification against a running Ollama instance is not done in this pivot** — the chain has 11 unit tests with fake providers but no end-to-end Ollama call. |
 | Does custom provider vision work with scope enforcement? | **Scope gate is enforced** (test `custom provider with scope_blocked is skipped`). **Adapter is stubbed** — the `invoke` function throws. Wiring the real cURL/openai-compat custom-provider vision call is a follow-up. |
 | Does Codex CLI vision work or is it clearly marked unverified? | **Marked unverified.** `supportsVision: false` until the CLI vision path is end-to-end validated. |
-| Is UI clear about provider/fallback/status? | **No — deferred.** Backend exposes `visionProviderUsed` / `visionFailureReason` on the IPC response; the renderer chip strings still say "OCR attached" (`AnswerFlowInterface.tsx:3103`). SettingsOverlay has no vision-mode row. |
+| Is UI clear about provider/fallback/status? | **No — deferred.** Backend exposes `visionProviderUsed` / `visionFailureReason` on the IPC response; the renderer chip strings still say "OCR attached" (`AnswerCueInterface.tsx:3103`). SettingsOverlay has no vision-mode row. |
 | Is provider-backed E2E passing? | **No — deferred.** Unit-level fake-provider tests pass; full Electron E2E with a fake vision provider in front of the real chain is not built. |
 | What remains unproven? | See Limitations below. |
 
@@ -152,7 +152,7 @@ closed in this order:
    `VisionProviderRegistry.ts:codex()`.
 3. **Full-electron E2E with fake provider stubs** — Unit-level fake provider
    tests pass for the chain and optimizer. A Playwright-level test that boots
-   the actual Electron app with `__answerflowGetLLMHelper` patched to return a
+   the actual Electron app with `__answercueGetLLMHelper` patched to return a
    fake helper is deferred.
 
 All other gaps from the original pivot report were closed in the follow-up

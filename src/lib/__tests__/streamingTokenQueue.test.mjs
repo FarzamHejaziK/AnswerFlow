@@ -106,7 +106,7 @@ test('applyFirstStreamingToken is idempotent against a pre-finalized row', () =>
 
 // Regression: id-collision fix. newMessageId() (crypto.randomUUID with
 // counter-suffixed-timestamp fallback) replaced 33 Date.now().toString() sites
-// in NativelyInterface.tsx. If a fresh stream id COLLIDES with a just-finalized
+// in AnswerCueInterface.tsx. If a fresh stream id COLLIDES with a just-finalized
 // row id, applyFirstStreamingToken NO-OPs (see the idempotency test above) and
 // silently drops the first token. The collision-avoidance pathway is that a
 // DIFFERENT id must create a brand-new streaming row — even when a finalized
@@ -253,7 +253,7 @@ test('RC-F: late WTA finalize ignored when chat placeholder active after manual 
   assert.equal(rows.filter((m) => m.intent === 'what_to_answer').length, 0);
 });
 
-// Regression: orphan-placeholder race fix in NativelyInterface.queueToken.
+// Regression: orphan-placeholder race fix in AnswerCueInterface.queueToken.
 // Previously, the first-token branch passed `() => reservedId` as idFactory to
 // resolveStreamingMessageId, but resolveStreamingMessageId reuses an existing
 // open same-intent row's id when one exists — so a stale orphan
@@ -302,7 +302,7 @@ test('seal-orphans pattern: orphan same-intent row gets isStreaming=false and a 
 });
 
 // Regression (Fix A — cross-flow late-finalize):
-// finalizeStreamingByIntent in NativelyInterface.tsx now consults
+// finalizeStreamingByIntent in AnswerCueInterface.tsx now consults
 // shouldAcceptIntelligenceIpc and, when the active stream is a DIFFERENT
 // intent (e.g. chat placeholder still open), passes streamingMsgId=null to
 // finalizeStreamingByIntentMessages. With streamingMsgId=null, the function

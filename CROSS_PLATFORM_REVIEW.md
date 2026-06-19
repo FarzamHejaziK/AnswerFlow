@@ -45,7 +45,7 @@ The 13 audit findings are all mechanically resolved. The only blocker-class issu
 
 ### F-006 / F-011 / F-012 — Hardcoded `⌘` glyphs
 - Score: **HIGH**
-- Correct? **Yes** for the changed surfaces: Solutions.tsx:372, Queue.tsx:358, AnswerFlowInterfaceCard.tsx:170, SettingsPopup.tsx:342/358, AnswerFlowInterface.tsx:3503, HelpSettings.tsx dynamic-action grid (1267) now uses `getModifierSymbol` consistently and the per-row remap is platform-correct.
+- Correct? **Yes** for the changed surfaces: Solutions.tsx:372, Queue.tsx:358, AnswerCueInterfaceCard.tsx:170, SettingsPopup.tsx:342/358, AnswerCueInterface.tsx:3503, HelpSettings.tsx dynamic-action grid (1267) now uses `getModifierSymbol` consistently and the per-row remap is platform-correct.
 - HelpSettings hotkeys array (837-839) uses computed cmd/shift constants.
 - See N-003 — `useShortcuts.DEFAULT_SHORTCUTS` const is still Mac-hardcoded but unused; `buildDefaultShortcuts()` is correct.
 
@@ -122,7 +122,7 @@ The 13 audit findings are all mechanically resolved. The only blocker-class issu
 - **`WindowHelper.ts` BrowserWindow options** (`vibrancy`, `visualEffectState`, `titleBarStyle`, `trafficLightPosition`) all behind `isMac ?` ternaries (185-200).
 - **Rust speaker mod fallback** compiles cleanly — verified single struct/impl/method definition.
 - **F-007 chat-focus banner gating** — confirmed `{isMac && stealthPermissionMissing && …}`; the related `stealthHotkeyConflict` banner has no Mac copy.
-- **`x-apple.systempreferences:` is unreachable on Windows** at three layers: (1) the renderer button (AnswerFlowInterface 3189) only renders when `kind === 'screen-recording-permission'` and that event only fires from a darwin-gated broadcast; (2) `PermissionsToaster.openScreenSettings` is only invoked when `platform === 'darwin'`; (3) the IPC allowlist (ipcHandlers 2560) requires darwin. Defense in depth confirmed.
+- **`x-apple.systempreferences:` is unreachable on Windows** at three layers: (1) the renderer button (AnswerCueInterface 3189) only renders when `kind === 'screen-recording-permission'` and that event only fires from a darwin-gated broadcast; (2) `PermissionsToaster.openScreenSettings` is only invoked when `platform === 'darwin'`; (3) the IPC allowlist (ipcHandlers 2560) requires darwin. Defense in depth confirmed.
 - **`-apple-system, BlinkMacSystemFont, …`** font stacks are standard CSS fallbacks — Windows falls through to Segoe UI automatically. Audit correctly classified as non-issue.
 
 ---
@@ -132,7 +132,7 @@ The 13 audit findings are all mechanically resolved. The only blocker-class issu
 ### Windows
 1. Fresh install: confirm Settings → SCK Backend toggle is NOT visible.
 2. Set `localStorage.useExperimentalSckBackend = 'true'` via DevTools, then click Start Meeting. Confirm the audio pipeline doesn't pass `"sck"` to the native module — this will currently fail per N-001.
-3. Trigger the audio-capture-failed banner (start meeting with mic muted at OS level): banner title should say "Audio Capture Issue" and the "Open Settings" button should open AnswerFlow's own Settings window, not pop a Microsoft Store dialog.
+3. Trigger the audio-capture-failed banner (start meeting with mic muted at OS level): banner title should say "Audio Capture Issue" and the "Open Settings" button should open AnswerCue's own Settings window, not pop a Microsoft Store dialog.
 4. Open Help → App Permissions Setup: should show ONLY a Microphone card, no Screen Recording / Accessibility cards, no SCK vs CoreAudio grid, no MockPermissionsAnim widget.
 5. Open Help → Hotkeys panel: confirm all glyphs show "Ctrl", not "⌘".
 6. Trigger the UpdateModal via test flow (`Cmd+I` per UpdateBanner): downloading view should NOT show the xattr troubleshooting card.
@@ -143,7 +143,7 @@ The 13 audit findings are all mechanically resolved. The only blocker-class issu
 1. Confirm Settings → SCK Backend toggle still renders identically.
 2. Confirm all permission-denied banners read the same Mac-flavored copy they did before (no regression in helpfulness — re-read against pre-fix screenshots if available).
 3. Trigger TCC zero-fill detector by revoking Screen Recording mid-meeting: banner should still fire with `screen-recording-revoked-rebuild` message.
-4. Stealth typing without Accessibility: banner at AnswerFlowInterface 3449 should still appear.
+4. Stealth typing without Accessibility: banner at AnswerCueInterface 3449 should still appear.
 5. UpdateModal: xattr troubleshooting card still visible.
 
 ### Build / type-check

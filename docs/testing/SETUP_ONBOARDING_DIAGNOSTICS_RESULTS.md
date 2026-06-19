@@ -16,7 +16,7 @@ The service-layer signals every chip needs already exist:
 | LLM provider / fallback / error | `LLMHelper` + `ProviderRouter` + `ProviderGateway` |
 | Screen available / stale / permission | `ScreenContextService.getScreenContext()` returns `permissionGranted` + `staleAge` |
 | RAG hybrid / lexical-fallback / no references | `rag_lexical_fallback` telemetry event (already emits) |
-| Privacy mode (local / cloud / AnswerFlow / custom) | `SettingsManager` + per-scope toggles wired |
+| Privacy mode (local / cloud / AnswerCue / custom) | `SettingsManager` + per-scope toggles wired |
 
 What is **missing** is the React rendering of those signals as user-facing chips, plus the diagnostics-copy with secrets redaction. Building those without time to also test them across the 6 known UI states (active/stale/permission-missing/missing/error/fallback) would land a brittle UI.
 

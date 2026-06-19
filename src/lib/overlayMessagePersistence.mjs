@@ -11,7 +11,7 @@
 // guarantees two calls in the same millisecond get distinct ids — closing
 // the same collision window that `genMessageId` closes in the renderer.
 //
-// In production every caller in NativelyInterface.tsx passes an explicit
+// In production every caller in AnswerCueInterface.tsx passes an explicit
 // `idFactory` that delegates to `genMessageId`. This default exists for
 // (a) callers that forget and (b) test harnesses that don't need a custom
 // factory. Either way, the default must NOT use bare `Date.now().toString()`

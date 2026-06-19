@@ -10,7 +10,7 @@
 // We observe the JSONL log the bundled instance actually writes (each
 // dist-electron entry-point has its own bundled telemetry singleton —
 // stubbing the standalone one doesn't reach the retriever's bundle). To
-// avoid cross-test interference we set NATIVELY_TELEMETRY_TEST_RUN_ID
+// avoid cross-test interference we set ANSWERCUE_TELEMETRY_TEST_RUN_ID
 // before importing the bundle; the retriever stamps that id onto every
 // fallback event and the test filters by it.
 
@@ -25,7 +25,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Stamp this run BEFORE importing the bundled retriever so the env-var read
 // inside the bundle sees the id.
 const RUN_ID = `test-run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-process.env.NATIVELY_TELEMETRY_TEST_RUN_ID = RUN_ID;
+process.env.ANSWERCUE_TELEMETRY_TEST_RUN_ID = RUN_ID;
 
 const hybridMod = await import(
   pathToFileURL(path.resolve(__dirname, '../../../dist-electron/electron/services/modes/ModeHybridRetriever.js')).href

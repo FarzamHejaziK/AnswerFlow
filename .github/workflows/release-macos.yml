@@ -8,13 +8,13 @@ name: Release (macOS signed + notarized)
 # electron-builder's built-in `mac.notarize: true` (notarytool under the hood),
 # and the DMGs are signed + notarized + stapled by scripts/afterAllArtifactBuild.cjs.
 # The only difference vs local is credential delivery: locally we use the
-# `answerflow-notary` keychain profile; in CI we can use either an App Store
+# `answercue-notary` keychain profile; in CI we can use either an App Store
 # Connect API key (recommended) or the Apple ID + app-specific password style
 # already used by ClickCherry. Both built-in notarize and the DMG hook read
 # those env vars.
 #
 # ── REQUIRED REPOSITORY SECRETS ────────────────────────────────────────────
-#   Certificate, either AnswerFlow-style:
+#   Certificate, either AnswerCue-style:
 #     MACOS_CERT_P12_BASE64   base64 of exported "Developer ID Application" .p12
 #     MACOS_CERT_PASSWORD     password set when exporting the .p12
 #   or ClickCherry-style:
@@ -34,12 +34,12 @@ name: Release (macOS signed + notarized)
 #     KEYCHAIN_PASSWORD       throwaway password for the temporary CI keychain
 #
 # Notes:
-#   - We do NOT use the local `answerflow-notary` keychain profile in CI — that
+#   - We do NOT use the local `answercue-notary` keychain profile in CI — that
 #     profile only exists on the developer's machine. CI credentials are supplied
 #     by GitHub Actions secrets.
 #   - electron-builder imports the signing cert from CSC_LINK (the .p12) and
 #     auto-discovers the Developer ID identity, so we do NOT set
-#     NATIVELY_SIGN_IDENTITY here (the .signed.cjs config treats undefined as
+#     ANSWERCUE_SIGN_IDENTITY here (the .signed.cjs config treats undefined as
 #     "auto-discover").
 
 on:
@@ -53,7 +53,7 @@ permissions:
 
 jobs:
   build-macos:
-    runs-on: macos-14 # Apple Silicon runner; builds both arches via NATIVELY_BUILD_ALL_MAC_ARCHES
+    runs-on: macos-14 # Apple Silicon runner; builds both arches via ANSWERCUE_BUILD_ALL_MAC_ARCHES
     timeout-minutes: 90
     steps:
       - name: Checkout
@@ -91,7 +91,7 @@ jobs:
           fi
           KEYCHAIN_PASSWORD="${KEYCHAIN_PASSWORD:-$(openssl rand -hex 16)}"
           CERT_PATH="$RUNNER_TEMP/developer_id.p12"
-          KEYCHAIN_PATH="$RUNNER_TEMP/answerflow-signing.keychain-db"
+          KEYCHAIN_PATH="$RUNNER_TEMP/answercue-signing.keychain-db"
           echo "$MACOS_CERT_P12_BASE64" | base64 --decode > "$CERT_PATH"
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
@@ -162,8 +162,8 @@ jobs:
         if: env.MACOS_SIGNING_AVAILABLE == 'true'
         run: |
           set -euo pipefail
-          APPS=$(find release -maxdepth 2 -name 'AnswerFlow.app' -path '*mac*')
-          if [ -z "$APPS" ]; then echo "No AnswerFlow.app found in release/"; exit 1; fi
+          APPS=$(find release -maxdepth 2 -name 'AnswerCue.app' -path '*mac*')
+          if [ -z "$APPS" ]; then echo "No AnswerCue.app found in release/"; exit 1; fi
           for APP in $APPS; do
             echo "::group::Verifying app: $APP"
             codesign -dv --verbose=4 "$APP" 2>&1 | sed -n '1,20p'
@@ -187,8 +187,8 @@ jobs:
         if: env.MACOS_SIGNING_AVAILABLE != 'true'
         run: |
           set -euo pipefail
-          APPS=$(find release -maxdepth 2 -name 'AnswerFlow.app' -path '*mac*')
-          if [ -z "$APPS" ]; then echo "No AnswerFlow.app found in release/"; exit 1; fi
+          APPS=$(find release -maxdepth 2 -name 'AnswerCue.app' -path '*mac*')
+          if [ -z "$APPS" ]; then echo "No AnswerCue.app found in release/"; exit 1; fi
           shopt -s nullglob
           DMGS=(release/*.dmg)
           ZIPS=(release/*.zip)
@@ -199,7 +199,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: answerflow-macos
+          name: answercue-macos
           path: |
             release/*.dmg
             release/*.zip

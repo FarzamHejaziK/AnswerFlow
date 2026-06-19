@@ -16,7 +16,7 @@ import packageJson from '../../package.json';
 
 interface AboutSectionProps { }
 
-const REPO_URL = 'https://github.com/FarzamHejaziK/AnswerFlow';
+const REPO_URL = 'https://github.com/FarzamHejaziK/AnswerCue';
 
 export const AboutSection: React.FC<AboutSectionProps> = () => {
     const handleOpenLink = (event: React.MouseEvent<HTMLAnchorElement>, url: string) => {
@@ -31,7 +31,7 @@ export const AboutSection: React.FC<AboutSectionProps> = () => {
     return (
         <div className="space-y-6 animated fadeIn pb-10">
             <div>
-                <h3 className="text-lg font-bold text-text-primary mb-1">About AnswerFlow</h3>
+                <h3 className="text-lg font-bold text-text-primary mb-1">About AnswerCue</h3>
                 <p className="text-sm text-text-secondary">
                     A desktop interview workspace for preparation, live transcription, AI-guided answers, and post-interview follow-up.
                 </p>
@@ -67,14 +67,14 @@ export const AboutSection: React.FC<AboutSectionProps> = () => {
                         color="text-sky-400"
                         bg="bg-sky-500/10"
                         title="Inline app updates"
-                        description="AnswerFlow checks GitHub Releases and shows a quiet sidebar update row when a newer version is available."
+                        description="AnswerCue checks GitHub Releases and shows a quiet sidebar update row when a newer version is available."
                         last
                     />
                 </div>
             </div>
 
             <div>
-                <h4 className="text-xs font-bold text-text-tertiary uppercase tracking-wider mb-2 px-1">How AnswerFlow Works</h4>
+                <h4 className="text-xs font-bold text-text-tertiary uppercase tracking-wider mb-2 px-1">How AnswerCue Works</h4>
                 <div className="bg-bg-item-surface rounded-xl border border-border-subtle overflow-hidden">
                     <FeatureRow
                         icon={<Database size={20} />}
@@ -88,7 +88,7 @@ export const AboutSection: React.FC<AboutSectionProps> = () => {
                         color="text-cyan-400"
                         bg="bg-cyan-500/10"
                         title="Live interview assistance"
-                        description="AnswerFlow captures microphone and meeting audio, keeps interviewer and candidate transcript messages distinct, and generates fast answer support."
+                        description="AnswerCue captures microphone and meeting audio, keeps interviewer and candidate transcript messages distinct, and generates fast answer support."
                     />
                     <FeatureRow
                         icon={<Zap size={20} />}
@@ -112,7 +112,7 @@ export const AboutSection: React.FC<AboutSectionProps> = () => {
                     <InfoRow
                         icon={<MicOff size={16} className="text-red-400 mt-0.5" />}
                         title="No always-on recording"
-                        description="AnswerFlow listens only during active interview flows and does not take screenshots or analyze the screen without an explicit command."
+                        description="AnswerCue listens only during active interview flows and does not take screenshots or analyze the screen without an explicit command."
                     />
                 </div>
             </div>
@@ -134,7 +134,7 @@ export const AboutSection: React.FC<AboutSectionProps> = () => {
                         onOpen={handleOpenLink}
                         icon={<Star size={20} className="transition-all group-hover:fill-current" />}
                         title="Star on GitHub"
-                        description="Follow AnswerFlow development and releases."
+                        description="Follow AnswerCue development and releases."
                         color="text-yellow-500"
                         bg="bg-yellow-500/10"
                     />

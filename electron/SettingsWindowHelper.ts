@@ -214,7 +214,7 @@ export class SettingsWindowHelper {
             // Apply NSPanel stealth attributes (becomesKeyOnlyIfNeeded +
             // _setPreventsActivation + sharingType=None + collectionBehavior)
             // BEFORE any show() so clicking the Settings button on the
-            // Natively overlay doesn't activate the Natively app and dim
+            // AnswerCue overlay doesn't activate the AnswerCue app and dim
             // the user's foreground app (Zoom/browser/IDE) mid-meeting.
             // Without this, settings was a regular focusable window and
             // every interaction stole focus. Failure is non-fatal; logged.
@@ -248,7 +248,7 @@ export class SettingsWindowHelper {
 
         // ROUND 3 FIX (#1): when Settings becomes visible, stop the
         // CGEventTap. Otherwise the tap intercepts every plain keystroke at
-        // OS level and routes them into Natively's chat input — the user
+        // OS level and routes them into AnswerCue's chat input — the user
         // can't type API keys (or anything) into Settings fields. Settings
         // input is a long-form interaction; stealth-typing-into-overlay is
         // not what the user wants here. They can re-engage with the hotkey

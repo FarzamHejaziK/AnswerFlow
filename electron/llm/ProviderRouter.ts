@@ -27,7 +27,7 @@ export function assertProviderDataScopes(provider: string, scopes: ProviderDataS
 }
 
 export interface ProviderAvailabilityState {
-    hasNatively?: boolean;
+    hasAnswerCue?: boolean;
     hasGroq?: boolean;
     groqDisabled?: boolean;
     hasCodex?: boolean;
@@ -99,9 +99,9 @@ export function routeLLMProviders(options: ProviderRouteOptions): ProviderAttemp
 
     const natively: ProviderSpec = {
         provider: 'natively',
-        name: 'AnswerFlow API',
+        name: 'AnswerCue API',
         model: models.natively,
-        available: Boolean(availability.hasNatively),
+        available: Boolean(availability.hasAnswerCue),
         unavailableReason: 'missing_api_key',
         supports: ['chat', 'stream_chat', 'vision'],
     };

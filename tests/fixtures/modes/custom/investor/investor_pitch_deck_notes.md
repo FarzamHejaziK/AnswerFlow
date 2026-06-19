@@ -1,7 +1,7 @@
 # Pitch deck speaker notes
 
 ## Product
-AnswerFlow is a live conversation copilot for individual operators. It handles interviews, sales calls, lectures, and team meetings with mode-specific prompts and reference files.
+AnswerCue is a live conversation copilot for individual operators. It handles interviews, sales calls, lectures, and team meetings with mode-specific prompts and reference files.
 
 ## Market
 The individual operator wedge is roughly 8 million knowledge workers in the US who pay for productivity tools out of pocket. legacy overlay and Final Round target the same wedge from different angles.

@@ -36,7 +36,7 @@ objc2-app-kit = { version = "0.2", features = ["NSWindow", "NSResponder"] }
 objc2-foundation = "0.2"
 # CGEventTap: session-wide keyboard interception for true Cluely-grade
 # stealth input. The tap captures keystrokes BEFORE they reach the
-# foreground app, so the user can type into Natively while Zoom/browser
+# foreground app, so the user can type into AnswerCue while Zoom/browser
 # stays as the OS-level frontmost+key application throughout. core-graphics
 # wraps CGEventTapCreate/CGEventGetFlags/CGEventKeyboardGetUnicodeString;
 # core-foundation gives us the CFRunLoop the tap must attach to.

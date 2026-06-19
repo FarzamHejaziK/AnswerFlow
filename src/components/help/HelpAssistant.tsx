@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { BookOpen, Check, HelpCircle, MessageCircle, Send, Trash2, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import helpGuideMarkdown from '../../content/answerflow-help-guide.md?raw';
+import helpGuideMarkdown from '../../content/answercue-help-guide.md?raw';
 import { useStreamBuffer } from '../../hooks/useStreamBuffer';
 import { genMessageId } from '../../utils/messageId';
 
@@ -17,16 +17,16 @@ type HelpMessage = {
 type HelpState = 'idle' | 'waiting' | 'streaming' | 'error';
 type HelpView = 'chat' | 'guide';
 
-const STORAGE_KEY = 'answerflow_help_assistant_messages_v1';
-const DISMISSED_STORAGE_KEY = 'answerflow_help_assistant_dismissed_v1';
-const SHOW_HELP_ASSISTANT_EVENT = 'answerflow-help-assistant-show';
+const STORAGE_KEY = 'answercue_help_assistant_messages_v1';
+const DISMISSED_STORAGE_KEY = 'answercue_help_assistant_dismissed_v1';
+const SHOW_HELP_ASSISTANT_EVENT = 'answercue-help-assistant-show';
 const MAX_STORED_MESSAGES = 80;
 
-const HELP_ASSISTANT_SYSTEM_PROMPT = `You are the AnswerFlow Help Assistant.
+const HELP_ASSISTANT_SYSTEM_PROMPT = `You are the AnswerCue Help Assistant.
 
-You provide product support for the AnswerFlow desktop app.
+You provide product support for the AnswerCue desktop app.
 
-Use the supplied AnswerFlow Help Guide as your primary source of truth. Also use the recent help chat history for continuity.
+Use the supplied AnswerCue Help Guide as your primary source of truth. Also use the recent help chat history for continuity.
 
 Rules:
 - Be concise, practical, and step-by-step.
@@ -110,9 +110,9 @@ const buildHelpContext = (history: HelpMessage[]) => {
         .join('\n\n');
 
     return [
-        '<answerflow_help_guide>',
+        '<answercue_help_guide>',
         helpGuideMarkdown,
-        '</answerflow_help_guide>',
+        '</answercue_help_guide>',
         recentHistory ? '<recent_help_chat>' : '',
         recentHistory,
         recentHistory ? '</recent_help_chat>' : '',
@@ -336,7 +336,7 @@ export const HelpAssistant: React.FC = () => {
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-secondary text-accent-primary">
                 <HelpCircle size={24} />
             </div>
-            <h3 className="mb-2 text-base font-semibold text-text-primary">Ask about AnswerFlow</h3>
+            <h3 className="mb-2 text-base font-semibold text-text-primary">Ask about AnswerCue</h3>
             <p className="max-w-[300px] text-xs leading-relaxed text-text-secondary">
                 Setup, audio, permissions, models, Custom Instructions, interviews, transcripts, documents, and troubleshooting.
             </p>
@@ -477,7 +477,7 @@ export const HelpAssistant: React.FC = () => {
                             <div className="flex shrink-0 items-center justify-between border-b border-border-subtle px-4 py-2">
                                 <div className="flex items-center gap-2 text-xs font-semibold text-text-primary">
                                     <BookOpen size={14} />
-                                    AnswerFlow Guide
+                                    AnswerCue Guide
                                 </div>
                                 <button
                                     type="button"

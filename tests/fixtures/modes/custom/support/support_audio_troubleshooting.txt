@@ -2,12 +2,12 @@ Audio capture troubleshooting
 ============================
 
 macOS microphone permission missing
-- Reset the TCC entry using: tccutil reset Microphone com.electron.answerflow
+- Reset the TCC entry using: tccutil reset Microphone com.electron.answercue
 - Restart the app and approve the prompt
-- If approval prompt is missing, open System Settings Privacy Microphone and toggle AnswerFlow off then on
+- If approval prompt is missing, open System Settings Privacy Microphone and toggle AnswerCue off then on
 
 macOS system audio permission missing
-- Reset the screen recording TCC entry: tccutil reset ScreenCapture com.electron.answerflow
+- Reset the screen recording TCC entry: tccutil reset ScreenCapture com.electron.answercue
 - System audio uses the aggregate device created at first launch; do not edit the aggregate descriptor manually
 
 Windows microphone silent capture

@@ -11,7 +11,7 @@
 
 | Provider | Vision supported? | How image is sent | OCR extraction supported? | Final answer with image? | Fallback if no vision | Privacy risk | Code path |
 |---|---|---|---|---|---|---|---|
-| **AnswerFlow API** | yes | multipart/form-data; image first resized with Sharp to ≤768 px on long edge, base64 encoded | no — only forwards | yes (AnswerFlow backend treats as multimodal) | server-side fallback | medium (cloud) | `generateWithAnswerFlow` `LLMHelper.ts:1698`; `streamWithAnswerFlow` |
+| **AnswerCue API** | yes | multipart/form-data; image first resized with Sharp to ≤768 px on long edge, base64 encoded | no — only forwards | yes (AnswerCue backend treats as multimodal) | server-side fallback | medium (cloud) | `generateWithAnswerCue` `LLMHelper.ts:1698`; `streamWithAnswerCue` |
 | **OpenAI (GPT-4o / 4.1 / 5.x)** | yes | OpenAI Vision API: `content[]` array with `{type:'image_url', image_url:{url:'data:image/png;base64,…'}}` | no — only forwards | yes | downgrades to text-only when `isMultimodal=false` | medium (cloud) | `generateWithOpenai` `LLMHelper.ts:1786`; `streamWithOpenaiMultimodal` |
 | **Anthropic Claude** | yes | Claude Vision: `content[]` with `{type:'image', source:{type:'base64', media_type, data}}` | no — only forwards | yes | downgrades to text-only | medium (cloud) | `generateWithClaude` `LLMHelper.ts:1907`; `streamWithClaudeMultimodal` |
 | **Google Gemini Flash / Pro** | yes | `google-genai` `inlineData: { mimeType, data:base64 }` per image | no — only forwards | yes | downgrades to text-only | medium (cloud) | `streamWithGeminiModel` `LLMHelper.ts:2523, 2530`; non-stream via `generateContent` |
@@ -23,24 +23,24 @@
 
 Provider order (multimodal request):
 ```
-answerflow → codex → openai → gemini_flash → claude → gemini_pro → groq
+answercue → codex → openai → gemini_flash → claude → gemini_pro → groq
 ```
 (`ProviderRouter.ts:149-151`).
 
 Provider order (text-only request):
 ```
-answerflow → groq → codex → gemini_flash → gemini_pro → openai → claude
+answercue → groq → codex → gemini_flash → gemini_pro → openai → claude
 ```
 
 ---
 
 ## Per-provider notes
 
-### AnswerFlow API
+### AnswerCue API
 - Image preprocessing: `Sharp` resize to ≤768 px on the long edge and JPEG
   re-encode (`LLMHelper.ts:900-905`).
 - Body cap commented at "4 screenshots × ~278 KB base64 = ~1.1 MB" — fine.
-- Scope policy: `assertOutboundScopes('answerflow', text, imagePaths)` runs at
+- Scope policy: `assertOutboundScopes('answercue', text, imagePaths)` runs at
   `LLMHelper.ts:1699`. Users can disable `screenshots` for this provider.
 
 ### OpenAI / Claude
@@ -84,7 +84,7 @@ answerflow → groq → codex → gemini_flash → gemini_pro → openai → cla
   (`curlUtils.ts:98-138`) walks the JSON body and converts the last user
   message into a multimodal array if a base64 image is present.
 - **No data-scope assertion** runs for this path
-  (compare to `LLMHelper.ts:1699` for AnswerFlow). A screenshot can leave the
+  (compare to `LLMHelper.ts:1699` for AnswerCue). A screenshot can leave the
   machine via a user-defined URL even if the user has disabled
   `screenshots` for the named providers.
 
@@ -94,7 +94,7 @@ answerflow → groq → codex → gemini_flash → gemini_pro → openai → cla
 
 **Q: Which provider is best for screen analysis today?**
 A: **Gemini Flash** for the streaming "What should I say" path: it's already
-the default in the multimodal stream list (after AnswerFlow/Codex/OpenAI),
+the default in the multimodal stream list (after AnswerCue/Codex/OpenAI),
 handles `inlineData` cleanly, has the largest free-tier vision quota, and is
 the only one paired with the OCR text block today. **Claude** is technically
 better at reading complex UI screenshots but is later in the failover order.
@@ -108,7 +108,7 @@ the cloud options.
 **Q: Which provider is safest / local?**
 A: **Ollama with a vision family** (`llava:13b`, `qwen2.5-vl`, etc.). The
 image bytes never leave the machine; the Sharp pre-resize at the request
-layer still applies because the AnswerFlow path is short-circuited for
+layer still applies because the AnswerCue path is short-circuited for
 local-only mode (`ProviderRouter.ts:280-286`).
 
 **Q: Which provider path is currently broken or untested?**

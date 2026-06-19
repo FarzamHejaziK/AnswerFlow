@@ -1,22 +1,22 @@
-You are now the autonomous QA architect, senior test engineer, product engineer, and code reviewer for AnswerFlow.
+You are now the autonomous QA architect, senior test engineer, product engineer, and code reviewer for AnswerCue.
 
 Repository:
- /Users/evin/AnswerFlow
+ /Users/evin/AnswerCue
 
 Use these skills heavily:
 
 @"test-engineer (agent)"
-@/Users/evin/AnswerFlow/.claude/skills/software-architecture/
-@/Users/evin/AnswerFlow/.claude/skills/senior-architect/
-@/Users/evin/AnswerFlow/.claude/skills/senior-backend/
-@/Users/evin/AnswerFlow/.claude/skills/code-reviewer/
+@/Users/evin/AnswerCue/.claude/skills/software-architecture/
+@/Users/evin/AnswerCue/.claude/skills/senior-architect/
+@/Users/evin/AnswerCue/.claude/skills/senior-backend/
+@/Users/evin/AnswerCue/.claude/skills/code-reviewer/
 
 Use Context7 and official documentation when needed.
 
 Mission:
-AnswerFlow currently fixes reported bugs, but the testing is not deep enough. I want you to build a real automated mode/profile-intelligence test system that simulates real users, real resumes, real job descriptions, custom prompts, negotiation contexts, reference files, and long meeting/interview scenarios.
+AnswerCue currently fixes reported bugs, but the testing is not deep enough. I want you to build a real automated mode/profile-intelligence test system that simulates real users, real resumes, real job descriptions, custom prompts, negotiation contexts, reference files, and long meeting/interview scenarios.
 
-This should test whether each AnswerFlow mode actually works like a real product, not just whether functions compile.
+This should test whether each AnswerCue mode actually works like a real product, not just whether functions compile.
 
 The core features to test:
 
@@ -34,7 +34,7 @@ The core features to test:
 12. Mode bleeding prevention
 13. Long-session context behavior
 14. Hallucination/refusal behavior
-15. AnswerFlow API integration if configured
+15. AnswerCue API integration if configured
 16. UI/IPC flow if possible
 
 Do not only write unit tests.
@@ -46,7 +46,7 @@ Important:
 - Do not just create mock tests that prove nothing.
 - Do not assume features work because a UI label exists.
 - Do not expose API keys in logs or reports.
-- If real AnswerFlow API credentials are configured locally, use them safely.
+- If real AnswerCue API credentials are configured locally, use them safely.
 - If real API testing is unavailable, create deterministic mocked provider tests and clearly mark real API tests as skipped.
 - If any file format cannot be parsed, that is a bug to report/fix.
 - If a test reveals a bug, fix the bug, then rerun the test.
@@ -112,7 +112,7 @@ Before writing tests:
    - injecting transcript
    - generating answers
    - running post-call notes
-   - calling AnswerFlow API
+   - calling AnswerCue API
 
 3. Do not invent APIs.
    Use the app’s actual service functions, IPC handlers, or test utilities.
@@ -168,13 +168,13 @@ Every fixture must contain unique sentinel facts so tests can verify whether the
 Examples:
 
 Sales mode sentinel:
-"AnswerFlow Pro annual enterprise discount floor is 17 percent for Acme test accounts."
+"AnswerCue Pro annual enterprise discount floor is 17 percent for Acme test accounts."
 
 Recruiting mode sentinel:
 "The Backend Platform role requires Kafka, PostgreSQL, and incident response ownership."
 
 Interview mode sentinel:
-"The candidate built PriceX, a price comparison website, and scaled AnswerFlow to 10k users."
+"The candidate built PriceX, a price comparison website, and scaled AnswerCue to 10k users."
 
 Lecture mode sentinel:
 "The professor emphasized Green's function as a likely 12-mark exam topic."
@@ -366,7 +366,7 @@ Important interview tests:
 - Recruiter screen answers must use JD + resume.
 - Salary negotiation must use salary_negotiation_context.xml.
 - Assistant must not invent FAANG experience, degrees, awards, or metrics absent from resume.
-- If the resume says PriceX/AnswerFlow, answers can use those facts only if present in fixture.
+- If the resume says PriceX/AnswerCue, answers can use those facts only if present in fixture.
 
 TECHNICAL INTERVIEW MODE:
 Use realistic technical files such as:
@@ -713,7 +713,7 @@ TEAM MEETING MODE — 5 users:
 LOOKING FOR WORK / INTERVIEW MODE — 5 users:
 
 1. Behavioral interview
-   - Resume: PriceX, AnswerFlow, open-source
+   - Resume: PriceX, AnswerCue, open-source
    - JD: SWE role
    - Expected: STAR answer using resume facts
 
@@ -1024,9 +1024,9 @@ Test:
 
 If full UI E2E is blocked, document exactly why and create a near-E2E service-level test instead.
 
-Phase 9: Real AnswerFlow API testing
+Phase 9: Real AnswerCue API testing
 
-If real AnswerFlow API is configured locally:
+If real AnswerCue API is configured locally:
 
 1. Do not print key.
 2. Do not commit key.
@@ -1040,7 +1040,7 @@ If real AnswerFlow API is configured locally:
    - retry/fallback
    - streaming behavior if available
 
-If real AnswerFlow API is not configured:
+If real AnswerCue API is not configured:
 - Skip real API tests cleanly.
 - Run mocked provider tests.
 - Document what environment variables/settings are needed.
@@ -1069,7 +1069,7 @@ Final report must include:
 12. Profile intelligence results.
 13. Dynamic action results.
 14. Long-session results.
-15. Real AnswerFlow API results if run.
+15. Real AnswerCue API results if run.
 16. UI/E2E results.
 17. Build/typecheck/lint/test results.
 18. Remaining risks.
@@ -1090,7 +1090,7 @@ Also produce a concise final verdict:
 Important quality bar:
 
 This should not be a small test file.
-This should become a real AnswerFlow QA system.
+This should become a real AnswerCue QA system.
 
 The goal is that after this work, whenever I fix a reported issue, I can run this suite and know whether I accidentally broke:
 - modes
@@ -1100,7 +1100,7 @@ The goal is that after this work, whenever I fix a reported issue, I can run thi
 - reference files
 - RAG
 - dynamic actions
-- AnswerFlow API behavior
+- AnswerCue API behavior
 - mode isolation
 - long session behavior
 

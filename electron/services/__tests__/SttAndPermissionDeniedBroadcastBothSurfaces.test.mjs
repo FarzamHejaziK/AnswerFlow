@@ -31,7 +31,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '../../..');
 const mainPath = path.join(root, 'electron/main.ts');
-const interfacePath = path.join(root, 'src/components/NativelyInterface.tsx');
+const interfacePath = path.join(root, 'src/components/AnswerCueInterface.tsx');
 const source = fs.readFileSync(mainPath, 'utf8');
 const interfaceSource = fs.readFileSync(interfacePath, 'utf8');
 
@@ -139,7 +139,7 @@ describe('B8b: stt-status and system-audio-permission-denied must reach BOTH lau
     );
   });
 
-  it('subscriber side intact: NativelyInterface.tsx still subscribes to both channels', () => {
+  it('subscriber side intact: AnswerCueInterface.tsx still subscribes to both channels', () => {
     // Structural confidence that the rendering paths match the sender
     // channels. If the subscriber side regresses, the broadcast still
     // succeeds but no UI updates.
@@ -149,14 +149,14 @@ describe('B8b: stt-status and system-audio-permission-denied must reach BOTH lau
     assert.match(
       interfaceSource,
       /window\.electronAPI\??\.onSttStatusChanged(?:\?\.)?\s*\(/,
-      'BUG: NativelyInterface.tsx must still subscribe via ' +
+      'BUG: AnswerCueInterface.tsx must still subscribe via ' +
         'window.electronAPI.onSttStatusChanged(...). Without this, the stt-status IPC ' +
         'is broadcast successfully but no renderer renders it.',
     );
     assert.match(
       interfaceSource,
       /window\.electronAPI\??\.onSystemAudioPermissionDenied(?:\?\.)?\s*\(/,
-      'BUG: NativelyInterface.tsx must still subscribe via ' +
+      'BUG: AnswerCueInterface.tsx must still subscribe via ' +
         'window.electronAPI.onSystemAudioPermissionDenied(...). Without this, the TCC ' +
         'permission banner IPC is broadcast successfully but no banner is rendered.',
     );

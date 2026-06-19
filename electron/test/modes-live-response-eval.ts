@@ -62,7 +62,7 @@ const BASELINE_SCENARIOS: EvalScenario[] = [
   {
     id: 'sales-pricing-objection',
     mode: 'sales',
-    contextBlock: '<active_mode_custom_instructions priority="highest">Product: Natively Teams. Price: $20k annually. Do not discount first.</active_mode_custom_instructions>\n\n<reference_file name="pricing-latest.md">Enterprise plan is $20k annually. Discount requires multi-year commitment.</reference_file>',
+    contextBlock: '<active_mode_custom_instructions priority="highest">Product: AnswerCue Teams. Price: $20k annually. Do not discount first.</active_mode_custom_instructions>\n\n<reference_file name="pricing-latest.md">Enterprise plan is $20k annually. Discount requires multi-year commitment.</reference_file>',
     transcript: 'Prospect: This is too expensive. I thought it would be around $10k.',
     latestQuestion: 'What should I say next?',
     mustInclude: [/20k|20,000|\$20|twenty.*thousand|annual.*20/i, /value|team|workflow|cost|problem|outcome|commitment|investment/i],
@@ -130,7 +130,7 @@ const BASELINE_SCENARIOS: EvalScenario[] = [
     contextBlock: '<active_mode_custom_instructions priority="highest">When asked to introduce yourself, say only your name and current role. Nothing else.</active_mode_custom_instructions>',
     transcript: 'Moderator: Please introduce yourself to the group.',
     latestQuestion: 'Introduce yourself.',
-    mustInclude: [/^[^a-zA-Z]*[A-Z][a-z]+|Natively|AI assistant|engineer|developer|manager|analyst|designer|consultant/i],
+    mustInclude: [/^[^a-zA-Z]*[A-Z][a-z]+|AnswerCue|AI assistant|engineer|developer|manager|analyst|designer|consultant/i],
     mustNotInclude: [/I love|I am passionate|I have worked at|my background|developed by|created by/i],
     maxLatencyMs: 12_000,
   },
@@ -339,7 +339,7 @@ const BASELINE_SCENARIOS: EvalScenario[] = [
     transcript: 'Interviewer: Tell me about yourself.',
     latestQuestion: 'Answer.',
     mustInclude: [/I.*(am|work|build|have|focus|background|experience)/i, /engineer|developer|lead|built|build|role|background|experience|product|design|focus/i],
-    mustNotInclude: [/great question|let me start|okay so.*introduction|\bEvin John\b|\bI'?m Evin\b|\bI am Evin\b|\bMy name is Evin\b|\bI'?m Natively\b|\bI am Natively\b/i],
+    mustNotInclude: [/great question|let me start|okay so.*introduction|\bEvin John\b|\bI'?m Evin\b|\bI am Evin\b|\bMy name is Evin\b|\bI'?m AnswerCue\b|\bI am AnswerCue\b/i],
     maxLatencyMs: 12_000,
   },
   {
@@ -696,13 +696,13 @@ const STRESS_SCENARIOS: EvalScenario[] = [
 ];
 
 function selectedScenarios(): EvalScenario[] {
-  const suite = process.env.NATIVELY_EVAL_SUITE || 'baseline';
+  const suite = process.env.ANSWERCUE_EVAL_SUITE || 'baseline';
   const scenarios = suite === 'stress'
     ? STRESS_SCENARIOS
     : suite === 'all'
       ? [...BASELINE_SCENARIOS, ...STRESS_SCENARIOS]
       : BASELINE_SCENARIOS;
-  const ids = process.env.NATIVELY_EVAL_IDS?.split(',').map(id => id.trim()).filter(Boolean);
+  const ids = process.env.ANSWERCUE_EVAL_IDS?.split(',').map(id => id.trim()).filter(Boolean);
   return ids?.length ? scenarios.filter(scenario => ids.includes(scenario.id)) : scenarios;
 }
 
@@ -710,7 +710,7 @@ async function modePromptFor(mode: string): Promise<string> {
   // Tiny-tier path (local small models): exercise tinyPrompts.ts instead
   // of the cloud-tier prompts.ts. Selected by env vars so the default
   // cloud eval path is untouched.
-  if (process.env.NATIVELY_EVAL_USE_OLLAMA === '1' || process.env.NATIVELY_EVAL_TIER === 'tiny') {
+  if (process.env.ANSWERCUE_EVAL_USE_OLLAMA === '1' || process.env.ANSWERCUE_EVAL_TIER === 'tiny') {
     const tiny = await import('../llm/tinyPrompts') as Record<string, string>;
     const byMode: Record<string, string> = {
       general: tiny.TINY_MODE_GENERAL_PROMPT,
@@ -741,12 +741,12 @@ async function buildHelper(): Promise<any> {
   const { LLMHelper } = await import('../LLMHelper') as { LLMHelper: LLMHelperConstructor };
 
   // Ollama / tiny-tier path: route through a locally running Ollama server.
-  // Selected when NATIVELY_EVAL_USE_OLLAMA=1; model picked from
-  // NATIVELY_EVAL_OLLAMA_MODEL (default: qwen3.5:4b to match the
+  // Selected when ANSWERCUE_EVAL_USE_OLLAMA=1; model picked from
+  // ANSWERCUE_EVAL_OLLAMA_MODEL (default: qwen3.5:4b to match the
   // local-small tier the tiny prompts were designed for).
-  if (process.env.NATIVELY_EVAL_USE_OLLAMA === '1') {
-    const ollamaModel = process.env.NATIVELY_EVAL_OLLAMA_MODEL || 'qwen3.5:4b';
-    const ollamaUrl = process.env.NATIVELY_EVAL_OLLAMA_URL || 'http://127.0.0.1:11434';
+  if (process.env.ANSWERCUE_EVAL_USE_OLLAMA === '1') {
+    const ollamaModel = process.env.ANSWERCUE_EVAL_OLLAMA_MODEL || 'qwen3.5:4b';
+    const ollamaUrl = process.env.ANSWERCUE_EVAL_OLLAMA_URL || 'http://127.0.0.1:11434';
     const helper = new LLMHelper(undefined, true, ollamaModel, ollamaUrl);
     console.log(`[eval] Ollama tier active — model=${ollamaModel} url=${ollamaUrl}`);
     return helper;
@@ -756,16 +756,16 @@ async function buildHelper(): Promise<any> {
   const groqKey = process.env.GROQ_API_KEY;
   const openaiKey = process.env.OPENAI_API_KEY;
   const claudeKey = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY;
-  const nativelyKey = process.env.NATIVELY_API_KEY;
+  const nativelyKey = process.env.ANSWERCUE_API_KEY;
   const helper = new LLMHelper(geminiKey, false, undefined, undefined, groqKey, openaiKey, claudeKey);
 
   if (nativelyKey) {
-    helper.setNativelyKey(nativelyKey);
+    helper.setAnswerCueKey(nativelyKey);
     helper.setModel('natively');
     return helper;
   }
 
-  const model = process.env.NATIVELY_EVAL_MODEL;
+  const model = process.env.ANSWERCUE_EVAL_MODEL;
   if (model) helper.setModel(model);
   return helper;
 }
@@ -783,10 +783,10 @@ async function ask(helper: any, scenario: EvalScenario): Promise<EvalResult> {
   for (const regex of scenario.mustNotInclude ?? []) {
     if (regex.test(response)) failures.push(`forbidden pattern present: ${regex}`);
   }
-  const rawMult = Number(process.env.NATIVELY_EVAL_LATENCY_MULT);
+  const rawMult = Number(process.env.ANSWERCUE_EVAL_LATENCY_MULT);
   const latencyMultiplier = Number.isFinite(rawMult) && rawMult > 0 ? rawMult : 1;
-  if (latencyMultiplier > 5 && !process.env.NATIVELY_EVAL_LATENCY_MULT_ALLOW_HIGH) {
-    throw new Error(`NATIVELY_EVAL_LATENCY_MULT=${latencyMultiplier} > 5x. Set NATIVELY_EVAL_LATENCY_MULT_ALLOW_HIGH=1 to force.`);
+  if (latencyMultiplier > 5 && !process.env.ANSWERCUE_EVAL_LATENCY_MULT_ALLOW_HIGH) {
+    throw new Error(`ANSWERCUE_EVAL_LATENCY_MULT=${latencyMultiplier} > 5x. Set ANSWERCUE_EVAL_LATENCY_MULT_ALLOW_HIGH=1 to force.`);
   }
   if (latencyMultiplier > 1 && !(globalThis as any).__nativelyEvalLatencyMultWarned) {
     (globalThis as any).__nativelyEvalLatencyMultWarned = true;
@@ -807,13 +807,13 @@ async function ask(helper: any, scenario: EvalScenario): Promise<EvalResult> {
 }
 
 async function main(): Promise<void> {
-  if (process.env.NATIVELY_LIVE_LLM_TESTS !== '1') {
-    console.error('Set NATIVELY_LIVE_LLM_TESTS=1 to run live AI response evals.');
+  if (process.env.ANSWERCUE_LIVE_LLM_TESTS !== '1') {
+    console.error('Set ANSWERCUE_LIVE_LLM_TESTS=1 to run live AI response evals.');
     process.exit(2);
   }
 
-  if (process.env.NATIVELY_EVAL_USE_OLLAMA !== '1' && !process.env.NATIVELY_API_KEY && !process.env.GEMINI_API_KEY && !process.env.GOOGLE_API_KEY && !process.env.GROQ_API_KEY && !process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY && !process.env.CLAUDE_API_KEY) {
-    console.error('No live LLM API key found. Set NATIVELY_API_KEY, GEMINI_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, or CLAUDE_API_KEY — or set NATIVELY_EVAL_USE_OLLAMA=1 for the local Ollama tier.');
+  if (process.env.ANSWERCUE_EVAL_USE_OLLAMA !== '1' && !process.env.ANSWERCUE_API_KEY && !process.env.GEMINI_API_KEY && !process.env.GOOGLE_API_KEY && !process.env.GROQ_API_KEY && !process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY && !process.env.CLAUDE_API_KEY) {
+    console.error('No live LLM API key found. Set ANSWERCUE_API_KEY, GEMINI_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, or CLAUDE_API_KEY — or set ANSWERCUE_EVAL_USE_OLLAMA=1 for the local Ollama tier.');
     process.exit(2);
   }
 

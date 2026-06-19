@@ -1,7 +1,7 @@
 /**
  * LocalWhisperSTT — local Whisper / Distil-Whisper / Moonshine STT provider.
  *
- * Dual-channel architecture: Natively captures Mic and System Audio as two
+ * Dual-channel architecture: AnswerCue captures Mic and System Audio as two
  * completely separate native streams. createSTTProvider() instantiates this
  * class TWICE — once per channel. No diarization model is needed; speaker
  * attribution is free from the hardware.

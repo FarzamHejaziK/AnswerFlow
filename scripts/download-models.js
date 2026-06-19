@@ -22,7 +22,7 @@ const MIXED_ASR_DTYPE = {
     decoder_model_merged: 'q8',
     decoder_with_past_model: 'q8',
 };
-const SHOULD_DOWNLOAD_STT_RESOURCE_CACHE = process.env.ANSWERFLOW_DOWNLOAD_STT_MODEL === '1';
+const SHOULD_DOWNLOAD_STT_RESOURCE_CACHE = process.env.ANSWERCUE_DOWNLOAD_STT_MODEL === '1';
 
 function missingMoonshineBaseFiles() {
     return MOONSHINE_BASE_REQUIRED_FILES.filter((relativePath) => {

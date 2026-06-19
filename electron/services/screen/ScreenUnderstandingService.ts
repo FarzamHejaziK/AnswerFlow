@@ -1,6 +1,6 @@
 // electron/services/screen/ScreenUnderstandingService.ts
 //
-// VISION-FIRST screen understanding pipeline for Natively.
+// VISION-FIRST screen understanding pipeline for AnswerCue.
 //
 // Flow:
 //   request
@@ -172,7 +172,7 @@ export class ScreenUnderstandingService {
     // Validate paths.
     const userDataDir =
       (app?.getPath ? app.getPath('userData') : undefined) ||
-      process.env.NATIVELY_TEST_USER_DATA ||
+      process.env.ANSWERCUE_TEST_USER_DATA ||
       '';
     const validPaths: string[] = [];
     for (const p of imagePaths) {
@@ -224,7 +224,7 @@ export class ScreenUnderstandingService {
         imageHash,
         unavailableReason: mode === 'private_vision'
           ? 'No local vision provider is available. Configure Ollama with a vision-capable model (llava, qwen2.5-vl, llama3.2-vision, etc.) or enable Codex CLI vision.'
-          : 'No vision-capable provider is configured. Add an API key for OpenAI, Claude, Gemini, Groq, or AnswerFlow API, or configure a local Ollama vision model.',
+          : 'No vision-capable provider is configured. Add an API key for OpenAI, Claude, Gemini, Groq, or AnswerCue API, or configure a local Ollama vision model.',
       });
     }
 

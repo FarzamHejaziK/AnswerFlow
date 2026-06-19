@@ -86,10 +86,10 @@ export class ProcessingHelper {
       this.llmHelper.setDeepseekApiKey(deepseekKey);
     }
 
-    const nativelyKey = credManager.getNativelyApiKey();
+    const nativelyKey = credManager.getAnswerCueApiKey();
     if (nativelyKey) {
-      console.log("[ProcessingHelper] Loading stored AnswerFlow API Key from CredentialsManager");
-      this.llmHelper.setNativelyKey(nativelyKey);
+      console.log("[ProcessingHelper] Loading stored AnswerCue API Key from CredentialsManager");
+      this.llmHelper.setAnswerCueKey(nativelyKey);
     }
 
     // CRITICAL: Re-initialize IntelligenceManager now that keys are loaded

@@ -7,7 +7,7 @@
 // because dev builds always claimed permission was granted.
 //
 // Fix: introduce an `isDevTccBypassEnabled()` helper that requires BOTH
-// `!app.isPackaged` AND `process.env.NATIVELY_DEV_BYPASS_SCREEN_TCC === '1'`.
+// `!app.isPackaged` AND `process.env.ANSWERCUE_DEV_BYPASS_SCREEN_TCC === '1'`.
 // Both gates now call this helper instead of bare `!app.isPackaged`.
 // Default in dev is now to run the full production capability path so
 // devs see real TCC status.
@@ -75,7 +75,7 @@ function extractFunctionBody(source, signatureRe) {
   return null;
 }
 
-describe("B5: dev-mode TCC bypass is opt-in (NATIVELY_DEV_BYPASS_SCREEN_TCC=1) only", () => {
+describe("B5: dev-mode TCC bypass is opt-in (ANSWERCUE_DEV_BYPASS_SCREEN_TCC=1) only", () => {
   it("isDevTccBypassEnabled() helper exists and checks BOTH !app.isPackaged AND the env flag", () => {
     const body = extractFunctionBody(
       main,
@@ -92,16 +92,16 @@ describe("B5: dev-mode TCC bypass is opt-in (NATIVELY_DEV_BYPASS_SCREEN_TCC=1) o
         "The bypass MUST remain dev-only — packaged builds must never short-circuit TCC.",
     );
     assert.ok(
-      /process\.env\.NATIVELY_DEV_BYPASS_SCREEN_TCC/.test(body),
-      "BUG: isDevTccBypassEnabled() no longer checks process.env.NATIVELY_DEV_BYPASS_SCREEN_TCC. " +
+      /process\.env\.ANSWERCUE_DEV_BYPASS_SCREEN_TCC/.test(body),
+      "BUG: isDevTccBypassEnabled() no longer checks process.env.ANSWERCUE_DEV_BYPASS_SCREEN_TCC. " +
         "Without the env-flag gate the bypass becomes unconditional in dev and re-introduces " +
         "the diagnostic blindness B5 was meant to remove.",
     );
     // Confirm the conjunction (both conditions joined by &&), not a disjunction
     // that would let either alone trigger the bypass.
     assert.ok(
-      /!\s*app\.isPackaged[\s\S]*&&[\s\S]*NATIVELY_DEV_BYPASS_SCREEN_TCC/.test(body) ||
-        /NATIVELY_DEV_BYPASS_SCREEN_TCC[\s\S]*&&[\s\S]*!\s*app\.isPackaged/.test(body),
+      /!\s*app\.isPackaged[\s\S]*&&[\s\S]*ANSWERCUE_DEV_BYPASS_SCREEN_TCC/.test(body) ||
+        /ANSWERCUE_DEV_BYPASS_SCREEN_TCC[\s\S]*&&[\s\S]*!\s*app\.isPackaged/.test(body),
       "BUG: isDevTccBypassEnabled() must combine !app.isPackaged AND the env-flag check " +
         "with && (logical AND). A || here would re-create the unconditional dev bypass.",
     );
@@ -159,14 +159,14 @@ describe("B5: dev-mode TCC bypass is opt-in (NATIVELY_DEV_BYPASS_SCREEN_TCC=1) o
     );
   });
 
-  it("env var NATIVELY_DEV_BYPASS_SCREEN_TCC is documented somewhere in main.ts", () => {
+  it("env var ANSWERCUE_DEV_BYPASS_SCREEN_TCC is documented somewhere in main.ts", () => {
     // The env knob is part of the public dev contract; it must be discoverable
     // by grep so devs who hit denied-screen-recording in dev can find the
     // escape hatch.
-    const occurrences = (main.match(/NATIVELY_DEV_BYPASS_SCREEN_TCC/g) || []).length;
+    const occurrences = (main.match(/ANSWERCUE_DEV_BYPASS_SCREEN_TCC/g) || []).length;
     assert.ok(
       occurrences >= 1,
-      "BUG: env var NATIVELY_DEV_BYPASS_SCREEN_TCC is no longer referenced in main.ts. " +
+      "BUG: env var ANSWERCUE_DEV_BYPASS_SCREEN_TCC is no longer referenced in main.ts. " +
         "This is the documented dev knob — removing it (or renaming silently) breaks the " +
         "documented bypass workflow.",
     );
@@ -206,9 +206,9 @@ describe("B5: dev-mode TCC bypass is opt-in (NATIVELY_DEV_BYPASS_SCREEN_TCC=1) o
         "as 'granted') so reviewers understand the diagnostic-blindness risk.",
     );
     assert.ok(
-      /NATIVELY_DEV_BYPASS_SCREEN_TCC/.test(docWindow),
+      /ANSWERCUE_DEV_BYPASS_SCREEN_TCC/.test(docWindow),
       "BUG: the doc block above isDevTccBypassEnabled no longer mentions the env-var name " +
-        "NATIVELY_DEV_BYPASS_SCREEN_TCC. Devs reading the helper must be told exactly which " +
+        "ANSWERCUE_DEV_BYPASS_SCREEN_TCC. Devs reading the helper must be told exactly which " +
         "env var opts them in.",
     );
   });

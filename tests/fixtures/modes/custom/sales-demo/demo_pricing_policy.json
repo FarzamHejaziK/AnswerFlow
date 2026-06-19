@@ -18,7 +18,7 @@
       "name": "Enterprise",
       "price_usd_annual_minimum": 20000,
       "limits": "Team admin, shared knowledge base, SSO, dedicated support",
-      "notes": "Enterprise gated at $20k per year minimum; not part of current Natively individual SKU"
+      "notes": "Enterprise gated at $20k per year minimum; not part of current AnswerCue individual SKU"
     }
   ],
   "discount_policy": {

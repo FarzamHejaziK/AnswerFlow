@@ -1,4 +1,4 @@
-feature,Natively,Cluely,Final_Round_AI,Otter
+feature,AnswerCue,Cluely,Final_Round_AI,Otter
 per_mode_reference_files,YES,NO,NO,NO
 custom_modes,YES,NO,NO,NO
 hybrid_local_cloud_retrieval,YES,NO,NO,NO

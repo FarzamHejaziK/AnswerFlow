@@ -23,15 +23,15 @@ Hardware: local machine, no GPU acceleration measured here.
 ## Run command shape
 
 ```
-ANSWERFLOW_EVAL_USE_OLLAMA=1 \
-ANSWERFLOW_EVAL_OLLAMA_MODEL='qwen3.5:9b' \
-ANSWERFLOW_LIVE_LLM_TESTS=1 \
-ANSWERFLOW_EVAL_LATENCY_MULT=2 \
-ANSWERFLOW_EVAL_SUITE=stress \
+ANSWERCUE_EVAL_USE_OLLAMA=1 \
+ANSWERCUE_EVAL_OLLAMA_MODEL='qwen3.5:9b' \
+ANSWERCUE_LIVE_LLM_TESTS=1 \
+ANSWERCUE_EVAL_LATENCY_MULT=2 \
+ANSWERCUE_EVAL_SUITE=stress \
 npx tsx electron/test/modes-live-response-eval.ts
 ```
 
-`ANSWERFLOW_EVAL_LATENCY_MULT` is a new env knob (added this session) that scales every scenario's `maxLatencyMs` to compensate for slower local models without rewriting per-scenario budgets. Default 1.
+`ANSWERCUE_EVAL_LATENCY_MULT` is a new env knob (added this session) that scales every scenario's `maxLatencyMs` to compensate for slower local models without rewriting per-scenario budgets. Default 1.
 
 ## Current results
 
@@ -103,7 +103,7 @@ In `general-noisy-mixed-language-unknown-owner`, the mustNotInclude regex flags 
 
 ### Kept
 
-- `electron/test/modes-live-response-eval.ts` — added `ANSWERFLOW_EVAL_LATENCY_MULT` env knob. Local-only test infra, no production impact.
+- `electron/test/modes-live-response-eval.ts` — added `ANSWERCUE_EVAL_LATENCY_MULT` env knob. Local-only test infra, no production impact.
 
 ### Reverted at user request
 
@@ -123,7 +123,7 @@ All 67/67 deterministic tests pass on the reverted state.
 ## Recommendations
 
 1. **Make 9B the default local-small tier IF the hardware can absorb 1.7× latency.** Quality is meaningfully better and the failures are honest model misses, not catastrophic prompt-leaks.
-2. **Raise scenario `maxLatencyMs` defaults from 12s to 18–20s for the local Ollama tier**, OR keep `ANSWERFLOW_EVAL_LATENCY_MULT` as an opt-in knob.
+2. **Raise scenario `maxLatencyMs` defaults from 12s to 18–20s for the local Ollama tier**, OR keep `ANSWERCUE_EVAL_LATENCY_MULT` as an opt-in knob.
 3. **Re-attempt the WALKAWAY/INJECTION safety guards on 9B**, since 9B has stronger instruction-following and may be able to absorb the extra prompt rules without the regressions seen on 4B.
 4. **Narrow the `/deadline is/i` and similar harness regexes** to anchor on the failure mode rather than incidental phrasing.
 5. **Investigate the one 9B baseline semantic miss** (`sales-enterprise-objection-no-discount`) — likely a wordlist tweak in the test regex, not a prompt issue.
@@ -132,5 +132,5 @@ All 67/67 deterministic tests pass on the reverted state.
 ## Open items
 
 - Decide whether to invest in 9B prompt hardening or hold pending hardware/budget changes.
-- Decide whether to raise default `maxLatencyMs` per scenario OR document `ANSWERFLOW_EVAL_LATENCY_MULT=2` as the standard local-Ollama eval invocation.
+- Decide whether to raise default `maxLatencyMs` per scenario OR document `ANSWERCUE_EVAL_LATENCY_MULT=2` as the standard local-Ollama eval invocation.
 - Optional: investigate why `lecture-study-group-key-point` regressed on 9B (the model knows the answer but didn't produce the required emoji-anchored phrasing).

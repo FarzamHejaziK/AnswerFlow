@@ -1,20 +1,20 @@
-You are now the lead senior Electron engineer, AI vision engineer, OCR engineer, desktop automation architect, security reviewer, QA lead, and product engineer for AnswerFlow.
+You are now the lead senior Electron engineer, AI vision engineer, OCR engineer, desktop automation architect, security reviewer, QA lead, and product engineer for AnswerCue.
 
 Repository:
- /Users/evin/AnswerFlow
+ /Users/evin/AnswerCue
 
 Use these skills heavily:
 
 @"test-engineer (agent)"
-@/Users/evin/AnswerFlow/.claude/skills/software-architecture/
-@/Users/evin/AnswerFlow/.claude/skills/senior-architect/
-@/Users/evin/AnswerFlow/.claude/skills/senior-backend/
-@/Users/evin/AnswerFlow/.claude/skills/code-reviewer/
+@/Users/evin/AnswerCue/.claude/skills/software-architecture/
+@/Users/evin/AnswerCue/.claude/skills/senior-architect/
+@/Users/evin/AnswerCue/.claude/skills/senior-backend/
+@/Users/evin/AnswerCue/.claude/skills/code-reviewer/
 
 Use Context7 and official documentation whenever needed.
 
 Mission:
-Build a professional, production-ready screen understanding system for AnswerFlow.
+Build a professional, production-ready screen understanding system for AnswerCue.
 
 This must not be a toy OCR patch.
 This must become a robust legacy overlay/Final Round AI-level screen understanding pipeline for live meetings, coding interviews, sales calls, lectures, debugging, dashboards, documents, and custom modes.
@@ -102,7 +102,7 @@ make a clone of these repo in a temp file and index and analyse these projects t
    - https://www.electronjs.org/docs/latest/api/desktop-capturer
    - Use official docs for screen/window capture constraints and permissions.
 
-Current known AnswerFlow state from previous audits:
+Current known AnswerCue state from previous audits:
 - Screenshot capture exists through ScreenshotHelper and desktopCapturer.
 - Cropper exists.
 - Tesseract.js OCR exists in ScreenContextService.
@@ -135,11 +135,11 @@ docs/engineering/SCREENSHOT_ANALYSIS_CALL_GRAPH.md
 docs/engineering/SCREENSHOT_ANALYSIS_SECURITY_AUDIT.md
 docs/engineering/SCREENSHOT_ANALYSIS_PROVIDER_MATRIX.md
 docs/engineering/SCREENSHOT_ANALYSIS_UX_AUDIT.md
-docs/engineering/ANSWERFLOW_PARITY_FIX_LOG.md
-docs/engineering/ANSWERFLOW_PARITY_ROADMAP.md
+docs/engineering/ANSWERCUE_PARITY_FIX_LOG.md
+docs/engineering/ANSWERCUE_PARITY_ROADMAP.md
 docs/engineering/FINAL_INDIVIDUAL_USER_PARITY_REPORT.md
 docs/testing/SCREEN_OCR_E2E_RESULTS.md
-docs/testing/ANSWERFLOW_PARITY_E2E_RESULTS.md
+docs/testing/ANSWERCUE_PARITY_E2E_RESULTS.md
 
 Create if useful:
 docs/engineering/SCREEN_UNDERSTANDING_IMPLEMENTATION_REPORT.md
@@ -190,7 +190,7 @@ Inspect deeply:
 - electron/main.ts
 - electron/utils/curlUtils.ts
 - src/types/electron.d.ts
-- src/components/AnswerFlowInterface.tsx
+- src/components/AnswerCueInterface.tsx
 - src/components/dynamic-actions/*
 - settings and diagnostics UI
 - all screen/screenshot tests
@@ -754,7 +754,7 @@ Update:
 
 Final report must answer:
 
-1. Does AnswerFlow now have reliable screen analysis?
+1. Does AnswerCue now have reliable screen analysis?
 2. Does Technical Interview mode use direct vision by default?
 3. Does OCR still work as fallback?
 4. Does “Use current screen” work?

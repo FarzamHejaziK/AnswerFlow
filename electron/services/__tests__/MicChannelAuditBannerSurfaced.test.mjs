@@ -2,7 +2,7 @@
 // onAudioCaptureFailed handler must surface BOTH 'system' and 'mic'
 // channel failures.
 //
-// Earlier code (NativelyInterface.tsx:929-940 pre-fix) had:
+// Earlier code (AnswerCueInterface.tsx:929-940 pre-fix) had:
 //
 //   if (payload.channel !== 'system') return; // mic failures already shown via STT status
 //
@@ -27,7 +27,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '../../..');
-const tsxPath = path.join(root, 'src/components/NativelyInterface.tsx');
+const tsxPath = path.join(root, 'src/components/AnswerCueInterface.tsx');
 const source = fs.readFileSync(tsxPath, 'utf8');
 
 // Extract the onAudioCaptureFailed handler body. We capture from the
@@ -46,12 +46,12 @@ describe('B1: mic-channel audio-capture-failed must surface in the renderer', ()
     const subscriptions = source.match(/onAudioCaptureFailed/g) || [];
     // We expect: one subscription site. The handler reference may also
     // appear in the electron preload type, but that lives in a
-    // different file — within NativelyInterface.tsx itself there should
+    // different file — within AnswerCueInterface.tsx itself there should
     // be a single call site.
     assert.equal(
       subscriptions.length,
       1,
-      `BUG: expected exactly 1 onAudioCaptureFailed subscription in NativelyInterface.tsx, found ${subscriptions.length}. ` +
+      `BUG: expected exactly 1 onAudioCaptureFailed subscription in AnswerCueInterface.tsx, found ${subscriptions.length}. ` +
         'If you intentionally added a second handler, consolidate them — multiple handlers fragment the surface logic.',
     );
   });

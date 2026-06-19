@@ -3,7 +3,7 @@
 **Status:** Phase D shipped (16 fixes, 122 regression tests). Signing chain (SIGN1-4) and test infrastructure (TEST1-3) tracked as separate work.
 **Started:** 2026-05-28
 **Completed:** 2026-05-29
-**Goal:** Bring AnswerFlow's macOS audio capture and transcription reliability to competitor (legacy overlay, Final Round AI, Granola) parity.
+**Goal:** Bring AnswerCue's macOS audio capture and transcription reliability to competitor (legacy overlay, Final Round AI, Granola) parity.
 **User symptom this report addresses:** "I granted Microphone and Screen Recording permissions but my voice / system audio is not being transcribed."
 
 ---
@@ -26,7 +26,7 @@ The reported symptom — "permissions granted but no transcription" — has **th
 
 The dominant root cause is structural: **macOS TCC binds Screen Recording / Microphone grants to a binary's "designated requirement" (DR)**. For ad-hoc-signed apps (this codebase's current state: `identity: null`, `--sign -`), the DR resolves to the binary's **cdhash**, which **changes on every rebuild**. After a release or auto-update:
 
-1. System Settings → Privacy & Security → Screen Recording / Microphone shows AnswerFlow as ALLOWED (good).
+1. System Settings → Privacy & Security → Screen Recording / Microphone shows AnswerCue as ALLOWED (good).
 2. `systemPreferences.getMediaAccessStatus('screen')` returns `'granted'` (good).
 3. CoreAudio Process Tap allocates, IO proc fires at the correct cadence (looks healthy in logs).
 4. **Every sample is zero.** TCC silently zero-fills — Apple does NOT surface this as an OSStatus error.
@@ -61,8 +61,8 @@ Together, these produced the exact symptom: "permission granted, app shows green
 
 | # | Severity | Issue | File:line | Status | Tests |
 |---|---|---|---|---|---|
-| B1 | CRITICAL | Renderer dropped mic zero-fill banner under incorrect "STT status surfaces it" assumption. | `src/components/AnswerFlowInterface.tsx:929-948` | ✅ | 6 |
-| B2 | CRITICAL | UI initialized STT status to `'connected'` (green) before any audio verified. New `'awaiting-audio'` state added. | `AnswerFlowInterface.tsx:391-398`, `main.ts:318`, +4 files | ✅ | 8 |
+| B1 | CRITICAL | Renderer dropped mic zero-fill banner under incorrect "STT status surfaces it" assumption. | `src/components/AnswerCueInterface.tsx:929-948` | ✅ | 6 |
+| B2 | CRITICAL | UI initialized STT status to `'connected'` (green) before any audio verified. New `'awaiting-audio'` state added. | `AnswerCueInterface.tsx:391-398`, `main.ts:318`, +4 files | ✅ | 8 |
 | B3 | CRITICAL | `setupSystemAudioPipeline` outer try/catch swallowed capture-construction throws → null wrapper, no watchdog armed. | `main.ts:1737-1944` | ✅ | 8 |
 | B4 | HIGH | Mic recovery exhausted 3 attempts with only `console.error` — no terminal IPC. | `main.ts:2858-2880` | ✅ | 8 |
 | B5 | HIGH | Dev-mode `getMacScreenCaptureStatus` early-returned `'granted'` unconditionally, masking real TCC denial during testing. | `main.ts:157-200, 4766-4772` | ✅ | 6 |
@@ -87,7 +87,7 @@ Together, these produced the exact symptom: "permission granted, app shows green
 
 ## 4. Competitor-level reliability gaps
 
-| Capability | legacy overlay | Final Round AI | Granola | AnswerFlow (today, post-fix) |
+| Capability | legacy overlay | Final Round AI | Granola | AnswerCue (today, post-fix) |
 |---|---|---|---|---|
 | Developer ID signing | ✅ | ✅ | ✅ (native Swift) | ⏳ SIGN4 |
 | Hardened runtime + notarization | ✅ | ✅ | ✅ | ⏳ SIGN2 + SIGN4 |
@@ -101,7 +101,7 @@ Together, these produced the exact symptom: "permission granted, app shows green
 | Sleep/wake recovery | ✅ | ✅ | ✅ (native) | ✅ (B7 — full state reset) |
 | Banner reaches user during transitions | unknown | unknown | unknown | ✅ (B8, B8b — dual-surface broadcast) |
 
-**Key insight (from research, §6.4 of the research agent's report):** legacy overlay is also Electron and has the same TCC pain. Their public response is documentation, not a fix — see their MDM permissions troubleshooting page. The differentiator competitors fall short on is **proactive diagnostics + self-repair**. That's the wedge for AnswerFlow — and we've now built it (UX1–UX4).
+**Key insight (from research, §6.4 of the research agent's report):** legacy overlay is also Electron and has the same TCC pain. Their public response is documentation, not a fix — see their MDM permissions troubleshooting page. The differentiator competitors fall short on is **proactive diagnostics + self-repair**. That's the wedge for AnswerCue — and we've now built it (UX1–UX4).
 
 ---
 
@@ -111,7 +111,7 @@ Each scenario lists: setup → action → expected behavior → observable artif
 
 1. **First-launch TCC mic dialog** — `tccutil reset Microphone com.electron.meeting-notes`; click Start Meeting; macOS prompts; Allow → capture starts within 2s. Log: `macOS microphone permission request during start meeting: granted`.
 2. **First-launch TCC screen dialog** — `tccutil reset ScreenCapture com.electron.meeting-notes`; Start meeting; TCC sheet appears (triggered by `desktopCapturer.getSources` warm-up); Allow → chunkCount climbs.
-3. **TCC mic denied (returning user)** — Deny mic; relaunch AnswerFlow → UX1 startup check emits banner `mic-denied`. User clicks "Open Mic Settings" (UX3) → goes straight to System Settings → Privacy → Microphone.
+3. **TCC mic denied (returning user)** — Deny mic; relaunch AnswerCue → UX1 startup check emits banner `mic-denied`. User clicks "Open Mic Settings" (UX3) → goes straight to System Settings → Privacy → Microphone.
 4. **TCC screen denied** — Reset + Deny screen; Start → `screen-recording-denied` banner with "Open Screen Settings" button.
 5. **Build cdhash change (rebuild invalidates grant)** — Grant permission to current build → rebuild → relaunch → Start meeting. Expected: `status==='granted'` BUT chunks zero-filled (peak-to-peak < 100 sustained) → after 12s `mac-screen-recording-revoked-rebuild` banner with "Repair Permissions" button (UX2). User clicks Repair → tccutil resets entries → user sees instruction to Cmd+Q and reopen.
 6. **macOS sleep mid-meeting** — Active meeting → `pmset sleepnow` → wait 30s → wake. Expected: B7 resets recovery counters, captures destroyed + recreated; transcript resumes within ~3s.
@@ -121,7 +121,7 @@ Each scenario lists: setup → action → expected behavior → observable artif
 10. **Output to virtual cable (BlackHole)** — Stuck-watchdog trips after 12s (B11) → banner `system-audio-stuck`.
 11. **Mic muted at hardware** — Plug muted USB mic → Start meeting → detector trips after 12s → banner `mic-zero-fill`. B10 verified: detector does NOT false-latch on muted-but-biased mics.
 12. **Toggle screen permission OFF during active meeting** — B6 verified: next reconfigureAudio or meeting restart re-checks permission and emits banner.
-13. **Dev-build TCC quirk (B5)** — `npm run electron:dev` → default behavior is now REAL TCC status (not bypassed). Set `ANSWERFLOW_DEV_BYPASS_SCREEN_TCC=1` to restore legacy behavior.
+13. **Dev-build TCC quirk (B5)** — `npm run electron:dev` → default behavior is now REAL TCC status (not bypassed). Set `ANSWERCUE_DEV_BYPASS_SCREEN_TCC=1` to restore legacy behavior.
 14. **Packaged build, restricted by MDM** — `mac-screen-recording-restricted` banner ("Contact administrator"). UX1 also catches MDM-restricted mic.
 15. **USB mic hot-unplug mid-meeting** — Recovery handler swaps to default → transcript continues within ~2s.
 16. **Settings → Audio panel verification** — Open Settings → Audio tab. UX4 verified: mic level bar (green) AND system audio level bar (blue) both move with real audio. If Screen Recording is denied, system bar shows amber + error message inline.
@@ -137,7 +137,7 @@ After Phase D fixes, the remaining work splits into three tracks:
 
 Required to fully eliminate the dominant root cause:
 
-- **SIGN1**: Migrate `appId` from generic `com.electron.meeting-notes` to a stable AnswerFlow-owned ID (e.g., `com.answerflow.app`). Includes migration story for upgrading users (TCC grants under old ID become orphaned).
+- **SIGN1**: Migrate `appId` from generic `com.electron.meeting-notes` to a stable AnswerCue-owned ID (e.g., `com.answercue.app`). Includes migration story for upgrading users (TCC grants under old ID become orphaned).
 - **SIGN2**: Set `hardenedRuntime: true` in package.json. Verify all entitlements (cs.allow-jit, cs.disable-library-validation, screen-capture) take effect under HR.
 - **SIGN3**: Modify `scripts/ad-hoc-sign.js` to sign Helper bundles (GPU/Renderer/Plugin) WITH entitlements after `codesign --deep` runs. Without this, the Helper that actually invokes screen capture has no entitlement and silently fails on HR-enforced builds.
 - **SIGN4**: Provision Developer ID Application certificate (Apple Developer Program, $99/yr) + wire CSC_LINK/CSC_KEY_PASSWORD env vars. Add `@electron/notarize` afterSign hook (devDep already installed). **Note:** User has already wired notarization infrastructure in parallel (commit `partial` includes notarytool wiring).
@@ -171,7 +171,7 @@ Current test suite: ~122 structural regression tests across 14 files. They guard
 | `electron/ipcHandlers.ts` | UX2 (`repair-tcc-permissions` IPC with absolute `/usr/bin/tccutil` + execFile + capital-letter service names) |
 | `electron/preload.ts` | B2 (state union), UX2 (repairTccPermissions bridge), UX4 (onAudioTestSystemLevel + onAudioTestSystemError bridges) |
 | `src/types/electron.d.ts` | B2, UX2, UX4 (type widening for all of the above) |
-| `src/components/AnswerFlowInterface.tsx` | B1 (mic banner surfaced), B2 (awaiting-audio state + reset on session), UX2 (Repair Permissions button + tccRepairing in-flight guard), UX3 (channel-aware deep-link button + adaptive label) |
+| `src/components/AnswerCueInterface.tsx` | B1 (mic banner surfaced), B2 (awaiting-audio state + reset on session), UX2 (Repair Permissions button + tccRepairing in-flight guard), UX3 (channel-aware deep-link button + adaptive label) |
 | `src/components/ui/RollingTranscript.tsx` | B2 (awaiting-audio visual treatment) |
 | `src/components/ui/ChannelCard.tsx` | B2 (awaiting-audio status label "Listening for audio…" + neutral icon) |
 | `src/components/SettingsOverlay.tsx` | UX4 (systemAudioLevel + systemAudioTestError state, IPC subscriptions, System Audio Level progress bar) |

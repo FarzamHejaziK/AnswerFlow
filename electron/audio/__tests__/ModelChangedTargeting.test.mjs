@@ -36,7 +36,7 @@ test('AppState sends model-changed only to current model listeners', () => {
   const helperBody = extractMethod(mainSource, /public\s+sendModelChanged\s*\([^)]*\)[^{]*\{/, 'sendModelChanged');
 
   assert.ok(/new\s+Set\s*<\s*number\s*>\s*\(/.test(helperBody), 'BUG: sendModelChanged must dedupe target windows.');
-  assert.ok(/getOverlayWindow\s*\(\s*\)/.test(helperBody), 'BUG: sendModelChanged must target the overlay, where NativelyInterface listens.');
+  assert.ok(/getOverlayWindow\s*\(\s*\)/.test(helperBody), 'BUG: sendModelChanged must target the overlay, where AnswerCueInterface listens.');
   assert.ok(/modelSelectorWindowHelper\.getWindow\s*\(\s*\)/.test(helperBody), 'BUG: sendModelChanged must target the model selector window.');
   assert.ok(/sendToWindow\s*\(\s*win\s*,\s*['"]model-changed['"]\s*,\s*modelId\s*\)/.test(helperBody), 'BUG: sendModelChanged must use safe window sends.');
   assert.ok(!/BrowserWindow\.getAllWindows\s*\(\s*\)/.test(helperBody), 'BUG: sendModelChanged must not broadcast to every BrowserWindow.');

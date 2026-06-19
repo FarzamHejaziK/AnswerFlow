@@ -1,4 +1,4 @@
-# AnswerFlow — macOS Production Readiness Fix Report
+# AnswerCue — macOS Production Readiness Fix Report
 
 **For:** Evin (read this when you wake up)
 **By:** Claude Code (overnight autopilot)
@@ -12,10 +12,10 @@
 
 ## Executive summary
 
-AnswerFlow currently ships as an **ad-hoc-signed** Electron app with **hardened runtime disabled** and **no notarization step**. That is the single biggest reason macOS permissions (mic, screen recording / system audio, accessibility) behave inconsistently across builds and why the app cannot pass Gatekeeper as a real distributed app. This autopilot pass did the following, **in strict priority order, fixing real bugs and adding regression tests** (16 new tests added + 12 previously-failing structural tests restored to green; **51/51** across all touched suites pass):
+AnswerCue currently ships as an **ad-hoc-signed** Electron app with **hardened runtime disabled** and **no notarization step**. That is the single biggest reason macOS permissions (mic, screen recording / system audio, accessibility) behave inconsistently across builds and why the app cannot pass Gatekeeper as a real distributed app. This autopilot pass did the following, **in strict priority order, fixing real bugs and adding regression tests** (16 new tests added + 12 previously-failing structural tests restored to green; **51/51** across all touched suites pass):
 
 1. **Signing/notarization (Phase 1):** wired a **non-breaking, opt-in** Developer ID + notarization path (`npm run dist:signed` → `electron-builder --config electron-builder.signed.cjs`) that enables hardened runtime, applies entitlements, signs, notarizes (notarytool) and staples — while the **default/dev build is byte-for-byte unchanged** (still ad-hoc, no Apple account needed). A senior review caught and we corrected a CRITICAL in the first iteration.
-2. **Premium/AnswerFlow-API (Phase 2):** full gating audit found the money path sound (correct plan separation, no key logging, server-authoritative gates, safe offline fail-open). Fixed the one real risk — **F4**: a transient server `429`/`account_suspended` no longer wrongly deletes a paying user's cached Pro license.
+2. **Premium/AnswerCue-API (Phase 2):** full gating audit found the money path sound (correct plan separation, no key logging, server-authoritative gates, safe offline fail-open). Fixed the one real risk — **F4**: a transient server `429`/`account_suspended` no longer wrongly deletes a paying user's cached Pro license.
 3. **Toggle/visibility (Phase 3):** fixed **RC-2** — the undetectability/passthrough toggle no longer gets stuck out of sync (it now always re-broadcasts authoritative state, so a drifted UI self-heals instead of needing a ~5s wait). IPC handlers now return authoritative state.
 4. **Audio (Phase 4), startup (Phase 5), telemetry (Phase 6):** audited; telemetry already leak-free; audio/startup findings tracked.
 
@@ -27,7 +27,7 @@ AnswerFlow currently ships as an **ad-hoc-signed** Electron app with **hardened 
 
 ## Final senior review verdict — APPROVE
 
-A consolidated senior code review (focused only on this session's net changes, cross-checked against `answerflow-api/server.js` and the vendored `app-builder-lib`) returned **0 critical / 0 high / 0 medium / 1 low (already satisfied)** and **GO on all five areas**:
+A consolidated senior code review (focused only on this session's net changes, cross-checked against `answercue-api/server.js` and the vendored `app-builder-lib`) returned **0 critical / 0 high / 0 medium / 1 low (already satisfied)** and **GO on all five areas**:
 
 | Area | Verdict |
 |------|---------|
@@ -44,7 +44,7 @@ Explicit confirmations: **no premium-gating weakening, no secret logging, no Win
 ## Phases completed
 - ✅ **Phase 0** — Repo scan, priority map, living docs created.
 - ✅ **Phase 1** — Signing/notarization/entitlements wired (opt-in, default build unchanged; reviewed).
-- ✅ **Phase 2** — Premium + AnswerFlow API gating audited; F4 fixed + tested.
+- ✅ **Phase 2** — Premium + AnswerCue API gating audited; F4 fixed + tested.
 - ✅ **Phase 3** — Toggle desync (RC-2) fixed + tested; 1s-flicker root-caused (GUI follow-up).
 - 🔄 **Phase 4** — Audio capture lifecycle audit (in progress).
 - ⬜ Phase 5 — Startup performance + window lifecycle.
@@ -103,14 +103,14 @@ Reviewed by code-reviewer agent against the vendored electron-builder source. It
 ### Change: Paying-user license never revoked on a transient server blip (Phase 2 — F4)
 
 #### Before
-On each launch, `LicenseManager.isPremiumAsync()` re-checked a AnswerFlow-API Pro license against `GET /v1/pro/verify`. It treated **any** response that wasn't exactly `{ok:true, has_pro:true}` as "entitlement lost" and **deleted the local license file**. The server returns `429 ip_blocked` (rate-limit/DDoS edge), `403 account_suspended` (a recoverable payment-method hold — "contact support"), and 5xx during incidents. So a transient rate-limit blip or a temporary payment hold would silently knock a **paying customer** out of Pro until they re-entered their key.
+On each launch, `LicenseManager.isPremiumAsync()` re-checked a AnswerCue-API Pro license against `GET /v1/pro/verify`. It treated **any** response that wasn't exactly `{ok:true, has_pro:true}` as "entitlement lost" and **deleted the local license file**. The server returns `429 ip_blocked` (rate-limit/DDoS edge), `403 account_suspended` (a recoverable payment-method hold — "contact support"), and 5xx during incidents. So a transient rate-limit blip or a temporary payment hold would silently knock a **paying customer** out of Pro until they re-entered their key.
 
 #### After
 The revoke/keep decision now lives in a pure, unit-tested policy (`classifyProVerify`). It revokes ONLY on a confirmed, durable loss of entitlement — plan downgraded (`has_pro:false`), `subscription_inactive`, or `key_not_found`/`invalid_key_format` (refund/deleted key). Every transient or unrecognized state (`ip_blocked`, `account_suspended`, 5xx, network error, unparseable body) **fails open** and keeps the license. Refunds are still caught; actual hosted-API usage is still server-enforced regardless. No gate was weakened — this only tightens protection for paying users.
 
 #### Files changed
 - `premium/electron/services/licenseVerifyPolicy.ts` (new — pure decision logic)
-- `premium/electron/services/LicenseManager.ts` (uses the policy in the answerflow_api branch)
+- `premium/electron/services/LicenseManager.ts` (uses the policy in the answercue_api branch)
 - `electron/services/__tests__/LicenseVerifyPolicy.test.mjs` (new — 11 regression tests)
 
 #### Tests
@@ -128,7 +128,7 @@ A full premium/API gating audit (separate agent) found the money path otherwise 
 A background root-cause investigation traced the "fast toggle does nothing until you wait ~5s" symptom. The core defect: `AppState.setUndetectable()` (and `setOverlayMousePassthrough()`) **early-returned silently when the requested value equalled the current value** (`if (this.isUndetectable === state) return;`). The renderer toggles optimistically (sets its local state, then fires the IPC without awaiting). If the renderer's optimistic state ever drifted from the main process — a dropped/duplicate `undetectable-changed` broadcast, or a concurrent global-shortcut press — the next click would land as a "no-op" in main, which returned **without broadcasting**, so the UI never re-synced. The toggle appeared dead until the user happened to toggle to the *other* value. The IPC handlers also returned a hardcoded `{success:true}` that ignored the real outcome.
 
 #### After
-- The toggle decision is now a pure, unit-tested reducer (`decideToggle`) whose invariant is: **always broadcast the authoritative state, every call** — even a no-op — while still gating the expensive macOS dock/focus/content-protection side-effects on an actual change. So any renderer drift now self-heals on the very next toggle (all four toggle UIs — Launcher, AnswerFlowInterface, SettingsPopup, SettingsOverlay — already subscribe to `undetectable-changed`).
+- The toggle decision is now a pure, unit-tested reducer (`decideToggle`) whose invariant is: **always broadcast the authoritative state, every call** — even a no-op — while still gating the expensive macOS dock/focus/content-protection side-effects on an actual change. So any renderer drift now self-heals on the very next toggle (all four toggle UIs — Launcher, AnswerCueInterface, SettingsPopup, SettingsOverlay — already subscribe to `undetectable-changed`).
 - `set-undetectable` / `set-overlay-mouse-passthrough` IPC handlers now return the **authoritative final state** (`{success, state}` / `{success, enabled}`) so the renderer can reconcile/roll back instead of assuming success.
 
 #### Files changed
@@ -240,7 +240,7 @@ These remain because they require running the Electron GUI to verify safely — 
 ---
 
 ## What you must personally review
-1. **appId decision (action required).** `com.electron.meeting-notes` → a professional id (e.g. `software.answerflow.desktop`)? This is the right time (pre-notarized-release) but it **resets all TCC permissions** for existing installs and may affect how `answerflow-api` keys installs/licenses. **NOT auto-changed.** Tell me the desired id + whether the backend ties anything to bundle id and I'll make the change.
+1. **appId decision (action required).** `com.electron.meeting-notes` → a professional id (e.g. `software.answercue.desktop`)? This is the right time (pre-notarized-release) but it **resets all TCC permissions** for existing installs and may affect how `answercue-api` keys installs/licenses. **NOT auto-changed.** Tell me the desired id + whether the backend ties anything to bundle id and I'll make the change.
 2. **Apple Developer Program enrollment** — required for the real signing/notarization run (see the checklist doc).
 3. **The toggle ~1s flicker fix** — root-caused but needs you (or me, with a screen) to verify the resequencing on a real display before changing the dock/focus order.
 4. **Premium F4 fix** lives in the `premium` submodule (local working-tree change) — make sure your submodule commit/publish flow picks it up.
@@ -256,7 +256,7 @@ These remain because they require running the Electron GUI to verify safely — 
 - [ ] OBSERVE (known, not-yet-fixed): does the window briefly disappear (~1s) on the main on/off toggle? Note severity for the follow-up fix.
 - [ ] Toggle while Screen Recording / Accessibility permission is missing — verify a clear message, not a silent dead toggle.
 
-**Premium / AnswerFlow API (Phase 2 — F4):**
+**Premium / AnswerCue API (Phase 2 — F4):**
 - [ ] With a valid API-Pro key, simulate a server blip (e.g. block the network briefly / rate-limit) and relaunch — Pro must NOT be lost.
 - [ ] Genuinely downgrade/cancel a test plan server-side — Pro should be revoked on next launch.
 - [ ] Confirm logs never print the API key / license key (grep the app log).

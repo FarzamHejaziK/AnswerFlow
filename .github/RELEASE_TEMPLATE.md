@@ -1,6 +1,6 @@
 ## Summary
 
-Short one-line description of the AnswerFlow release.
+Short one-line description of the AnswerCue release.
 
 ## What's New
 
@@ -32,27 +32,27 @@ Choose the artifact for your operating system and CPU architecture.
 
 ### macOS
 
-- Apple Silicon: `AnswerFlow-VERSION-arm64-mac.zip`
-- Intel: `AnswerFlow-VERSION.dmg` or `AnswerFlow-VERSION-mac.zip`
+- Apple Silicon: `AnswerCue-VERSION-arm64-mac.zip`
+- Intel: `AnswerCue-VERSION.dmg` or `AnswerCue-VERSION-mac.zip`
 - Auto-update metadata: `latest-mac.yml`
 
 If macOS says the app is damaged on an unsigned test build:
 
 ```bash
-xattr -cr ~/Downloads/AnswerFlow-VERSION-arm64-mac.zip
-xattr -cr /Applications/AnswerFlow.app
+xattr -cr ~/Downloads/AnswerCue-VERSION-arm64-mac.zip
+xattr -cr /Applications/AnswerCue.app
 ```
 
 ### Windows
 
-- Intel x64 installer: `AnswerFlow-Setup-VERSION.exe`
+- Intel x64 installer: `AnswerCue-Setup-VERSION.exe`
 - Auto-update metadata: `latest.yml`
 
 If Microsoft Defender SmartScreen warns about an unsigned test build, click **More info**, then **Run anyway**.
 
 ### Linux
 
-- AppImage target: `AnswerFlow-VERSION.AppImage`
-- Debian package target: `answerflow_VERSION_amd64.deb`
+- AppImage target: `AnswerCue-VERSION.AppImage`
+- Debian package target: `answercue_VERSION_amd64.deb`
 
 Linux artifacts are configured in the package build metadata. Attach them when a Linux build is produced.

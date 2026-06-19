@@ -1,6 +1,6 @@
 // tests/e2e/basic-smoke.spec.ts
 //
-// FINDING-006: Playwright E2E smoke tests for Natively.
+// FINDING-006: Playwright E2E smoke tests for AnswerCue.
 //
 // This file exercises the renderer → main-process IPC contract that
 // service-level tests cannot cover. Each test opens the actual Electron
@@ -24,7 +24,7 @@ import { test, expect, skip } from '@playwright/test';
 const CI = process.env.CI === 'true';
 const APP_PORT = parseInt(process.env.ELECTRON_APP_PORT ?? '0', 10);
 
-test.describe('FINDING-006: Natively E2E smoke', () => {
+test.describe('FINDING-006: AnswerCue E2E smoke', () => {
   test.beforeEach(async ({ page }) => {
     if (CI) {
       test.skip();

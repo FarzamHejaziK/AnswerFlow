@@ -38,7 +38,7 @@ describe('Retrieval isolation — only active mode files contribute', () => {
     const result = runScenario({
       mode,
       files,
-      query: 'what is our Q1 ARR run rate for the Natively pilot',
+      query: 'what is our Q1 ARR run rate for the AnswerCue pilot',
       transcript: 'Founder: what is our Q1 ARR run rate for the pilot accounts? It should be in the metrics sheet.',
     });
     assert.ok(result.snippets.length > 0, 'Test data should produce at least one snippet');

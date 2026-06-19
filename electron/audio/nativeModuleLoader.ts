@@ -21,7 +21,7 @@ export interface NativeModule {
   getDefaultOutputDeviceId?: () => string;
   // macOS-only: apply NSPanel-nonactivating + becomesKeyOnlyIfNeeded +
   // hidesOnDeactivate=NO + the right collectionBehavior on the overlay
-  // window so clicks/keystrokes don't activate Natively (foreground app
+  // window so clicks/keystrokes don't activate AnswerCue (foreground app
   // keeps key state in dock/menu bar/screen-share). Requires a binary
   // rebuild — WindowHelper checks `typeof` and degrades to plain panel
   // type if missing. Caller passes BrowserWindow.getNativeWindowHandle().

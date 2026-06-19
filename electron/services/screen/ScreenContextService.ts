@@ -2,7 +2,7 @@
 // =====================================================================
 // captureScreen, captureCropper, captureScreenFromPath, and runOCR remain
 // only so existing tests keep passing and so a future opt-in legacy OCR
-// mode could be reintroduced. Natively's default screen-understanding
+// mode could be reintroduced. AnswerCue's default screen-understanding
 // pipeline (ScreenUnderstandingService) no longer reads OCR text from this
 // service — it routes images through VisionProviderFallbackChain instead.
 // Do NOT add new callers to OCR methods on this service.

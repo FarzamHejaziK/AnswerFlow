@@ -115,7 +115,7 @@ const INITIAL_LOCAL_STT_MODEL: LocalSttModelState = {
     error: null,
 };
 
-const AUDIO_DEVICES_CHANGED_EVENT = 'answerflow-audio-devices-changed';
+const AUDIO_DEVICES_CHANGED_EVENT = 'answercue-audio-devices-changed';
 
 const EMPTY_PROVIDER_KEY_DRAFTS: ProviderKeyDrafts = {
     openai: '',
@@ -134,7 +134,7 @@ const providerLabels: Record<string, string> = {
     gemini: 'Gemini',
     custom: 'Custom',
     'codex-cli': 'Codex CLI',
-    natively: 'AnswerFlow API',
+    natively: 'AnswerCue API',
     groq: 'Groq',
     openai: 'OpenAI',
     claude: 'Claude',
@@ -151,13 +151,13 @@ const sttProviderLabels: Record<string, string> = {
     azure: 'Azure Speech',
     ibmwatson: 'IBM Watson',
     soniox: 'Soniox',
-    natively: 'AnswerFlow API',
+    natively: 'AnswerCue API',
     'local-whisper': 'Moonshine Base',
 };
 
 const inferProviderLabel = (provider: string | undefined, model: string | undefined) => {
     const modelId = (model || '').toLowerCase();
-    if (modelId === 'natively') return 'AnswerFlow API';
+    if (modelId === 'natively') return 'AnswerCue API';
     if (modelId.includes('gpt') || modelId.includes('openai')) return 'OpenAI';
     if (modelId.includes('claude')) return 'Claude';
     if (modelId.includes('deepseek')) return 'DeepSeek';
@@ -170,7 +170,7 @@ const hasConfiguredAi = (provider: string | undefined, model: string | undefined
     const modelId = (model || '').toLowerCase();
     if (!modelId) return false;
     if (provider === 'ollama' || provider === 'custom' || provider === 'codex-cli') return true;
-    if (modelId === 'natively') return !!creds?.hasNativelyKey;
+    if (modelId === 'natively') return !!creds?.hasAnswerCueKey;
     if (modelId.includes('gpt') || modelId.includes('openai')) return !!creds?.hasOpenaiKey;
     if (modelId.includes('claude')) return !!creds?.hasClaudeKey;
     if (modelId.includes('deepseek')) return !!creds?.hasDeepseekKey;
@@ -182,7 +182,7 @@ const hasConfiguredAi = (provider: string | undefined, model: string | undefined
 const hasAnyConfiguredAiProvider = (provider: string | undefined, creds: any) => {
     if (provider === 'ollama' || provider === 'custom' || provider === 'codex-cli') return true;
     return !!(
-        creds?.hasNativelyKey ||
+        creds?.hasAnswerCueKey ||
         creds?.hasGeminiKey ||
         creds?.hasGroqKey ||
         creds?.hasOpenaiKey ||
@@ -202,7 +202,7 @@ const hasConfiguredStt = (creds: any) => {
         case 'azure': return !!creds?.hasAzureKey && !!creds?.azureRegion;
         case 'ibmwatson': return !!creds?.hasIbmWatsonKey && !!creds?.ibmWatsonRegion;
         case 'soniox': return !!creds?.hasSonioxKey;
-        case 'natively': return !!creds?.hasNativelyKey;
+        case 'natively': return !!creds?.hasAnswerCueKey;
         case 'local-whisper': return true;
         default: return false;
     }
@@ -1710,8 +1710,8 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
     }, [resetWorkspaceStreamBuffer]);
 
     const hydrateDraftWorkspace = useCallback(async () => {
-        const draftId = localStorage.getItem('answerflow_current_interview_workspace_id') || genMessageId();
-        localStorage.setItem('answerflow_current_interview_workspace_id', draftId);
+        const draftId = localStorage.getItem('answercue_current_interview_workspace_id') || genMessageId();
+        localStorage.setItem('answercue_current_interview_workspace_id', draftId);
         setWorkspaceStateId(draftId);
         setWorkspaceConversationState('idle');
         setWorkspaceErrorMessage(null);
@@ -1877,9 +1877,9 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
     ]);
 
     useEffect(() => {
-        const savedDraftId = localStorage.getItem('answerflow_current_interview_workspace_id');
+        const savedDraftId = localStorage.getItem('answercue_current_interview_workspace_id');
         if (!savedDraftId) {
-            localStorage.setItem('answerflow_current_interview_workspace_id', workspaceStateId);
+            localStorage.setItem('answercue_current_interview_workspace_id', workspaceStateId);
             return;
         }
 
@@ -1996,7 +1996,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
         const localModelStatus = (downloadedLocalSttModel?.status || 'missing') as LocalSttModelStatus;
         const localModelReady = localModelStatus === 'available';
         const sttReady = hasConfiguredStt(creds) && (sttProvider !== 'local-whisper' || localModelReady);
-        const model = llm?.model || 'answerflow';
+        const model = llm?.model || 'answercue';
         const localModelHint = localModelStatus === 'available'
             ? 'Downloaded locally'
             : localModelStatus === 'downloading'
@@ -2592,7 +2592,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
 
     const handleNewInterview = () => {
         const nextWorkspaceId = genMessageId();
-        localStorage.setItem('answerflow_current_interview_workspace_id', nextWorkspaceId);
+        localStorage.setItem('answercue_current_interview_workspace_id', nextWorkspaceId);
         setWorkspaceStateId(nextWorkspaceId);
         selectMeeting(null);
         setForwardMeeting(null);
@@ -3400,11 +3400,11 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
                     <button
                         onClick={() => {
                             try {
-                                localStorage.removeItem('answerflow_help_assistant_dismissed_v1');
+                                localStorage.removeItem('answercue_help_assistant_dismissed_v1');
                             } catch {
                                 /* localStorage can fail in constrained environments */
                             }
-                            window.dispatchEvent(new CustomEvent('answerflow-help-assistant-show', { detail: { open: true } }));
+                            window.dispatchEvent(new CustomEvent('answercue-help-assistant-show', { detail: { open: true } }));
                         }}
                         title="Help"
                         className={`p-2 text-text-secondary hover:text-text-primary transition-all duration-300 ${isLight ? 'hover:drop-shadow-[0_0_6px_rgba(0,0,0,0.25)]' : 'hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]'}`}
@@ -3549,7 +3549,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
                                                     </div>
                                                     <h1 className="text-[28px] leading-tight font-semibold text-text-primary">Download local transcription</h1>
                                                     <p className="mt-3 text-[15px] leading-relaxed text-text-secondary">
-                                                        AnswerFlow transcribes interviews on this computer. Download Moonshine once and it stays cached across app updates.
+                                                        AnswerCue transcribes interviews on this computer. Download Moonshine once and it stays cached across app updates.
                                                     </p>
                                                 </div>
                                                 <p className="text-[12px] leading-relaxed text-text-tertiary">
@@ -3582,7 +3582,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
                                                                             style={{ width: `${Math.max(2, Math.min(100, localSttModel.progress))}%` }}
                                                                         />
                                                                     </div>
-                                                                    <p className="mt-2 text-[11px] text-text-tertiary">Keep AnswerFlow open until the download finishes.</p>
+                                                                    <p className="mt-2 text-[11px] text-text-tertiary">Keep AnswerCue open until the download finishes.</p>
                                                                 </div>
                                                             )}
 
@@ -4241,7 +4241,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
                                                         </h3>
                                                     </div>
                                                     <p className="text-[11px] leading-relaxed text-text-secondary">
-                                                        AnswerFlow is currently {isDetectable ? 'detectable' : 'undetectable'} by screen sharing.
+                                                        AnswerCue is currently {isDetectable ? 'detectable' : 'undetectable'} by screen sharing.
                                                     </p>
                                                 </div>
                                                 <button

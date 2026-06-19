@@ -115,8 +115,8 @@ export const STT_PROVIDERS: Record<SttProviderId, SttProviderConfig> = {
     },
     natively: {
         id: 'natively',
-        name: 'AnswerFlow Pro (Managed)',
-        description: 'All-in-one managed STT via AnswerFlow API',
+        name: 'AnswerCue Pro (Managed)',
+        description: 'All-in-one managed STT via AnswerCue API',
         endpoint: '', 
         model: '',
         uploadType: 'websocket',

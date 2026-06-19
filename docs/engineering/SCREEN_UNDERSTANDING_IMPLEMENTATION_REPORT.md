@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-AnswerFlow now has a production-ready screen understanding pipeline with:
+AnswerCue now has a production-ready screen understanding pipeline with:
 - Secure screenshot path validation with symlink escape detection
 - OCR with provider fallback chain (Tesseract primary, native OCR stubs for future)
 - Direct vision routing for Technical Interview mode
@@ -21,7 +21,7 @@ AnswerFlow now has a production-ready screen understanding pipeline with:
 ## PHASE 1: validateImagePath with realpath/symlink protection ✓
 
 ### Issue
-The original `validateImagePath` blocked `/Users/` paths before checking userData allowlist, making it reject valid macOS screenshot paths like `/Users/evin/Library/Application Support/AnswerFlow/screenshots/abc.png`.
+The original `validateImagePath` blocked `/Users/` paths before checking userData allowlist, making it reject valid macOS screenshot paths like `/Users/evin/Library/Application Support/AnswerCue/screenshots/abc.png`.
 
 ### Root Cause
 Brittle denylist ordering — `/Users/` was blocked unconditionally before the userData prefix check could rescue legitimate paths.
@@ -186,7 +186,7 @@ interface OcrProviderAdapter {
 
 ### Existing UI (No Changes Required)
 The existing UI already has:
-- Screen context status chip (lines 3101-3104 in AnswerFlowInterface.tsx)
+- Screen context status chip (lines 3101-3104 in AnswerCueInterface.tsx)
 - "No screen context" / "OCR attached" / "OCR unavailable" states
 - Attached screenshot preview
 - Capture-and-process shortcut handling
@@ -349,7 +349,7 @@ re-invent things that are missing or claim things that are present.
    `capture-and-process`.** Those paths continue to call `ScreenContextService`
    directly. The new `screenUnderstandingMode` setting therefore changes
    behaviour at the *service* level and in tests, but does not yet route the
-   live answer pipeline. (Phase 6 of `answerflow-market-research.md` — pending.)
+   live answer pipeline. (Phase 6 of `answercue-market-research.md` — pending.)
 2. **`VisionScreenAnalyzer` is still not invoked.** `SUS` only marks
    `visionRequested: true`; no provider call is made by SUS. `VisionScreenAnalyzer.callVisionProvider`
    itself currently calls `LLMHelper.streamChat({ imagePaths })`, but
@@ -358,7 +358,7 @@ re-invent things that are missing or claim things that are present.
    answers must continue to flow through `LLMHelper.chatWithGemini` /
    `extractProblemFromImages`.
 3. **No UI consumer** for `provenance` / `ocrRan` / `visionRequested`. The
-   service exposes everything; no `AnswerFlowInterface` chip or answer pill
+   service exposes everything; no `AnswerCueInterface` chip or answer pill
    currently reads them.
 4. **No real Electron Playwright test for the screen-understanding flow.**
    `npm run test:e2e:screen-understanding` runs a Node-only API harness, not

@@ -53,8 +53,8 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({ currentModel, onSe
                 const creds = await window.electronAPI?.getStoredCredentials?.();
                 const cModels: { id: string; name: string; desc: string; provider: string }[] = [];
 
-                if (creds?.hasNativelyKey) {
-                    cModels.push({ id: 'natively', name: 'AnswerFlow API', desc: 'Managed AI • Fast execution', provider: 'natively' });
+                if (creds?.hasAnswerCueKey) {
+                    cModels.push({ id: 'natively', name: 'AnswerCue API', desc: 'Managed AI • Fast execution', provider: 'natively' });
                 }
                 for (const [prov, cfg] of Object.entries(STANDARD_CLOUD_MODELS)) {
                     if (!cfg.hasKeyCheck(creds)) continue;

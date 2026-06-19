@@ -283,7 +283,7 @@ const SettingsPopup = () => {
 
                 <div className={`h-px my-0.5 mx-1.5 ${dividerClass}`} />
 
-                {/* Show/Hide Natively */}
+                {/* Show/Hide AnswerCue */}
                 <div className={`flex items-center justify-between px-2.5 py-1.5 rounded-md transition-colors duration-200 group interaction-base interaction-press ${itemHoverClass} ${glassRowClass}`}>
                     <div className="flex items-center gap-2.5">
                         <MessageSquare className={`w-3.5 h-3.5 transition-colors ${iconInactiveClass}`} />

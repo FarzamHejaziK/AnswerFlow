@@ -1,8 +1,8 @@
 {
-  "name": "answerflow",
+  "name": "answercue",
   "version": "2.7.4",
   "main": "dist-electron/electron/main.js",
-  "description": "AnswerFlow is a live interview assistant that helps prepare context, transcribe conversations, and generate AI-guided answers.",
+  "description": "AnswerCue is a live interview assistant that helps prepare context, transcribe conversations, and generate AI-guided answers.",
   "scripts": {
     "clean": "rimraf dist dist-electron",
     "dev": "vite",
@@ -15,18 +15,18 @@
     "electron:dev": "npm run build:electron && cross-env NODE_ENV=development electron .",
     "electron:build": "npm run build:electron && cross-env NODE_ENV=production electron .",
     "app:dev": "concurrently \"npm run dev -- --port 5180 --strictPort\" \"wait-on http://localhost:5180 && npm run electron:dev\"",
-    "app:build": "npm run build && npm run build:electron && cross-env NATIVELY_BUILD_ALL_MAC_ARCHES=1 npm run build:native && node scripts/download-models.js && node scripts/ensure-sharp-mac-deps.js && electron-builder",
-    "app:build:signed": "npm run build && npm run build:electron && cross-env NATIVELY_BUILD_ALL_MAC_ARCHES=1 npm run build:native && node scripts/download-models.js && node scripts/ensure-sharp-mac-deps.js && electron-builder --config electron-builder.signed.cjs",
+    "app:build": "npm run build && npm run build:electron && cross-env ANSWERCUE_BUILD_ALL_MAC_ARCHES=1 npm run build:native && node scripts/download-models.js && node scripts/ensure-sharp-mac-deps.js && electron-builder",
+    "app:build:signed": "npm run build && npm run build:electron && cross-env ANSWERCUE_BUILD_ALL_MAC_ARCHES=1 npm run build:native && node scripts/download-models.js && node scripts/ensure-sharp-mac-deps.js && electron-builder --config electron-builder.signed.cjs",
     "watch": "tsc -p electron/tsconfig.json --watch",
     "start": "npm run app:dev",
     "dist": "npm run app:build",
     "dist:signed": "npm run app:build:signed",
     "build:native": "node scripts/build-native.js",
     "test": "npm run build:electron && node --test 'electron/services/__tests__/**/*.test.mjs' 'electron/llm/__tests__/**/*.test.mjs' 'electron/audio/__tests__/**/*.test.mjs'",
-    "test:modes": "npm run build:electron && node --test electron/services/__tests__/Mode*.test.mjs electron/services/__tests__/ProfileIntelligenceGate.test.mjs electron/services/__tests__/NativelyApiE2E.test.mjs",
-    "test:modes:no-build": "node --test electron/services/__tests__/Mode*.test.mjs electron/services/__tests__/ProfileIntelligenceGate.test.mjs electron/services/__tests__/NativelyApiE2E.test.mjs",
+    "test:modes": "npm run build:electron && node --test electron/services/__tests__/Mode*.test.mjs electron/services/__tests__/ProfileIntelligenceGate.test.mjs electron/services/__tests__/AnswerCueApiE2E.test.mjs",
+    "test:modes:no-build": "node --test electron/services/__tests__/Mode*.test.mjs electron/services/__tests__/ProfileIntelligenceGate.test.mjs electron/services/__tests__/AnswerCueApiE2E.test.mjs",
     "test:modes:collect-fixtures": "RUN_INTERNET_FIXTURE_COLLECTION=1 node --test electron/services/__tests__/ModeFixtureIntegrity.test.mjs",
-    "test:modes:e2e": "RUN_NATIVELY_API_E2E=1 npm run test:modes",
+    "test:modes:e2e": "RUN_ANSWERCUE_API_E2E=1 npm run test:modes",
     "test:modes:long": "node --test electron/services/__tests__/ModeLongSession.test.mjs",
     "test:e2e": "npx playwright test",
     "test:e2e:headed": "npx playwright test --headed",
@@ -36,9 +36,9 @@
   },
   "build": {
     "generateUpdatesFilesForAllChannels": true,
-    "appId": "com.answerflow.desktop",
+    "appId": "com.answercue.desktop",
     "afterPack": "./scripts/ad-hoc-sign.js",
-    "productName": "AnswerFlow",
+    "productName": "AnswerCue",
     "files": [
       "dist",
       "dist-electron",
@@ -63,8 +63,8 @@
         "to": "assets/"
       },
       {
-        "from": "assets/answerflow/answerflow.icns",
-        "to": "answerflow.icns"
+        "from": "assets/answercue/answercue.icns",
+        "to": "answercue.icns"
       },
       {
         "from": "resources/models/Xenova/",
@@ -88,13 +88,13 @@
           ]
         }
       ],
-      "icon": "assets/answerflow/answerflow.icns",
+      "icon": "assets/answercue/answercue.icns",
       "identity": null,
       "hardenedRuntime": false,
       "extendInfo": {
-        "NSScreenCaptureUsageDescription": "AnswerFlow needs Screen Recording permission to capture system audio for interview transcription.",
-        "NSMicrophoneUsageDescription": "AnswerFlow needs microphone access to transcribe your voice during interviews.",
-        "NSAudioCaptureUsageDescription": "AnswerFlow needs system audio access to transcribe interview audio."
+        "NSScreenCaptureUsageDescription": "AnswerCue needs Screen Recording permission to capture system audio for interview transcription.",
+        "NSMicrophoneUsageDescription": "AnswerCue needs microphone access to transcribe your voice during interviews.",
+        "NSAudioCaptureUsageDescription": "AnswerCue needs system audio access to transcribe interview audio."
       }
     },
     "dmg": {
@@ -148,7 +148,7 @@
       {
         "provider": "github",
         "owner": "FarzamHejaziK",
-        "repo": "AnswerFlow",
+        "repo": "AnswerCue",
         "releaseType": "release"
       }
     ]

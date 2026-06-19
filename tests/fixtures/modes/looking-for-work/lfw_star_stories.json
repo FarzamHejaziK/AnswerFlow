@@ -8,7 +8,7 @@
     },
     {
       "tag": "scale",
-      "title": "Scaled Natively to 10k users",
+      "title": "Scaled AnswerCue to 10k users",
       "summary": "Led infra rework when the live transcript pipeline started dropping audio at >3 concurrent meetings per host.",
       "outcome": "Sustained 10k DAU with p95 transcript-to-answer < 1.4s."
     }

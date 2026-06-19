@@ -26,7 +26,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '../../..');
 
-const tsxPath = path.join(root, 'src/components/NativelyInterface.tsx');
+const tsxPath = path.join(root, 'src/components/AnswerCueInterface.tsx');
 const mainPath = path.join(root, 'electron/main.ts');
 const preloadPath = path.join(root, 'electron/preload.ts');
 const electronDtsPath = path.join(root, 'src/types/electron.d.ts');
@@ -56,7 +56,7 @@ function windowAround(source, re, linesBefore = 1, linesAfter = 5) {
 }
 
 describe('B2: STT user/interviewer status must initialize to \'awaiting-audio\'', () => {
-  it('NativelyInterface.tsx initializes sttUserStatus to \'awaiting-audio\' (not \'connected\')', () => {
+  it('AnswerCueInterface.tsx initializes sttUserStatus to \'awaiting-audio\' (not \'connected\')', () => {
     const win = windowAround(tsx, /setSttUserStatus\s*\]\s*=\s*useState/, 0, 6) ||
       windowAround(tsx, /const\s*\[\s*sttUserStatus\s*,\s*setSttUserStatus/, 0, 6);
     assert.ok(win, 'could not locate sttUserStatus useState declaration');
@@ -74,7 +74,7 @@ describe('B2: STT user/interviewer status must initialize to \'awaiting-audio\''
     );
   });
 
-  it('NativelyInterface.tsx initializes sttInterviewerStatus to \'awaiting-audio\' (not \'connected\')', () => {
+  it('AnswerCueInterface.tsx initializes sttInterviewerStatus to \'awaiting-audio\' (not \'connected\')', () => {
     const win = windowAround(tsx, /setSttInterviewerStatus\s*\]\s*=\s*useState/, 0, 6) ||
       windowAround(tsx, /const\s*\[\s*sttInterviewerStatus\s*,\s*setSttInterviewerStatus/, 0, 6);
     assert.ok(win, 'could not locate sttInterviewerStatus useState declaration');
@@ -140,7 +140,7 @@ describe('B2: STT user/interviewer status must initialize to \'awaiting-audio\''
     );
   });
 
-  it('NativelyInterface.tsx calls setSttUserStatus(\'awaiting-audio\') and setSttInterviewerStatus(\'awaiting-audio\') (meeting-end reset)', () => {
+  it('AnswerCueInterface.tsx calls setSttUserStatus(\'awaiting-audio\') and setSttInterviewerStatus(\'awaiting-audio\') (meeting-end reset)', () => {
     assert.ok(
       /setSttUserStatus\s*\(\s*['"]awaiting-audio['"]\s*\)/.test(tsx),
       'BUG: meeting-end reset path no longer calls setSttUserStatus(\'awaiting-audio\'). ' +
@@ -161,7 +161,7 @@ describe('B2: STT user/interviewer status must initialize to \'awaiting-audio\''
       { name: 'electron/main.ts SttStatusPayload', source: main, anchor: /interface\s+SttStatusPayload\s*\{[\s\S]*?state\s*:\s*([^;]+);/ },
       { name: 'electron/preload.ts onSttStatusChanged', source: preload, anchor: /onSttStatusChanged[\s\S]{0,400}?state\s*:\s*([^;,\n]+)/ },
       { name: 'src/types/electron.d.ts onSttStatusChanged', source: electronDts, anchor: /onSttStatusChanged[\s\S]{0,400}?state\s*:\s*([^;,\n]+)/ },
-      { name: 'NativelyInterface.tsx sttUserStatus useState type', source: tsx, anchor: /useState<\s*([^>]+?)>\s*\(\s*['"]awaiting-audio['"]/ },
+      { name: 'AnswerCueInterface.tsx sttUserStatus useState type', source: tsx, anchor: /useState<\s*([^>]+?)>\s*\(\s*['"]awaiting-audio['"]/ },
     ];
     const missing = [];
     for (const c of checks) {

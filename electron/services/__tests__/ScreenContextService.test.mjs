@@ -1,18 +1,18 @@
 // LEGACY OCR PATH — TESTS SKIPPED (2026-05-17)
 // =====================================================================
 // ScreenContextService is the legacy OCR-backed screen context service.
-// Natively no longer uses it in the default runtime path (vision-first
+// AnswerCue no longer uses it in the default runtime path (vision-first
 // pivot). These tests are kept on disk so the OCR contract can be
 // re-validated if a future opt-in OCR mode is reintroduced. Until then,
-// set NATIVELY_RUN_LEGACY_OCR_TESTS=1 to opt in.
+// set ANSWERCUE_RUN_LEGACY_OCR_TESTS=1 to opt in.
 // =====================================================================
 import { test as _test, describe as _describe } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-const LEGACY_OCR_ENABLED = process.env.NATIVELY_RUN_LEGACY_OCR_TESTS === '1';
-const skipReason = LEGACY_OCR_ENABLED ? undefined : 'legacy OCR path disabled — set NATIVELY_RUN_LEGACY_OCR_TESTS=1 to run';
+const LEGACY_OCR_ENABLED = process.env.ANSWERCUE_RUN_LEGACY_OCR_TESTS === '1';
+const skipReason = LEGACY_OCR_ENABLED ? undefined : 'legacy OCR path disabled — set ANSWERCUE_RUN_LEGACY_OCR_TESTS=1 to run';
 const test = (name, opts, fn) => {
   if (typeof opts === 'function') return _test(name, { skip: skipReason }, opts);
   return _test(name, { ...(opts || {}), skip: skipReason }, fn);

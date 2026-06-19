@@ -1,10 +1,10 @@
-# Contributing to AnswerFlow
+# Contributing to AnswerCue
 
-Thank you for helping improve AnswerFlow. This fork is focused on a clean interview-assistant experience: prep chat, reusable document context, live transcript, AI answer generation, and post-interview follow-up chat.
+Thank you for helping improve AnswerCue. This fork is focused on a clean interview-assistant experience: prep chat, reusable document context, live transcript, AI answer generation, and post-interview follow-up chat.
 
 ## Before You Start
 
-- Open issues and pull requests against `https://github.com/FarzamHejaziK/AnswerFlow`.
+- Open issues and pull requests against `https://github.com/FarzamHejaziK/AnswerCue`.
 - Keep changes focused and easy to review.
 - Preserve AGPL-3.0 license notices.
 - Do not commit API keys, logs with secrets, generated local databases, or build artifacts.
@@ -48,7 +48,7 @@ npm test
 
 ## Product Expectations
 
-When making user-facing changes, keep the current AnswerFlow workflow intact:
+When making user-facing changes, keep the current AnswerCue workflow intact:
 
 1. First-run setup collects provider keys and permissions.
 2. New Interview opens a prep page, not an active recording.

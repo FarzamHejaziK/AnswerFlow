@@ -4,7 +4,7 @@ import { isVerboseLogging } from '../verboseLog';
 
 /**
  * Lifecycle owner for the macOS CGEventTap. JS-side state machine for the
- * "stealth typing mode" that lets the user type into Natively without their
+ * "stealth typing mode" that lets the user type into AnswerCue without their
  * foreground app (Zoom, browser, etc.) ever losing key/frontmost status at
  * the OS level.
  *
@@ -268,7 +268,7 @@ export class StealthKeyboardManager {
         // sees a stale window with dead inputs (tap intercepts keystrokes
         // at OS level → routes to overlay, not the aux window's React
         // tree). Hiding here closes the loop: engaging the tap = "I want
-        // to type into Natively now" implies "no other Natively windows
+        // to type into AnswerCue now" implies "no other AnswerCue windows
         // should be competing for input."
         this.hideAuxWindowsForStealth();
 

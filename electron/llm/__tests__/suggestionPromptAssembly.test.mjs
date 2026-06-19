@@ -370,7 +370,7 @@ test('WhatToAnswerLLM delegates attached images to streamChat (vision fallback o
   // NEW CONTRACT: WhatToAnswerLLM no longer gates on the selected model's vision
   // capability. Every image-bearing request is handed to streamChat, whose
   // unified streaming vision fallback chain (OpenAI → Claude → Gemini → Groq →
-  // Natively → local) picks a vision-capable provider, retries, and degrades
+  // AnswerCue → local) picks a vision-capable provider, retries, and degrades
   // gracefully. The premature "switch to a vision model" refusal is gone — that
   // dead-ended screenshots whenever the picked model couldn't see images.
   const { WhatToAnswerLLM } = require(distWhatToAnswerPath);

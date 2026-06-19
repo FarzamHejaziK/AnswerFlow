@@ -6,14 +6,14 @@
  */
 
 export const CHECKOUT_URLS = {
-    /** AnswerFlow Pro (lifetime/yearly) */
+    /** AnswerCue Pro (lifetime/yearly) */
     pro: 'https://checkout.dodopayments.com/buy/pdt_0NcM6Aw0IWdspbsgUeCLA',
-    /** AnswerFlow API — Standard tier */
+    /** AnswerCue API — Standard tier */
     apiStandard: 'https://checkout.dodopayments.com/buy/pdt_0NbFixGmD8CSeawb5qvVl',
-    /** AnswerFlow API — Pro tier */
+    /** AnswerCue API — Pro tier */
     apiPro: 'https://checkout.dodopayments.com/buy/pdt_0NcM6Aw0IWdspbsgUeCLA',
-    /** AnswerFlow API — Max tier */
+    /** AnswerCue API — Max tier */
     apiMax: 'https://checkout.dodopayments.com/buy/pdt_0NcM7JElX4Af6LNVFS1Yf',
-    /** AnswerFlow API — Ultra tier */
+    /** AnswerCue API — Ultra tier */
     apiUltra: 'https://checkout.dodopayments.com/buy/pdt_0NcM7rC2kAb69TFKsZnUU',
 } as const;

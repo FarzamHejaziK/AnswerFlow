@@ -26,7 +26,7 @@ function read(rel) {
   return fs.readFileSync(path.join(root, rel), 'utf8');
 }
 
-const ui = read('src/components/NativelyInterface.tsx');
+const ui = read('src/components/AnswerCueInterface.tsx');
 
 test('issue #252: audio-capture-failed handler does not reuse the screen-recording banner kind', () => {
   // The audio-capture-failed listener should set a warning of kind
@@ -86,7 +86,7 @@ test('issue #252: banner title is not hardcoded to "Screen Recording Permission 
 
 test('issue #252: Open Settings button does not unconditionally fire x-apple.systempreferences', () => {
   // macOS-only URLs are correct only inside the guarded macOS/channel branches.
-  // On Windows the action must fall back to Natively's own settings
+  // On Windows the action must fall back to AnswerCue's own settings
   // (toggleSettingsWindow / openSettingsTab) instead of firing an OS URI.
   const stripped = ui.replace(/\s+/g, ' ');
   const xAppleCount = (stripped.match(/x-apple\.systempreferences:/g) || []).length;

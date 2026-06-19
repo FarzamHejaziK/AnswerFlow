@@ -8,15 +8,15 @@ if (!app.isPackaged) {
   require('dotenv').config();
 }
 
-const APP_NAME = "AnswerFlow";
-const APP_ID = "com.answerflow.desktop";
-const DEBUG_LOG_FILE_NAME = "answerflow_debug.log";
+const APP_NAME = "AnswerCue";
+const APP_ID = "com.answercue.desktop";
+const DEBUG_LOG_FILE_NAME = "answercue_debug.log";
 
 /**
  * Whether THIS build carries a real Developer ID signature.
  *
  * The signed release path (`electron-builder.signed.cjs`) bakes
- * `answerflowSigned: true` into the packaged app's package.json via
+ * `answercueSigned: true` into the packaged app's package.json via
  * `extraMetadata`. The default/dev build leaves it absent. We read the flag
  * once from the bundled package.json (inside the asar) and cache it.
  *
@@ -28,7 +28,7 @@ function isSignedBuild(): boolean {
   try {
     const pkgPath = path.join(app.getAppPath(), 'package.json')
     const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
-    _cachedSignedBuild = pkg?.answerflowSigned === true || pkg?.nativelySigned === true
+    _cachedSignedBuild = pkg?.answercueSigned === true || pkg?.nativelySigned === true
   } catch {
     _cachedSignedBuild = false
   }
@@ -224,11 +224,14 @@ function clearSystemAudioPermissionWarning(): void {
  * no transcription" failure mode) were invisible during local dev.
  *
  * Now opt-in: default OFF in dev so devs see the real TCC status; set
- * `NATIVELY_DEV_BYPASS_SCREEN_TCC=1` to restore the legacy bypass for
+ * `ANSWERCUE_DEV_BYPASS_SCREEN_TCC=1` to restore the legacy bypass for
  * smooth daily development.
  */
 function isDevTccBypassEnabled(): boolean {
-  return !app.isPackaged && process.env.NATIVELY_DEV_BYPASS_SCREEN_TCC === '1';
+  return !app.isPackaged && (
+    process.env.ANSWERCUE_DEV_BYPASS_SCREEN_TCC === '1' ||
+    process.env.ANSWERCUE_DEV_BYPASS_SCREEN_TCC === '1'
+  );
 }
 
 function getMacScreenCaptureStatus(): MacScreenCaptureStatus {
@@ -236,7 +239,7 @@ function getMacScreenCaptureStatus(): MacScreenCaptureStatus {
 
   // B5: opt-in dev bypass — see isDevTccBypassEnabled() for rationale.
   if (isDevTccBypassEnabled()) {
-    console.log('[Main] Dev TCC bypass enabled (NATIVELY_DEV_BYPASS_SCREEN_TCC=1) — reporting screen capture as granted');
+    console.log('[Main] Dev TCC bypass enabled (ANSWERCUE_DEV_BYPASS_SCREEN_TCC=1) — reporting screen capture as granted');
     return 'granted';
   }
 
@@ -337,22 +340,22 @@ function formatPermissionMessage(reason: PermissionReason, extra?: { device?: st
         : 'System audio capture is unavailable. Interviewer audio will not be captured. Check your audio device routing in Settings and restart the meeting.';
     case 'mac-screen-recording-restricted':
       if (!isMac) return formatPermissionMessage('system-audio-stuck');
-      return 'Screen Recording is restricted by device policy. Interviewer audio will not be captured. Contact your administrator to allow screen capture for AnswerFlow.';
+      return 'Screen Recording is restricted by device policy. Interviewer audio will not be captured. Contact your administrator to allow screen capture for AnswerCue.';
     case 'mac-screen-recording-revoked-rebuild':
       // Defense-in-depth: even though all call sites must be darwin-gated
       // (the `mac-` prefix marks this constraint), if a future contributor
       // calls this from a cross-platform path we degrade gracefully rather
       // than leak macOS UI strings to Windows users.
       if (!isMac) return formatPermissionMessage('system-audio-stuck');
-      return 'System audio is being captured but every sample is silent. This usually means macOS Screen Recording permission needs to be re-granted to this build of AnswerFlow. Open System Settings → Privacy & Security → Screen Recording, toggle AnswerFlow off and back on, then restart the app. (If you recently rebuilt or updated, the previous grant may not apply.)';
+      return 'System audio is being captured but every sample is silent. This usually means macOS Screen Recording permission needs to be re-granted to this build of AnswerCue. Open System Settings → Privacy & Security → Screen Recording, toggle AnswerCue off and back on, then restart the app. (If you recently rebuilt or updated, the previous grant may not apply.)';
     case 'mic-denied':
       return isMac
-        ? 'Microphone access denied. Please allow microphone access in System Settings → Privacy & Security → Microphone, then restart AnswerFlow.'
-        : 'Microphone access denied. Please allow microphone access in Settings → Privacy → Microphone, then restart AnswerFlow.';
+        ? 'Microphone access denied. Please allow microphone access in System Settings → Privacy & Security → Microphone, then restart AnswerCue.'
+        : 'Microphone access denied. Please allow microphone access in Settings → Privacy → Microphone, then restart AnswerCue.';
     case 'mic-zero-fill':
       return isMac
-        ? 'Microphone is producing silent audio. Check that the device is unmuted and that macOS Microphone permission is granted to AnswerFlow in System Settings → Privacy & Security → Microphone.'
-        : 'Microphone is producing silent audio. Check that the device is unmuted and that AnswerFlow has microphone access in Settings → Privacy → Microphone.';
+        ? 'Microphone is producing silent audio. Check that the device is unmuted and that macOS Microphone permission is granted to AnswerCue in System Settings → Privacy & Security → Microphone.'
+        : 'Microphone is producing silent audio. Check that the device is unmuted and that AnswerCue has microphone access in Settings → Privacy → Microphone.';
     case 'mac-same-device-input-output':
       // Defense-in-depth: see comment on `mac-screen-recording-revoked-rebuild`.
       // The CoreAudio Process Tap same-device limitation is macOS-specific;
@@ -362,7 +365,7 @@ function formatPermissionMessage(reason: PermissionReason, extra?: { device?: st
     case 'system-audio-stuck':
       return 'No audio detected on system output for 12s. If your meeting app is using a different output device (Bluetooth headset, virtual cable, second monitor), switch it to your default output, or restart the meeting after switching.';
     case 'system-audio-output-mismatch':
-      return 'No audio detected on the selected output device. AnswerFlow is listening to an output that is different from the Windows default, so the meeting audio may be playing somewhere else. In AnswerFlow Settings choose Default Speakers, or set the meeting app to the selected output, then restart the meeting.';
+      return 'No audio detected on the selected output device. AnswerCue is listening to an output that is different from the Windows default, so the meeting audio may be playing somewhere else. In AnswerCue Settings choose Default Speakers, or set the meeting app to the selected output, then restart the meeting.';
   }
 }
 
@@ -407,14 +410,14 @@ import { DeepgramStreamingSTT } from "./audio/DeepgramStreamingSTT"
 import { SonioxStreamingSTT } from "./audio/SonioxStreamingSTT"
 import { ElevenLabsStreamingSTT } from "./audio/ElevenLabsStreamingSTT"
 import { OpenAIStreamingSTT } from "./audio/OpenAIStreamingSTT"
-import { NativelyProSTT } from "./audio/NativelyProSTT"
+import { AnswerCueProSTT } from "./audio/AnswerCueProSTT"
 import { ThemeManager } from "./ThemeManager"
 import { RAGManager } from "./rag/RAGManager"
 import { DatabaseManager } from "./db/DatabaseManager"
 import { warmupIntentClassifier } from "./llm"
 
 /** Unified type for all STT providers with optional extended capabilities */
-type STTProvider = (GoogleSTT | RestSTT | DeepgramStreamingSTT | SonioxStreamingSTT | ElevenLabsStreamingSTT | OpenAIStreamingSTT | NativelyProSTT) & {
+type STTProvider = (GoogleSTT | RestSTT | DeepgramStreamingSTT | SonioxStreamingSTT | ElevenLabsStreamingSTT | OpenAIStreamingSTT | AnswerCueProSTT) & {
   finalize?: () => void;
   setAudioChannelCount?: (count: number) => void;
   notifySpeechEnded?: () => void;
@@ -512,7 +515,7 @@ export class AppState {
   // (and only the transcript handler) treats `isMeetingActive || _isDraining`
   // as "accept trailing finals" — every other call site looks at
   // `isMeetingActive` alone, which flips to false synchronously on Stop so the
-  // launcher's "Meeting ongoing" pill switches back to "Start AnswerFlow" the
+  // launcher's "Meeting ongoing" pill switches back to "Start AnswerCue" the
   // instant the user clicks Stop, with no 250 ms green-→-blue stutter.
   private _isDraining: boolean = false;
   // Tracks remembered output device so reconfigureAudio can no-op when nothing changed.
@@ -1507,10 +1510,10 @@ export class AppState {
         { provider: sttProvider, message: w?.message, droppedBytes: w?.droppedBytes });
     });
 
-    // Auto language detection: NativelyProSTT emits 'languageDetected' when the
+    // Auto language detection: AnswerCueProSTT emits 'languageDetected' when the
     // backend resolves the language from the first audio batch. Notify the renderer
     // so the settings UI can show what was detected.
-    if (stt instanceof NativelyProSTT) {
+    if (stt instanceof AnswerCueProSTT) {
       stt.on('connected', () => {
         _consecutiveErrors = 0;
         if (_lastState !== 'connected') {
@@ -1530,7 +1533,7 @@ export class AppState {
         helper.getLauncherWindow()?.webContents.send('stt-language-auto-detected', bcp47);
       });
 
-      // Persistent-reconnect signal: NativelyProSTT now retries indefinitely
+      // Persistent-reconnect signal: AnswerCueProSTT now retries indefinitely
       // with a 30s backoff cap, but we want the user to know after ~5 attempts
       // (~30–90s of dead transcript) that the issue is sustained, not a blip.
       // Reuse the stt-status channel with state='reconnecting' and a higher
@@ -1969,7 +1972,7 @@ export class AppState {
           this.systemAudioCapture = null;
           this.sendAudioCaptureFailed({
             channel: 'system',
-            message: 'System audio capture failed to initialize. The native audio module could not allocate the capture device. Restarting AnswerFlow may help; if the problem persists, file a bug.',
+            message: 'System audio capture failed to initialize. The native audio module could not allocate the capture device. Restarting AnswerCue may help; if the problem persists, file a bug.',
             attempt: 0,
             maxAttempts: 0,
             terminal: true,
@@ -1992,7 +1995,7 @@ export class AppState {
           this.microphoneCapture = null;
           this.sendAudioCaptureFailed({
             channel: 'mic',
-            message: 'Microphone capture failed to initialize. The native audio module could not open the default input device. Check that the device is connected and not in exclusive use by another app, then restart AnswerFlow.',
+            message: 'Microphone capture failed to initialize. The native audio module could not open the default input device. Check that the device is connected and not in exclusive use by another app, then restart AnswerCue.',
             attempt: 0,
             maxAttempts: 0,
             terminal: true,
@@ -3559,7 +3562,7 @@ export class AppState {
 
     // ─── UX STATE FLIP — SYNCHRONOUS ───────────────────────────────────────
     // Now flip the UX-facing meeting flag and broadcast. The launcher's
-    // "Meeting ongoing" pill reverts to "Start AnswerFlow" immediately;
+    // "Meeting ongoing" pill reverts to "Start AnswerCue" immediately;
     // trailing transcript finals are still accepted via `_isDraining`.
     this.isMeetingActive = false;
     this._meetingGeneration++;
@@ -3962,7 +3965,7 @@ export class AppState {
     const { CredentialsManager } = require('./services/CredentialsManager');
     CredentialsManager.getInstance().setSttLanguage(key);
 
-    // 'auto' is only meaningful for NativelyProSTT — other providers fall back to en-US.
+    // 'auto' is only meaningful for AnswerCueProSTT — other providers fall back to en-US.
     const sttProvider = CredentialsManager.getInstance().getSttProvider();
     const effectiveKey = (key === 'auto' && sttProvider !== 'natively') ? 'english-us' : key;
 
@@ -4503,7 +4506,7 @@ export class AppState {
         }
 
         if (settled) {
-          // Capture whether AnswerFlow is currently the frontmost app BEFORE
+          // Capture whether AnswerCue is currently the frontmost app BEFORE
           // dock.hide() — that call triggers an implicit macOS app-deactivation
           // which shifts keyboard focus to the next frontmost app (Chrome, etc.).
           const answerFlowWasFocused =
@@ -4515,7 +4518,7 @@ export class AppState {
           app.dock.hide();
           this.hideTray();
 
-          // If AnswerFlow was the focused window when the user toggled stealth,
+          // If AnswerCue was the focused window when the user toggled stealth,
           // restore focus to our window after dock.hide() so macOS does not
           // hand control to Chrome / whatever is behind us.
           // We use win.focus() (not app.focus()) to avoid the heavy-handed
@@ -4656,8 +4659,8 @@ export class AppState {
         appName = APP_NAME;
         if (isMac) {
           iconPath = app.isPackaged
-            ? path.join(process.resourcesPath, "answerflow.icns")
-            : path.join(app.getAppPath(), "assets/answerflow/answerflow.icns");
+            ? path.join(process.resourcesPath, "answercue.icns")
+            : path.join(app.getAppPath(), "assets/answercue/answercue.icns");
         } else if (isWin) {
           iconPath = app.isPackaged
             ? path.join(process.resourcesPath, "assets/icons/win/icon.ico")
@@ -4780,7 +4783,7 @@ export class AppState {
 
 async function initializeApp() {
   // When a duplicate launch is attempted (e.g. user invokes Spotlight again
-  // while AnswerFlow is running), focus and recenter the existing window so the
+  // while AnswerCue is running), focus and recenter the existing window so the
   // launch is visibly handled instead of silently absorbed.
   app.on('second-instance', () => {
     try {
@@ -4952,7 +4955,7 @@ async function initializeApp() {
   // One-time macOS screen recording permission prompt.
   //
   // We must fire this AFTER createWindow() so that:
-  //   1. The AnswerFlow launcher window is visible and focused when the TCC dialog
+  //   1. The AnswerCue launcher window is visible and focused when the TCC dialog
   //      appears — macOS anchors the dialog to the frontmost app window on Ventura+.
   //      Without a visible window the dialog can appear behind other apps (Sequoia).
   //   2. In stealth/undetectable mode the dock icon is hidden, but the window is
@@ -5031,7 +5034,7 @@ async function initializeApp() {
             console.warn('[Init] Microphone is restricted by device policy at startup.');
             appState.sendAudioCaptureFailed({
               channel: 'mic',
-              message: 'Microphone is restricted by device policy. Contact your administrator to enable microphone access for AnswerFlow.',
+              message: 'Microphone is restricted by device policy. Contact your administrator to enable microphone access for AnswerCue.',
               attempt: 0,
               maxAttempts: 0,
               terminal: true,

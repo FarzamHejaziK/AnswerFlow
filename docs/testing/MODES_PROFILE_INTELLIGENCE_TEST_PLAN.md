@@ -1,12 +1,12 @@
 # Modes & Profile Intelligence — Real-User QA Test Plan
 
 Version: 1.0  
-Owner: AnswerFlow QA automation  
+Owner: AnswerCue QA automation  
 Last updated: 2026-05-15
 
 ## 1. Mission
 
-AnswerFlow's reported-bug fix cycle does not verify whether each mode behaves like a real product. This plan establishes a deep, **realistic, end-to-end** test system for:
+AnswerCue's reported-bug fix cycle does not verify whether each mode behaves like a real product. This plan establishes a deep, **realistic, end-to-end** test system for:
 
 1. Modes Manager (CRUD, active mode, isolation)
 2. Mode-specific system prompts
@@ -16,7 +16,7 @@ AnswerFlow's reported-bug fix cycle does not verify whether each mode behaves li
 6. Mode switching and **mode-bleeding prevention**
 7. Long-session context behavior
 8. Hallucination / refusal behavior
-9. AnswerFlow API integration (when configured)
+9. AnswerCue API integration (when configured)
 10. IPC surface (service-level near-E2E)
 
 The aim is that, after this work, fixing any future reported bug can be checked against this suite to detect collateral regressions across modes, retrieval, profile intelligence, mode isolation, and long sessions.
@@ -124,7 +124,7 @@ For each of the 7 discovered modes we run **5 realistic user scenarios** plus a 
 5. Leadership sync — KPI dashboard CSV.
 
 ### 3.5 Looking-for-Work (5)
-1. Behavioral interview — resume includes PriceX & AnswerFlow (sentinel: "candidate built PriceX, a price-comparison website, and scaled AnswerFlow to 10k users").
+1. Behavioral interview — resume includes PriceX & AnswerCue (sentinel: "candidate built PriceX, a price-comparison website, and scaled AnswerCue to 10k users").
 2. Recruiter screen — JD + salary expectations in custom context.
 3. Product sense interview — startup founder resume.
 4. Conflict / leadership story — single conflict story in resume.
@@ -208,7 +208,7 @@ Asserts: after correction, retrieval picks up the corrected fact, not the origin
 | 6 | Mode-bleeding torture tests | In progress |
 | 7 | Bug-fix loop (per finding, no test hardcoding) | Loop |
 | 8 | Service-level near-E2E (no Electron Playwright wired) | Documented |
-| 9 | Real AnswerFlow API integration (env-gated) | Skipped unless env set |
+| 9 | Real AnswerCue API integration (env-gated) | Skipped unless env set |
 | 10 | Final report and verdict | Pending |
 
 ## 10. Out of scope (deliberate)

@@ -30,7 +30,7 @@
  *   - No-op when notarization credentials are absent (local / dev / ad-hoc builds).
  *     This means `npm run app:build` (the ad-hoc dev path) is completely unaffected —
  *     it never tries to notarize and never fails for lack of an Apple account.
- *   - No-op when NATIVELY_SKIP_NOTARIZE=1 is set (explicit escape hatch).
+ *   - No-op when ANSWERCUE_SKIP_NOTARIZE=1 is set (explicit escape hatch).
  *   - Notarization only runs when one of the three credential strategies is fully
  *     configured via environment variables (see below). This is the production path.
  *
@@ -101,8 +101,8 @@ module.exports = async function notarizeHook(context) {
     return; // Windows / Linux — nothing to notarize.
   }
 
-  if (process.env.NATIVELY_SKIP_NOTARIZE === '1') {
-    console.log('[notarize] NATIVELY_SKIP_NOTARIZE=1 — skipping notarization.');
+  if (process.env.ANSWERCUE_SKIP_NOTARIZE === '1') {
+    console.log('[notarize] ANSWERCUE_SKIP_NOTARIZE=1 — skipping notarization.');
     return;
   }
 

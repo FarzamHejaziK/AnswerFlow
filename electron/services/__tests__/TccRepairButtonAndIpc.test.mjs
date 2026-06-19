@@ -20,7 +20,7 @@ const read = (rel) => readFileSync(resolve(repoRoot, rel), 'utf8');
 const ipcHandlers = read('electron/ipcHandlers.ts');
 const preload = read('electron/preload.ts');
 const electronDts = read('src/types/electron.d.ts');
-const interfaceTsx = read('src/components/NativelyInterface.tsx');
+const interfaceTsx = read('src/components/AnswerCueInterface.tsx');
 
 // Extract the handler body for handler-scoped assertions.
 function extractHandlerBody(source) {
@@ -115,11 +115,11 @@ test('electron.d.ts declares repairTccPermissions with ok:boolean and message:st
   assert.match(decl, /message\s*:\s*string/, "expected 'message: string' in repairTccPermissions return type");
 });
 
-test('NativelyInterface.tsx renders a Repair Permissions button gated by isMac', () => {
+test('AnswerCueInterface.tsx renders a Repair Permissions button gated by isMac', () => {
   assert.match(
     interfaceTsx,
     /Repair Permissions/,
-    "expected literal 'Repair Permissions' button label in NativelyInterface.tsx",
+    "expected literal 'Repair Permissions' button label in AnswerCueInterface.tsx",
   );
   // Locate the *button label* literal (quoted string-literal rendered into
   // JSX), not earlier occurrences in code comments. Earlier matches may

@@ -12,7 +12,7 @@
   2. Settings UI exposing macOS-only backends (SCK toggle) and Help/Setup Guide copy.
   3. `electron/main.ts` user-facing strings ("System Settings → Privacy & Security …") propagated to renderer toasts/banners on every platform.
   4. Rust `native-module/src/speaker/mod.rs` has a **broken fallback module** (duplicate struct definitions, conflicting impls) that will fail to compile on Linux — orthogonal to Windows but a sign the conditional-compilation surface was not exercised.
-  5. Keyboard shortcut display in non-Settings surfaces (Queue, Solutions, AnswerFlowInterface, SettingsPopup) still renders raw `⌘` glyphs without going through `getModifierSymbol`.
+  5. Keyboard shortcut display in non-Settings surfaces (Queue, Solutions, AnswerCueInterface, SettingsPopup) still renders raw `⌘` glyphs without going through `getModifierSymbol`.
 
 ---
 
@@ -22,11 +22,11 @@
 - **Location:** `electron/main.ts:1296`, `:1312`, `:1398`, `:1504`, `:1543`, `:2443`, `:2544`, `:2563`, `:4094`
 - **Symptom on Windows:** Audio-recovery banners, mic test failures, and meeting-start errors broadcast strings like:
   - `"macOS cannot tap a device while it is also the active microphone"` (1296)
-  - `"macOS Screen Recording permission needs to be re-granted… Open System Settings → Privacy & Security → Screen Recording, toggle AnswerFlow off and back on"` (1398)
-  - `"macOS Microphone permission is granted to AnswerFlow in System Settings → Privacy & Security → Microphone"` (1504)
+  - `"macOS Screen Recording permission needs to be re-granted… Open System Settings → Privacy & Security → Screen Recording, toggle AnswerCue off and back on"` (1398)
+  - `"macOS Microphone permission is granted to AnswerCue in System Settings → Privacy & Security → Microphone"` (1504)
   - `"Screen Recording permission denied… System Settings → Privacy & Security → Screen Recording"` (1543, 2563, 4094)
   - `"Microphone access denied. Please allow microphone access in System Settings"` (2443, 2544)
-  All of these surface in the renderer's `audio-capture-failed`/`system-audio-permission-denied` listeners. The renderer already shows them verbatim in the banner (`AnswerFlowInterface.tsx:3182` renders `systemAudioWarning.message`).
+  All of these surface in the renderer's `audio-capture-failed`/`system-audio-permission-denied` listeners. The renderer already shows them verbatim in the banner (`AnswerCueInterface.tsx:3182` renders `systemAudioWarning.message`).
 - **Reachable on Windows:** YES. The CoreAudio Tap zero-fill detector (`:1395-1404`) is the only one gated by macOS-specific zero-fill logic, but the `audio-capture-failed` broadcast at `:1296` (same-device input/output guard) and `:1310` (8s no-chunks watchdog) fire on Windows too. The `:1502-1505` mic-zero-fill broadcast definitely fires on Windows because it lives inside `setupMicrophoneCapture` which runs on every platform.
 - **Root cause:** Diagnostic strings were written for macOS first and never branched. The platform-conditional Open-Settings button (the Issue #252 fix) only switches the URL — it still shows the same Mac-flavored body text.
 - **Fix sketch:** Add a `formatPermissionMessage(reason, process.platform)` helper alongside `getMacScreenCaptureStatus`. For Windows substitute `"Settings → Privacy → Microphone"` and `"Settings → Privacy → Screen Recording"` (or drop the Screen-Recording reference entirely — Windows has no equivalent TCC, the same Rust SCK/CA paths don't exist there). For the `:1396-1403` TCC zero-fill detector specifically, gate the whole detector on `process.platform === 'darwin'`: zero-filled chunks on Windows mean WASAPI loopback failure, not TCC.
@@ -46,11 +46,11 @@
 - **Fix sketch:** Wrap the entire `SCK Backend` card in `{isMac && (…)}`. Read `isMac` from `src/utils/platformUtils.ts` (already imported elsewhere in the file or trivially added). Also hide the corresponding `HelpSettings.tsx:949-966` "ScreenCaptureKit (SCK) / CoreAudio (Legacy)" comparison block on Windows.
 
 ### F-004 — Help & Setup Guide tells Windows users to grant macOS-only permissions
-- **Location:** `src/components/settings/HelpSettings.tsx:808` ("Enable Screen Recording and Accessibility for AnswerFlow in macOS Privacy & Security"), `:828-832` (`'⌘H', '⌘⇧H', '⌘K'` hardcoded hotkeys), `:933-994` (entire "App Permissions Setup" section using `System Settings > Privacy & Security > Screen Recording / Accessibility` paths), `:1772` ("Cmd+Shift+Arrows … Cmd+B … Cmd+1-7")
+- **Location:** `src/components/settings/HelpSettings.tsx:808` ("Enable Screen Recording and Accessibility for AnswerCue in macOS Privacy & Security"), `:828-832` (`'⌘H', '⌘⇧H', '⌘K'` hardcoded hotkeys), `:933-994` (entire "App Permissions Setup" section using `System Settings > Privacy & Security > Screen Recording / Accessibility` paths), `:1772` ("Cmd+Shift+Arrows … Cmd+B … Cmd+1-7")
 - **Symptom on Windows:** Brand-new Windows users open the help/onboarding panel and are told to do something impossible (`Privacy & Security` is a macOS-only OS pane). Accessibility permission is a macOS-only concept; on Windows we don't need it because there is no global event-tap equivalent (the StealthKeyboardTap is already gated `#[cfg(target_os="macos")]`).
 - **Reachable on Windows:** YES — the whole Help panel renders on every platform.
 - **Root cause:** Static copy authored for macOS launch, never branched.
-- **Fix sketch:** Branch every step in `SetupGuide` and the `App Permissions Setup` accordion on `isMac`. On Windows: drop the Accessibility step entirely; the Screen Recording step becomes `"Allow AnswerFlow when Windows asks for microphone access on first meeting (Settings → Privacy → Microphone)."` The `hotkeys` array should run through `getPlatformShortcut(['⌘','H'])` etc.
+- **Fix sketch:** Branch every step in `SetupGuide` and the `App Permissions Setup` accordion on `isMac`. On Windows: drop the Accessibility step entirely; the Screen Recording step becomes `"Allow AnswerCue when Windows asks for microphone access on first meeting (Settings → Privacy → Microphone)."` The `hotkeys` array should run through `getPlatformShortcut(['⌘','H'])` etc.
 
 ### F-005 — `PermissionsToaster` still shows Mac-only "System Preferences" copy on Windows
 - **Location:** `src/components/onboarding/PermissionsToaster.tsx:213-219`, `:258`
@@ -59,7 +59,7 @@
   - Line 258 still says `"You can grant permissions later in System Preferences."` unconditionally on the final-CTA helper text. That string is macOS-only — Windows users should see `"Windows will ask the first time you start a meeting."` or equivalent.
 - **Reachable on Windows:** YES.
 - **Root cause:** Final text-helper was missed when the row-level platform branching was added.
-- **Fix sketch:** Change line 258 to a conditional: `platform === 'darwin' ? 'You can grant permissions later in System Preferences.' : 'Windows will prompt you the first time AnswerFlow needs the mic.'`. Optionally drop the entire Screen Recording row on Windows since `scrStatus` will always be `'granted'` on Windows per `permissions:check` IPC handler.
+- **Fix sketch:** Change line 258 to a conditional: `platform === 'darwin' ? 'You can grant permissions later in System Preferences.' : 'Windows will prompt you the first time AnswerCue needs the mic.'`. Optionally drop the entire Screen Recording row on Windows since `scrStatus` will always be `'granted'` on Windows per `permissions:check` IPC handler.
 
 ---
 
@@ -69,35 +69,35 @@
 - **Location:**
   - `src/_pages/Solutions.tsx:371` — `"Take a screenshot of your problem (⌘H) and press ⌘↵ to generate the script."`
   - `src/_pages/Queue.tsx:357` — `"Take a screenshot (Cmd+H) for automatic analysis"`
-  - `src/components/AnswerFlowInterfaceCard.tsx:169` — hardcoded `<kbd>⌘</kbd>`
+  - `src/components/AnswerCueInterfaceCard.tsx:169` — hardcoded `<kbd>⌘</kbd>`
   - `src/components/UpdateBanner.tsx:60` — comment-only; ignore
   - `src/components/SettingsPopup.tsx:341-357` — fallback hotkey arrays default to `['⌘','B']` and `['⌘','H']` instead of using `getModifierSymbol` for the platform.
-  - `src/components/AnswerFlowInterface.tsx:3501` — `(shortcuts.selectiveScreenshot || ['⌘', 'Shift', 'H'])`
-  - `src/components/AnswerFlowInterface.tsx:3416` — comment + body: "Cmd+Shift+Space" text
-  - `src/components/AnswerFlowInterface.tsx:3452` — "Grant it in System Settings, then restart AnswerFlow."
+  - `src/components/AnswerCueInterface.tsx:3501` — `(shortcuts.selectiveScreenshot || ['⌘', 'Shift', 'H'])`
+  - `src/components/AnswerCueInterface.tsx:3416` — comment + body: "Cmd+Shift+Space" text
+  - `src/components/AnswerCueInterface.tsx:3452` — "Grant it in System Settings, then restart AnswerCue."
   - `src/components/settings/HelpSettings.tsx:1230-1238` — entire dynamic-action grid hardcodes `'⌘'` symbols (line 1241 belatedly remaps to `'Ctrl'` only inside one map iteration — other rows like `kbd: '⌘1'` at lines 19-23 don't pass through the remap).
 - **Symptom on Windows:** Users see the Mac Command glyph `⌘` everywhere except SettingsOverlay shortcuts (which have proper formatting via `useShortcuts`). It's intelligible but unprofessional and wrong for the platform.
 - **Reachable on Windows:** YES.
 - **Root cause:** No central enforcement; some surfaces use `getPlatformShortcut`, others were added with hardcoded glyphs.
 - **Fix sketch:** Mechanical find-and-replace pass — every hardcoded `'⌘'`/`'⌥'`/`'⇧'` literal becomes `getModifierSymbol('cmd'|'option'|'shift')`. Every kbd fallback array becomes `getPlatformShortcut(['⌘','H'])`.
 
-### F-007 — `AnswerFlowInterface.tsx:3452` shows "Grant it in System Settings" on Windows
-- **Location:** `src/components/AnswerFlowInterface.tsx:3416-3452`
+### F-007 — `AnswerCueInterface.tsx:3452` shows "Grant it in System Settings" on Windows
+- **Location:** `src/components/AnswerCueInterface.tsx:3416-3452`
 - **Symptom on Windows:** This is the chat-focus-input failure path that fires when `globalShortcut.register('CommandOrControl+Shift+Space')` fails. On Windows the failure mode is different (probably another app owning the hotkey, not the Accessibility-permission gap macOS has). The dialog explicitly tells the user "Grant it in System Settings" — wrong OS, wrong remedy.
 - **Reachable on Windows:** YES — `globalShortcut.register` returning false fires on Windows too.
 - **Root cause:** Diagnostic written for macOS Accessibility failure.
-- **Fix sketch:** Add an `isMac` branch; on Windows replace with `"Another app may be using Ctrl+Shift+Space. Close it or change the AnswerFlow chat shortcut in Settings."`
+- **Fix sketch:** Add an `isMac` branch; on Windows replace with `"Another app may be using Ctrl+Shift+Space. Close it or change the AnswerCue chat shortcut in Settings."`
 
 ### F-008 — `IpcHandlers.ts:2553` allowlist accepts `x-apple.systempreferences:` even when invoked from Windows
 - **Location:** `electron/ipcHandlers.ts:2544-2562`
-- **Symptom on Windows:** The `open-external` IPC handler allows any URL with `x-apple.systempreferences:` protocol. On Windows, `shell.openExternal()` will return a generic protocol-not-handled failure (or pop up "How do you want to open this?" dialog depending on Edge config). The renderer should never be reaching this handler with that scheme — but if any code path slips through (like the `AnswerFlowInterface:3188` line that the user just fixed but might re-regress), the IPC layer silently approves it.
+- **Symptom on Windows:** The `open-external` IPC handler allows any URL with `x-apple.systempreferences:` protocol. On Windows, `shell.openExternal()` will return a generic protocol-not-handled failure (or pop up "How do you want to open this?" dialog depending on Edge config). The renderer should never be reaching this handler with that scheme — but if any code path slips through (like the `AnswerCueInterface:3188` line that the user just fixed but might re-regress), the IPC layer silently approves it.
 - **Reachable on Windows:** Conditionally — depends on renderer-side bugs, but this is the last line of defense and it has no platform gate.
 - **Root cause:** Allowlist trusts protocol, not platform.
 - **Fix sketch:** `const allowedSystemSettingsUrl = parsed.protocol === 'x-apple.systempreferences:' && process.platform === 'darwin';`
 
 ### F-009 — `UpdateModal.tsx` shows mac-only `xattr -cr` instructions unconditionally
 - **Location:** `src/components/UpdateModal.tsx:87`, `:194`, `:201`, `:237-249` (rendered in both `instructions` and `downloading` states — the "If macOS says 'App is damaged'" card)
-- **Symptom on Windows:** The "downloading" overlay card embeds an `xattr -cr /Applications/AnswerFlow.app` shell command for Windows users. The header literally says `"If macOS says 'App is damaged'"`. Windows users will see this every time the auto-updater downloads a build.
+- **Symptom on Windows:** The "downloading" overlay card embeds an `xattr -cr /Applications/AnswerCue.app` shell command for Windows users. The header literally says `"If macOS says 'App is damaged'"`. Windows users will see this every time the auto-updater downloads a build.
 - **Reachable on Windows:** YES — UpdateModal is rendered in `UpdateBanner.tsx` regardless of platform.
 - **Root cause:** Update flow was originally Mac-only and the Windows updater path (NSIS) was added without revising the modal.
 - **Fix sketch:** Wrap the `xattr` card with `{isMac && (…)}`. The `instructions` state should branch entirely: macOS gets the DMG + xattr steps; Windows gets `.exe` installer instructions (or just "Run the downloaded installer to update.")
@@ -148,11 +148,11 @@
 - **Location:** `electron/main.ts:437, 3613, 3614, 3627, 3794, 3912, 4146`
 - **Status:** Verified clean — all `app.dock.*` calls are inside `if (process.platform === 'darwin')` blocks (verified at lines 436, 3574, 3908, 4142). The bare `app.dock.setIcon(image)` at line 3794 is inside `if (isMac)` (line 3791). Safe.
 
-### F-018 — Comment-only Mac references in `audio/MicrophoneCapture.ts:123`, `audio/AnswerFlowProSTT.ts:107`, `audio/SystemAudioCapture.ts:117,152`
+### F-018 — Comment-only Mac references in `audio/MicrophoneCapture.ts:123`, `audio/AnswerCueProSTT.ts:107`, `audio/SystemAudioCapture.ts:117,152`
 - **Status:** Verified clean — these are comments explaining the original macOS rationale (CoreAudio handle teardown, 5-7s SCK init). No runtime impact.
 
 ### F-019 — `src/components/SettingsOverlay.tsx:2083` "System Settings" tab label
-- **Status:** `'System Settings'` is the in-app navigation tab inside AnswerFlow's own settings UI, not a deep link. Fine.
+- **Status:** `'System Settings'` is the in-app navigation tab inside AnswerCue's own settings UI, not a deep link. Fine.
 
 ### F-020 — `native-module/index.d.ts:109` mentions "CoreAudio" / "WASAPI"
 - **Status:** This is the auto-generated TypeScript declaration. Comments are descriptive only, not user-facing strings.
@@ -191,7 +191,7 @@
 - F-004 (branch HelpSettings setup steps + permission accordion + hotkey arrays)
 - F-005 (PermissionsToaster final-CTA copy)
 - F-006 / F-011 / F-012 (one find-and-replace pass for `⌘`/`⌥`/`⇧` → `getModifierSymbol`)
-- F-007 (AnswerFlowInterface chat-focus error message)
+- F-007 (AnswerCueInterface chat-focus error message)
 - F-008 (allowlist platform check)
 - F-009 (UpdateModal xattr card)
 - F-013 (PhoneMirrorSettings "Mac" → "computer")

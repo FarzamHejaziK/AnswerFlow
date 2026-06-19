@@ -4,7 +4,8 @@ const os = require('os');
 const path = require('path');
 
 const nativeModulePath = path.join(__dirname, '..', 'native-module');
-const buildAllMacTargets = process.env.NATIVELY_BUILD_ALL_MAC_ARCHES === '1';
+const buildAllMacTargets =
+  process.env.ANSWERCUE_BUILD_ALL_MAC_ARCHES === '1';
 
 function verifyArtifacts(expectedArtifacts) {
   const missing = expectedArtifacts.filter((file) => !fs.existsSync(path.join(nativeModulePath, file)));

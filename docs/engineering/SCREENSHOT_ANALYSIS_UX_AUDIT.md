@@ -2,7 +2,7 @@
 
 **Audit date:** 2026-05-15
 **Commit:** `43ae233d7148`
-**Surface inspected:** `src/components/AnswerFlowInterface.tsx`,
+**Surface inspected:** `src/components/AnswerCueInterface.tsx`,
 `src/components/Queue/`, `src/_pages/`, `src/hooks/useShortcuts.ts`,
 `src/components/SettingsOverlay.tsx`, `src/components/SettingsPopup.tsx`.
 
@@ -27,7 +27,7 @@ the live question" without a prior screenshot step.
 
 **Yes — partial.**
 
-`AnswerFlowInterface.tsx:3101-3104` renders a `Monitor`-icon pill with four states:
+`AnswerCueInterface.tsx:3101-3104` renders a `Monitor`-icon pill with four states:
 
 | `screenContextStatus` | Visible label | Color tone |
 |---|---|---|
@@ -63,7 +63,7 @@ The `<screen_context>` block is purely backend evidence.
 
 **Yes — for one error class.**
 
-`AnswerFlowInterface.tsx:3111-3143` shows a Screen Recording warning banner
+`AnswerCueInterface.tsx:3111-3143` shows a Screen Recording warning banner
 with an "Open Settings" button that deep-links to
 `x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture`.
 
@@ -103,7 +103,7 @@ bubble up as console errors and a generic system message in chat.
 ```
 
 When this chip surfaces in `DynamicActionBar` and the user accepts it:
-- `AnswerFlowInterface.tsx:3185` calls
+- `AnswerCueInterface.tsx:3185` calls
   `handleWhatToSay(action.promptInstruction)`.
 - `handleWhatToSay` runs **without any attached screenshot** (it consults
   `attachedContext`, which is empty unless the user already took one).
@@ -136,7 +136,7 @@ does not provide.
   "Brainstorm". None of them say "look at the screen". The legacy-overlay-style
   prompt "Solve what I'm looking at" doesn't exist.
 - The screenshot preview in the attachment area
-  (`AnswerFlowInterface.tsx:3311-3329`) does communicate "yes, the AI will
+  (`AnswerCueInterface.tsx:3311-3329`) does communicate "yes, the AI will
   see this", but only once you have already taken a screenshot manually.
 
 ---

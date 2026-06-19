@@ -22,7 +22,7 @@
 //
 // Strategy: source-level static assertions. Driving the real streamChat
 // generator would pull in the entire LLMHelper module (Gemini SDK, Groq,
-// OpenAI, Claude, Natively, RAG, knowledge orchestrator, mode loader,
+// OpenAI, Claude, AnswerCue, RAG, knowledge orchestrator, mode loader,
 // post-processor, …) which is impractical for a fast unit test. The static
 // checks below catch any regression where the abort-gate, controller
 // supersession, stop handler, or preload binding is removed or weakened —

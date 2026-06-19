@@ -84,8 +84,8 @@ function normalizeSpeaker(speaker: string): string {
     if (lower === 'user' || lower === 'me') {
         return 'You';
     }
-    if (lower === 'assistant' || lower === 'natively' || lower === 'answerflow') {
-        return 'AnswerFlow';
+    if (lower === 'assistant' || lower === 'natively' || lower === 'answercue') {
+        return 'AnswerCue';
     }
     // Keep original if it looks like a name
     return speaker;

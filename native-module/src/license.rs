@@ -124,7 +124,7 @@ impl Task for VerifyDodoTask {
     fn compute(&mut self) -> napi::Result<Self::Output> {
         let client = reqwest::blocking::Client::builder()
             .timeout(std::time::Duration::from_secs(15))
-            .user_agent("Natively/1.0 (license-check)")
+            .user_agent("AnswerCue/1.0 (license-check)")
             .build()
             .map_err(|e| napi::Error::from_reason(format!("ERR:client:{}", e)))?;
 
@@ -266,7 +266,7 @@ impl Task for ValidateDodoTask {
     fn compute(&mut self) -> napi::Result<Self::Output> {
         let client = reqwest::blocking::Client::builder()
             .timeout(std::time::Duration::from_secs(10))
-            .user_agent("Natively/1.0 (license-validate)")
+            .user_agent("AnswerCue/1.0 (license-validate)")
             .build()
             .map_err(|e| napi::Error::from_reason(format!("ERR:client:{}", e)))?;
 
@@ -370,7 +370,7 @@ impl Task for DeactivateDodoTask {
     fn compute(&mut self) -> napi::Result<Self::Output> {
         let client = reqwest::blocking::Client::builder()
             .timeout(std::time::Duration::from_secs(10))
-            .user_agent("Natively/1.0 (license-deactivate)")
+            .user_agent("AnswerCue/1.0 (license-deactivate)")
             .build()
             .map_err(|e| napi::Error::from_reason(format!("ERR:client:{}", e)))?;
 

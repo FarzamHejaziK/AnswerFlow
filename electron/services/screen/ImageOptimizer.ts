@@ -13,7 +13,7 @@
 //
 // Notes:
 //   - Sharp is already a project dep (used elsewhere for OCR preprocessing and
-//     Natively-API image compression). We centralize provider-ready optimization
+//     AnswerCue-API image compression). We centralize provider-ready optimization
 //     here so the vision pipeline has a single source of truth for sizes/quality.
 //   - We do NOT delete optimized files immediately — VisionProviderFallbackChain
 //     may retry the same payload across providers in one request. Callers should
@@ -83,7 +83,7 @@ function applyProviderTweaks(
       return { ...base, format: 'jpeg' };
     case 'natively':
       // Server enforces a 4 MB body cap; the per-image quality bump used in
-      // streamWithNatively (q=85, 1920px) is consistent with the 'best' profile.
+      // streamWithAnswerCue (q=85, 1920px) is consistent with the 'best' profile.
       return base;
     case 'gemini':
     case 'openai':

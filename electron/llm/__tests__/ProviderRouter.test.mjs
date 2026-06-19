@@ -20,7 +20,7 @@ test('routeLLMProviders returns deterministic text fallback order with availabil
     capability: 'chat',
     multimodal: false,
     availability: {
-      hasNatively: true,
+      hasAnswerCue: true,
       hasGroq: true,
       hasCodex: true,
       hasGemini: true,
@@ -58,7 +58,7 @@ test('routeLLMProviders omits DeepSeek from multimodal fallback (text-only provi
     capability: 'chat',
     multimodal: true,
     availability: {
-      hasNatively: true,
+      hasAnswerCue: true,
       hasGroq: true,
       hasCodex: true,
       hasGemini: true,
@@ -90,7 +90,7 @@ test('routeLLMProviders returns multimodal fallback order', async () => {
     capability: 'chat',
     multimodal: true,
     availability: {
-      hasNatively: true,
+      hasAnswerCue: true,
       hasGroq: true,
       hasCodex: true,
       hasGemini: true,
@@ -115,7 +115,7 @@ test('routeLLMProviders marks missing providers unavailable with reasons', async
     capability: 'chat',
     multimodal: false,
     availability: {
-      hasNatively: false,
+      hasAnswerCue: false,
       hasGroq: false,
       hasCodex: false,
       hasGemini: false,
@@ -150,7 +150,7 @@ test('routeLLMProviders marks unsupported capabilities without dropping attempts
   const attempts = await route({
     capability: 'structured',
     availability: {
-      hasNatively: true,
+      hasAnswerCue: true,
       hasGemini: true,
       hasOpenAI: true,
       hasClaude: true,
@@ -164,7 +164,7 @@ test('routeLLMProviders marks unsupported capabilities without dropping attempts
 });
 
 test('routeLLMProviders does not mutate input objects', async () => {
-  const availability = { hasNatively: true, hasGroq: false };
+  const availability = { hasAnswerCue: true, hasGroq: false };
   const models = { groq: 'groq-text' };
   const before = JSON.stringify({ availability, models });
 

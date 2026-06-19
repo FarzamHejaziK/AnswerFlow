@@ -25,7 +25,7 @@ for constrained CI, but it is **not** skipped by default.
 
 | Fixture | Words asserted | p50 latency |
 |---------|----------------|-------------|
-| `ocr_simple_text.png` | `Hello`, `AnswerFlow`, `Screen`, `understanding`, `works` | ~255 ms |
+| `ocr_simple_text.png` | `Hello`, `AnswerCue`, `Screen`, `understanding`, `works` | ~255 ms |
 | `ocr_code_problem.png` | `two_sum` (loose), `return` | ~290 ms |
 | `ocr_error_log.png` | `TypeError`, `undefined` | ~260 ms |
 | `ocr_table.png` | `Plan`, `Price` | ~180 ms |
@@ -68,7 +68,7 @@ this change-set. Documented under "Known gaps".
 
 ### 7. Does UI show OCR success/failure?
 
-Partial. `AnswerFlowInterface.tsx` has loading states for "Capturing screen /
+Partial. `AnswerCueInterface.tsx` has loading states for "Capturing screen /
 Reading screen" but it does not yet read the `provenance` / `ocrRan` /
 `visionRequested` fields from `ScreenUnderstandingResult`. The provenance
 plumbing now exists in the service result type — the UI consumer is pending
@@ -119,8 +119,8 @@ Source-grep / stub-only (these prove *plumbing*, not OCR engine quality):
    brief — pending.
 4. **No real Electron Playwright test for the screen-understanding flow.**
    `npm run test:e2e:screen-understanding` runs a Node script
-   (`answerflow-api/tests/screen-understanding-live.e2e.mjs`) that hits the live
-   AnswerFlow API, not the Electron app. Phase 8 — pending.
+   (`answercue-api/tests/screen-understanding-live.e2e.mjs`) that hits the live
+   AnswerCue API, not the Electron app. Phase 8 — pending.
 5. **Apple Vision OCR adapter is a stub (`isAvailable: false`).** The fallback
    chain currently always lands on Tesseract on macOS. Native bridge — pending.
 

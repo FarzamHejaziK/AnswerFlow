@@ -2,7 +2,7 @@
 //
 // LEGACY OCR PATH — RUNTIME-DISABLED (2026-05-17)
 // =====================================================================
-// Natively now uses vision-provider screen understanding by default.
+// AnswerCue now uses vision-provider screen understanding by default.
 // This manager is retained ONLY so existing tests and any future opt-in
 // legacy OCR mode can still reference the OCR provider chain. The default
 // screen-understanding pipeline (ScreenUnderstandingService) no longer

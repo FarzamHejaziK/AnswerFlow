@@ -16,7 +16,7 @@
 //!     which means the user's foreground app keeps key state and frontmost
 //!     status everywhere observable (dock, menu bar, screen-share, focus
 //!     followers). This is THE attribute that fixes "clicking any button on
-//!     Natively dims my Zoom window."
+//!     AnswerCue dims my Zoom window."
 //!
 //!   • `hidesOnDeactivate = NO` — without this, macOS auto-hides the panel
 //!     when another app activates. Combined with becomesKeyOnlyIfNeeded,

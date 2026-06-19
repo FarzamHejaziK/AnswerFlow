@@ -12,12 +12,12 @@
 //!
 //! # Why we want this on top of NSPanel-nonactivating
 //!
-//! NSPanel + becomesKeyOnlyIfNeeded already prevents Natively from activating
+//! NSPanel + becomesKeyOnlyIfNeeded already prevents AnswerCue from activating
 //! the app when buttons are clicked or the input is focused. But for keystrokes
 //! to reach our text input via the normal DOM pipeline, the panel still has to
 //! become the OS-level "key window" — which causes a window-level focus shift
 //! that some screen-share / focus-follower tools can detect. With CGEventTap,
-//! Natively NEVER becomes the key window for keyboard input. The user's Zoom
+//! AnswerCue NEVER becomes the key window for keyboard input. The user's Zoom
 //! call stays the key window of the frontmost app; we silently siphon
 //! keystrokes off the wire and present them in the renderer.
 //!
@@ -370,7 +370,7 @@ fn tap_callback_inner(
     // event with a system modifier (Cmd / Ctrl / Option / Fn), any F-key,
     // and any modifier-flagsChanged event. The OS routes those normally to
     // the foreground app while non-modified character keys still get routed
-    // into Natively's input.
+    // into AnswerCue's input.
     //
     // Trade-off: Cmd+Backspace / Cmd+A / Cmd+Enter no longer reach the
     // renderer's switch statement. Plain Enter still submits (case 36),

@@ -1,25 +1,25 @@
 <p align="center">
-  <img src="assets/readme/answerflow-banner.png" alt="AnswerFlow Interview Assistant" width="100%">
+  <img src="assets/readme/answercue-banner.png" alt="AnswerCue Interview Assistant" width="100%">
 </p>
 
-# AnswerFlow
+# AnswerCue
 
 **Open-source desktop interview assistant for prep, live transcription, real-time answer support, and post-interview follow-up.**
 
 [![License](https://img.shields.io/badge/License-AGPL--3.0-blue?style=flat-square)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-6D5DF6?style=flat-square)](https://github.com/FarzamHejaziK/AnswerFlow/releases)
-[![Latest Release](https://img.shields.io/github/v/release/FarzamHejaziK/AnswerFlow?style=flat-square&color=22C55E)](https://github.com/FarzamHejaziK/AnswerFlow/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/FarzamHejaziK/AnswerFlow/total?style=flat-square&color=success)](https://github.com/FarzamHejaziK/AnswerFlow/releases)
-[![Build Windows](https://img.shields.io/github/actions/workflow/status/FarzamHejaziK/AnswerFlow/build-windows.yml?branch=main&label=Windows%20build&style=flat-square)](https://github.com/FarzamHejaziK/AnswerFlow/actions/workflows/build-windows.yml)
-[![Release macOS](https://img.shields.io/github/actions/workflow/status/FarzamHejaziK/AnswerFlow/release-macos.yml?branch=main&label=macOS%20release&style=flat-square)](https://github.com/FarzamHejaziK/AnswerFlow/actions/workflows/release-macos.yml)
+[![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-6D5DF6?style=flat-square)](https://github.com/FarzamHejaziK/AnswerCue/releases)
+[![Latest Release](https://img.shields.io/github/v/release/FarzamHejaziK/AnswerCue?style=flat-square&color=22C55E)](https://github.com/FarzamHejaziK/AnswerCue/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/FarzamHejaziK/AnswerCue/total?style=flat-square&color=success)](https://github.com/FarzamHejaziK/AnswerCue/releases)
+[![Build Windows](https://img.shields.io/github/actions/workflow/status/FarzamHejaziK/AnswerCue/build-windows.yml?branch=main&label=Windows%20build&style=flat-square)](https://github.com/FarzamHejaziK/AnswerCue/actions/workflows/build-windows.yml)
+[![Release macOS](https://img.shields.io/github/actions/workflow/status/FarzamHejaziK/AnswerCue/release-macos.yml?branch=main&label=macOS%20release&style=flat-square)](https://github.com/FarzamHejaziK/AnswerCue/actions/workflows/release-macos.yml)
 
-[Download Latest Release](https://github.com/FarzamHejaziK/AnswerFlow/releases/latest) ·
-[Report an Issue](https://github.com/FarzamHejaziK/AnswerFlow/issues) ·
-[View Source](https://github.com/FarzamHejaziK/AnswerFlow)
+[Download Latest Release](https://github.com/FarzamHejaziK/AnswerCue/releases/latest) ·
+[Report an Issue](https://github.com/FarzamHejaziK/AnswerCue/issues) ·
+[View Source](https://github.com/FarzamHejaziK/AnswerCue)
 
 Requires macOS 12+ on Apple Silicon or Intel, or Windows 10/11 on Intel/AMD 64-bit.
 
-AnswerFlow is a desktop interview assistant for preparing context, transcribing live interviews, and continuing the conversation afterward with the full interview history available as context.
+AnswerCue is a desktop interview assistant for preparing context, transcribing live interviews, and continuing the conversation afterward with the full interview history available as context.
 
 It is designed around one flow:
 
@@ -35,24 +35,24 @@ Installers are published from GitHub Releases.
 
 | Platform | Download | Notes |
 | --- | --- | --- |
-| Windows 10/11 x64 | [Latest release assets](https://github.com/FarzamHejaziK/AnswerFlow/releases/latest) | NSIS installer. Current builds are configured for Azure Artifact Signing with the `answerflow-windows` public-trust certificate profile. |
-| macOS Apple Silicon | [Latest release assets](https://github.com/FarzamHejaziK/AnswerFlow/releases/latest) | Use the Apple Silicon ZIP/DMG artifact when available. |
-| macOS Intel | [Latest release assets](https://github.com/FarzamHejaziK/AnswerFlow/releases/latest) | Use the Intel DMG/ZIP artifact when available. |
+| Windows 10/11 x64 | [Latest release assets](https://github.com/FarzamHejaziK/AnswerCue/releases/latest) | NSIS installer. Current builds are configured for Azure Artifact Signing through the repository signing secrets. |
+| macOS Apple Silicon | [Latest release assets](https://github.com/FarzamHejaziK/AnswerCue/releases/latest) | Use the Apple Silicon ZIP/DMG artifact when available. |
+| macOS Intel | [Latest release assets](https://github.com/FarzamHejaziK/AnswerCue/releases/latest) | Use the Intel DMG/ZIP artifact when available. |
 
-If your operating system warns about an unsigned or newly signed build, make sure you downloaded it from the official AnswerFlow release page.
+If your operating system warns about an unsigned or newly signed build, make sure you downloaded it from the official AnswerCue release page.
 
-## Why AnswerFlow?
+## Why AnswerCue?
 
 - **Interview-first flow:** prep chat, reusable docs, live interview transcript, AI answers, and post-interview follow-up all stay in one interview timeline.
 - **Bring your own provider key:** OpenAI, Google Gemini, and Anthropic Claude are supported from Settings.
 - **Local transcription path:** Moonshine Base runs locally after setup, so live transcription does not need a cloud speech provider.
 - **Reusable document context:** Markdown, TXT, PDF, and DOCX files are ingested into Markdown locally and can be attached across interviews.
 - **Persistent interview memory:** prep chat, selected docs, transcript, AI responses, and post-interview chat are saved so you can reopen an interview later.
-- **Light and dark UI:** the desktop app follows the AnswerFlow visual system with both themes available.
+- **Light and dark UI:** the desktop app follows the AnswerCue visual system with both themes available.
 
 ## Current Product Shape
 
-AnswerFlow is focused on interview workflows, not a generic meeting dashboard.
+AnswerCue is focused on interview workflows, not a generic meeting dashboard.
 
 - **Preflight setup:** first-run setup guides the user through provider keys and required permissions.
 - **Provider keys:** Settings supports the main LLM providers: OpenAI, Google Gemini, and Anthropic Claude.
@@ -62,25 +62,25 @@ AnswerFlow is focused on interview workflows, not a generic meeting dashboard.
 - **Custom instructions:** Settings includes Custom Instructions and AI Persona. Custom Instructions can also ingest one local file.
 - **Live interview phase:** the live transcript separates interviewer speech, user speech, and AI responses.
 - **Post-interview chat:** after the interview finishes, the user can keep asking questions with prep chat, selected docs, transcript, and generated AI responses available as context.
-- **Help assistant:** a bottom help entry opens a persistent help chat backed by the in-app AnswerFlow Help Guide and the user's selected main LLM.
-- **Light and dark UI:** the UI uses the current AnswerFlow palette and supports theme switching.
+- **Help assistant:** a bottom help entry opens a persistent help chat backed by the in-app AnswerCue Help Guide and the user's selected main LLM.
+- **Light and dark UI:** the UI uses the current AnswerCue palette and supports theme switching.
 
 ## Repository
 
 Main repository:
 
 ```bash
-https://github.com/FarzamHejaziK/AnswerFlow
+https://github.com/FarzamHejaziK/AnswerCue
 ```
 
 Clone:
 
 ```bash
-git clone https://github.com/FarzamHejaziK/AnswerFlow.git
-cd AnswerFlow
+git clone https://github.com/FarzamHejaziK/AnswerCue.git
+cd AnswerCue
 ```
 
-The original upstream project remains configured separately for future merge updates, but AnswerFlow branding, documentation, and release metadata should point to this repository.
+The original upstream project remains configured separately for future merge updates, but AnswerCue branding, documentation, and release metadata should point to this repository.
 
 ## License
 
@@ -150,12 +150,12 @@ For a clean local smoke test:
 
 ## Audio Setup
 
-For live interview transcription, AnswerFlow needs:
+For live interview transcription, AnswerCue needs:
 
 - Microphone input for your voice.
 - Meeting/system audio output for the interviewer.
 
-The output device selected in AnswerFlow should match the device used by Zoom, Teams, Google Meet, or the meeting app. If the meeting plays through AirPods, choose AirPods. If it plays through Studio Display Speakers, choose Studio Display Speakers.
+The output device selected in AnswerCue should match the device used by Zoom, Teams, Google Meet, or the meeting app. If the meeting plays through AirPods, choose AirPods. If it plays through Studio Display Speakers, choose Studio Display Speakers.
 
 If only your voice transcribes, the meeting/system audio device is probably mismatched or missing permission. If only the interviewer transcribes, check microphone input and microphone permission.
 
@@ -210,10 +210,10 @@ The prep context must be included in live interview answer generation, not only 
 
 This checkout tracks:
 
-- `origin`: `https://github.com/FarzamHejaziK/AnswerFlow.git`
-- `upstream`: `https://github.com/FarzamHejaziK/AnswerFlow.git`
+- `origin`: `https://github.com/FarzamHejaziK/AnswerCue.git`
+- `upstream`: original project remote, fetch-only
 
-Push AnswerFlow work to `origin`, not `upstream`.
+Push AnswerCue work to `origin`, not `upstream`.
 
 To pull future upstream updates:
 

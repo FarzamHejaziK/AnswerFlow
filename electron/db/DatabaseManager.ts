@@ -1360,7 +1360,7 @@ export class DatabaseManager {
 
         const summaryMarkdown = `# Overview
 
-AnswerFlow is a real-time AI interview assistant designed to help you prepare context, stay focused during live interviews, and keep the conversation useful afterward. Get live transcription, answer support, and structured notes after every interview.
+AnswerCue is a real-time AI interview assistant designed to help you prepare context, stay focused during live interviews, and keep the conversation useful afterward. Get live transcription, answer support, and structured notes after every interview.
 
 # Getting Started
 
@@ -1370,7 +1370,7 @@ Add prep notes or documents, then start the live interview when you are ready.
 
 ### During a Meeting
 - Use the **five quick action buttons** for real-time assistance
-- Show or hide AnswerFlow at any time:
+- Show or hide AnswerCue at any time:
   - **Mac**: Cmd + B
   - **Windows**: Ctrl + B
 - Move the widget anywhere on your screen by hovering over the top pill and dragging
@@ -1388,7 +1388,7 @@ Add prep notes or documents, then start the live interview when you are ready.
 - **Smart Note Taking**: Automatically captures key points, action items, and structured summaries.
 - **Summary**: A concise high-level brief of the entire meeting.
 - **Transcript**: Full real-time speech-to-text transcript, available during and after the call.
-- **Usage**: Track your interaction history and see how AnswerFlow assisted you.
+- **Usage**: Track your interaction history and see how AnswerCue assisted you.
 
 ## Live Insights
 Click **Live Insights** during a call to view:
@@ -1405,7 +1405,7 @@ Click **Live Insights** during a call to view:
 - **Full Screen Screenshot**: Cmd + H
 - **Selective Screenshot**: Cmd + Shift + H
 
-# Making the Most of AnswerFlow
+# Making the Most of AnswerCue
 
 ### Custom Context
 Upload resumes, project briefs, sales scripts, or other documents to tailor responses to your workflow. (coming soon).
@@ -1441,21 +1441,21 @@ model choice or backup routing.
 # Support
 
 If you need help with setup or usage, contact us anytime at:
-support@answerflow.app`;
+support@answercue.app`;
 
         const demoMeeting: Meeting = {
             id: demoId,
-            title: "AnswerFlow Demo & Guide",
+            title: "AnswerCue Demo & Guide",
             date: today.toISOString(),
             duration: "5:00",
-            summary: "Complete guide to using AnswerFlow - your real-time AI interview assistant.",
+            summary: "Complete guide to using AnswerCue - your real-time AI interview assistant.",
             detailedSummary: {
                 overview: summaryMarkdown,
                 actionItems: [],
                 keyPoints: []
             },
             transcript: [
-                { speaker: 'interviewer', text: "Welcome to AnswerFlow! Let me show you how it works.", timestamp: 0 },
+                { speaker: 'interviewer', text: "Welcome to AnswerCue! Let me show you how it works.", timestamp: 0 },
                 { speaker: 'user', text: "Thanks! I'm excited to try it out.", timestamp: 5000 },
                 { speaker: 'interviewer', text: "You have 5 quick action buttons. 'What to answer' listens to the conversation and suggests what you should say.", timestamp: 10000 },
                 { speaker: 'user', text: "That sounds helpful for interviews.", timestamp: 18000 },
@@ -1465,13 +1465,13 @@ support@answerflow.app`;
                 { speaker: 'interviewer', text: "'Follow Up Questions' suggests questions you can ask. 'Answer' lets you speak a question and get an instant response.", timestamp: 35000 },
                 { speaker: 'user', text: "Can I take screenshots during calls?", timestamp: 45000 },
                 { speaker: 'interviewer', text: "Yes! Press Cmd+H for full screen or Cmd+Shift+H to select an area. The AI will analyze it and help you.", timestamp: 50000 },
-                { speaker: 'user', text: "How do I hide AnswerFlow during screen share?", timestamp: 60000 },
+                { speaker: 'user', text: "How do I hide AnswerCue during screen share?", timestamp: 60000 },
                 { speaker: 'interviewer', text: "Press Cmd+B to toggle visibility anytime. You can also enable undetectable mode in settings.", timestamp: 65000 },
                 { speaker: 'user', text: "This is amazing. What happens after the call?", timestamp: 75000 },
                 { speaker: 'interviewer', text: "You get detailed meeting notes with action items, key points, full transcript, and a log of all AI interactions.", timestamp: 80000 }
             ],
             usage: [
-                { type: 'assist', timestamp: 15000, question: 'What features does AnswerFlow have?', answer: 'AnswerFlow offers interview prep chat, reusable document context, live transcription, quick answer actions, screenshot analysis, and post-interview chat.' },
+                { type: 'assist', timestamp: 15000, question: 'What features does AnswerCue have?', answer: 'AnswerCue offers interview prep chat, reusable document context, live transcription, quick answer actions, screenshot analysis, and post-interview chat.' },
                 { type: 'followup', timestamp: 40000, question: 'How do the action buttons work?', answer: 'Each button serves a specific purpose: suggest answers, clarify questions, recap conversations, generate follow-up questions, or get instant voice-to-answer responses.' }
             ],
             isProcessed: true

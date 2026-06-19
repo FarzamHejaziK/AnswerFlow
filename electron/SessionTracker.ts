@@ -271,7 +271,7 @@ export class SessionTracker {
     addAssistantMessage(text: string): void {
         console.log(`[SessionTracker] addAssistantMessage called`, { length: text.length });
 
-        // Natively-style filtering
+        // AnswerCue-style filtering
         if (!text) return;
 
         const cleanText = text.trim();

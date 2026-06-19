@@ -49,7 +49,7 @@ export const SENTINELS = {
   },
   'looking-for-work': {
     pricex: 'Built PriceX, a price-comparison website',
-    scaled: 'scaled Natively to 10k users',
+    scaled: 'scaled AnswerCue to 10k users',
     jd: 'AI Product Engineer at Helio Labs, hybrid SF',
     conflict: 'chargeback escalation with payments vendor',
     negotiation: 'Target base $185k; BATNA competing offer at $180k',

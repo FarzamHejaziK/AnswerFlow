@@ -76,8 +76,8 @@ const ModelSelectorWindow = () => {
                 // Build the list
                 const models: ModelOption[] = [];
 
-                if (creds?.hasNativelyKey) {
-                    models.push({ id: 'natively', name: 'AnswerFlow API', type: 'cloud', provider: 'natively' });
+                if (creds?.hasAnswerCueKey) {
+                    models.push({ id: 'natively', name: 'AnswerCue API', type: 'cloud', provider: 'natively' });
                 }
 
                 // Cloud Models — standard models + unique preferred models

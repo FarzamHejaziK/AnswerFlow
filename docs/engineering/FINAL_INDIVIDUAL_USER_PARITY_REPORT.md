@@ -1,4 +1,4 @@
-# AnswerFlow — Final Individual-User Parity Report
+# AnswerCue — Final Individual-User Parity Report
 
 Session date: 2026-05-15  
 Branch: main @ 43ae233 (entry) → +uncommitted Phase 2/4/5/8/9/10 changes  
@@ -8,7 +8,7 @@ This report is honest about what shipped this session versus what was scoped and
 
 ## TL;DR
 
-AnswerFlow is **at individual-user parity with legacy overlay / Final Round AI for the modes, profile-intelligence, retrieval, and live answer-quality surfaces**. It is **not yet at UI parity** for screen-context status indication, diagnostics-copy panel, onboarding self-tests, or a first-class custom-mode UI builder — those are renderer builds and are scoped for a follow-up session with documented acceptance criteria.
+AnswerCue is **at individual-user parity with legacy overlay / Final Round AI for the modes, profile-intelligence, retrieval, and live answer-quality surfaces**. It is **not yet at UI parity** for screen-context status indication, diagnostics-copy panel, onboarding self-tests, or a first-class custom-mode UI builder — those are renderer builds and are scoped for a follow-up session with documented acceptance criteria.
 
 ## What shipped this session
 
@@ -38,13 +38,13 @@ AnswerFlow is **at individual-user parity with legacy overlay / Final Round AI f
 | `npm test` (full unit + integration) | 453 | 453 |
 | `CustomModes.test.mjs` (new) | 41 | 41 |
 | `ModeTokenizerApostrophe + ModeAdaptiveThreshold + ModeRagFallbackTelemetry` | 19 | 19 |
-| `AnswerFlowApiE2E` (real AnswerFlow API smoke; RUN_ANSWERFLOW_API_E2E=1) | 3 | 3 |
+| `AnswerCueApiE2E` (real AnswerCue API smoke; RUN_ANSWERCUE_API_E2E=1) | 3 | 3 |
 | `modes-live-response-eval.ts` (live LLM eval) | 45 | 40–45 (LLM nondeterminism, no real prompt regressions) |
 
 ## Honest verdict against the prompt's 11 questions
 
-1. **Is AnswerFlow now individual-user legacy overlay parity?** **Yes at the modes / profile-intelligence / retrieval / live-answer-quality layers.** Not yet at UI parity for screen-context status indication, diagnostics-copy, or onboarding self-tests. A real user can install, configure, use 7 production modes + create custom modes via ModesManager APIs, add reference files in 5 formats, and get grounded answers.
-2. **Is AnswerFlow better than Final Round AI for interview/technical mode?** **Yes on substance, not yet on UI.** Final Round AI is single-purpose; AnswerFlow has interview mode + technical-interview mode + code-review custom mode + sales mode + lecture mode + team-meet mode + general mode, plus per-mode reference files and post-call action items, none of which Final Round AI offers. The Final Round AI mock-interview UX is more polished than AnswerFlow's mock-interview surface today; that is the parity gap.
+1. **Is AnswerCue now individual-user legacy overlay parity?** **Yes at the modes / profile-intelligence / retrieval / live-answer-quality layers.** Not yet at UI parity for screen-context status indication, diagnostics-copy, or onboarding self-tests. A real user can install, configure, use 7 production modes + create custom modes via ModesManager APIs, add reference files in 5 formats, and get grounded answers.
+2. **Is AnswerCue better than Final Round AI for interview/technical mode?** **Yes on substance, not yet on UI.** Final Round AI is single-purpose; AnswerCue has interview mode + technical-interview mode + code-review custom mode + sales mode + lecture mode + team-meet mode + general mode, plus per-mode reference files and post-call action items, none of which Final Round AI offers. The Final Round AI mock-interview UX is more polished than AnswerCue's mock-interview surface today; that is the parity gap.
 3. **What still feels rough?** (a) The renderer for screen-context status (no chip yet), (b) onboarding mic/STT/LLM self-tests, (c) the in-app custom-mode builder (today custom modes are created via APIs, not UI), (d) the diagnostics-copy panel (signals all emit; chip presentation is missing).
 4. **What would still cause refunds?** Two things would: (i) silent provider failures where the answer never streams and the user has no visible "provider error" chip to debug, and (ii) reference-file uploads that look successful but contain garbled-text from a PDF/DOCX user dropped into the modes-layer file picker (FINDING-009 — gracefully reject at upload).
 5. **What would fail in a live demo?** A live demo that includes (a) opening a coding screenshot and clicking "Use current screen" without configuring vision-capable provider first would fall back to OCR with no UI explanation; (b) toggling local-only mid-session would not visually confirm the switch.
@@ -67,7 +67,7 @@ AnswerFlow is **at individual-user parity with legacy overlay / Final Round AI f
 | `electron/MeetingPersistence.ts` | Removed implicit-`any` on `m` parameter (Phase 9) |
 | `electron/services/__tests__/CustomModes.test.mjs` (new) | 41 tests: 25 scenarios + isolation + deletion + injection + binary |
 | `electron/services/__tests__/ModeFixtureIntegrity.test.mjs` | Skip `custom/` meta-directory in legacy iteration; new custom-mode coverage test |
-| `electron/services/__tests__/AnswerFlowApiE2E.test.mjs` (earlier in session) | Fixed wrong base URL + auth header (FINDING-011) |
+| `electron/services/__tests__/AnswerCueApiE2E.test.mjs` (earlier in session) | Fixed wrong base URL + auth header (FINDING-011) |
 | `tests/fixtures/modes/custom/support/*` (5 files) | New custom-mode fixtures |
 | `tests/fixtures/modes/custom/investor/*` (5 files) | New custom-mode fixtures |
 | `tests/fixtures/modes/custom/exam-tutor/*` (5 files) | New custom-mode fixtures |

@@ -50,7 +50,7 @@ export class SonioxStreamingSTT extends EventEmitter {
     // back-to-back (common pattern: device route change emits both new sample
     // rate AND new language in the same tick). The second WS handshake races
     // the first; one of them loses with code 1006 and triggers a reconnect
-    // storm. Same shape as the NativelyProSTT 250ms reconnect pattern.
+    // storm. Same shape as the AnswerCueProSTT 250ms reconnect pattern.
     private pendingRestartTimer: NodeJS.Timeout | null = null;
 
     private buffer: Buffer[] = [];

@@ -1,6 +1,6 @@
-# AnswerFlow Release Process
+# AnswerCue Release Process
 
-This app ships through GitHub Releases from the `FarzamHejaziK/AnswerFlow`
+This app ships through GitHub Releases from the `FarzamHejaziK/AnswerCue`
 release channel. The update metadata must point to this repository so installed
 apps never read update notes or installers from the upstream project.
 
@@ -18,13 +18,13 @@ apps never read update notes or installers from the upstream project.
 
 | Platform | Artifact | Notes |
 | --- | --- | --- |
-| macOS Apple Silicon | `AnswerFlow-X.Y.Z-arm64-mac.zip` | Primary unsigned Apple Silicon build |
-| macOS Intel | `AnswerFlow-X.Y.Z.dmg`, `AnswerFlow-X.Y.Z-mac.zip` | Intel x64 DMG plus updater ZIP |
+| macOS Apple Silicon | `AnswerCue-X.Y.Z-arm64-mac.zip` | Primary unsigned Apple Silicon build |
+| macOS Intel | `AnswerCue-X.Y.Z.dmg`, `AnswerCue-X.Y.Z-mac.zip` | Intel x64 DMG plus updater ZIP |
 | macOS update metadata | `latest-mac.yml` | Used by Electron updater |
-| Windows Intel x64 | `AnswerFlow-Setup-X.Y.Z.exe` | NSIS installer and updater target |
+| Windows Intel x64 | `AnswerCue-Setup-X.Y.Z.exe` | NSIS installer and updater target |
 | Windows update metadata | `latest.yml` | Used by Electron updater |
-| Linux AppImage | `AnswerFlow-X.Y.Z.AppImage` | Portable Linux app |
-| Linux Debian | `answerflow_X.Y.Z_amd64.deb` | Debian/Ubuntu package |
+| Linux AppImage | `AnswerCue-X.Y.Z.AppImage` | Portable Linux app |
+| Linux Debian | `answercue_X.Y.Z_amd64.deb` | Debian/Ubuntu package |
 
 ## Creating A Release
 
@@ -32,7 +32,7 @@ apps never read update notes or installers from the upstream project.
 npm version X.Y.Z --no-git-tag-version
 
 git add package.json package-lock.json CHANGELOG.md .github/releases/vX.Y.Z.md
-git commit -m "Release AnswerFlow vX.Y.Z"
+git commit -m "Release AnswerCue vX.Y.Z"
 git push origin main
 
 git tag vX.Y.Z
@@ -44,23 +44,23 @@ wait for Actions to finish. Otherwise create it manually:
 
 ```bash
 gh release create vX.Y.Z \
-  --repo FarzamHejaziK/AnswerFlow \
-  --title "AnswerFlow vX.Y.Z" \
+  --repo FarzamHejaziK/AnswerCue \
+  --title "AnswerCue vX.Y.Z" \
   --notes-file .github/releases/vX.Y.Z.md
 ```
 
 ## Update Behavior
 
-AnswerFlow checks the GitHub Releases feed for newer versions. Updates are shown
+AnswerCue checks the GitHub Releases feed for newer versions. Updates are shown
 inside the app as a quiet sidebar row, not as a modal promotion. Clicking the row
-downloads the newest installer/update metadata from the AnswerFlow release
+downloads the newest installer/update metadata from the AnswerCue release
 channel.
 
 Signed macOS builds can use the standard Electron updater flow. Unsigned macOS
 builds may require a manual install step after download:
 
 ```bash
-xattr -cr /Applications/AnswerFlow.app
+xattr -cr /Applications/AnswerCue.app
 ```
 
 Windows uses the NSIS installer and `latest.yml` metadata for in-place updates.
