@@ -3246,6 +3246,11 @@ export class AppState {
     this._audioTestEpoch++;
     if (this.audioTestCapture) {
       console.log('[Main] Stopping Audio Test');
+      // Audio tests are disposable probes. Re-warming the same mic wrapper
+      // after closing the test can block the Electron main thread inside
+      // CoreAudio HAL startup, freezing the UI before the user even starts a
+      // meeting. Meeting captures still keep their normal pre-warm path.
+      this.audioTestCapture.disablePreWarm();
       this.audioTestCapture.stop();
       this.audioTestCapture = null;
     }

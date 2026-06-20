@@ -107,6 +107,7 @@ interface Message {
   isStreaming?: boolean;
   hasScreenshot?: boolean;
   screenshotPreview?: string;
+  screenshotPath?: string;
   isCode?: boolean;
   intent?: string;
   isNegotiationCoaching?: boolean;
@@ -358,6 +359,13 @@ const MessageRow = React.memo(
                 <Image className="w-2.5 h-2.5" />
                 <span>Screenshot attached</span>
               </div>
+            )}
+            {msg.role === 'user' && msg.hasScreenshot && msg.screenshotPreview && (
+              <img
+                src={msg.screenshotPreview}
+                alt="Screenshot preview"
+                className={`mt-1 max-h-36 w-full rounded-lg border object-cover ${msg.text ? 'mb-2' : ''} ${isLightTheme ? 'border-black/10' : 'border-white/10'}`}
+              />
             )}
             {msg.role === 'system' && !msg.isStreaming && (
               <button
@@ -1369,12 +1377,30 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
 
   const handleScreenshotAttach = (data: { path: string; preview: string }) => {
     setIsExpanded(true);
+    setMessages((prev) => {
+      if (prev.some((m) => m.screenshotPath === data.path)) return prev;
+      return [
+        ...prev,
+        {
+          id: genMessageId(),
+          role: 'user',
+          text: '',
+          hasScreenshot: true,
+          screenshotPreview: data.preview,
+          screenshotPath: data.path,
+          intent: 'screenshot_attachment',
+        },
+      ];
+    });
     setAttachedContext((prev) => {
       // Prevent duplicates and cap at 5
       if (prev.some((s) => s.path === data.path)) return prev;
       const updated = [...prev, data];
       return updated.slice(-5); // Keep last 5
     });
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 50);
   };
 
   // STT Status listener — must survive isExpanded changes.
@@ -2107,6 +2133,7 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
           text: 'What should I say about this?',
           hasScreenshot: true,
           screenshotPreview: currentAttachments[0].preview,
+          screenshotPath: currentAttachments[0].path,
         },
       ]);
       // Scroll to bottom when user sends message
@@ -2286,6 +2313,7 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
           text: 'Give me a code hint for this',
           hasScreenshot: true,
           screenshotPreview: currentAttachments[0].preview,
+          screenshotPath: currentAttachments[0].path,
         },
       ]);
       // Scroll to bottom when user sends message
@@ -2331,6 +2359,7 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
           text: 'Brainstorm with this context',
           hasScreenshot: true,
           screenshotPreview: currentAttachments[0].preview,
+          screenshotPath: currentAttachments[0].path,
         },
       ]);
       // Scroll to bottom when user sends message
@@ -2607,6 +2636,7 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
             text: question,
             hasScreenshot: currentAttachments.length > 0,
             screenshotPreview: currentAttachments[0]?.preview,
+            screenshotPath: currentAttachments[0]?.path,
           },
         ]);
 
@@ -2768,6 +2798,7 @@ Provide only the answer, nothing else.`;
         text: userText || (currentAttachments.length > 0 ? 'Analyze this screenshot' : ''),
         hasScreenshot: currentAttachments.length > 0,
         screenshotPreview: currentAttachments[0]?.preview,
+        screenshotPath: currentAttachments[0]?.path,
       },
     ]);
 
@@ -4767,7 +4798,7 @@ Provide only the answer, nothing else.`;
                       <span>Ask anything on screen or conversation, or</span>
                       <div className="flex items-center gap-1 opacity-80">
                         {(
-                          shortcuts.selectiveScreenshot || [getModifierSymbol('cmd'), 'Shift', 'H']
+                          shortcuts.takeScreenshot || [getModifierSymbol('cmd'), 'H']
                         ).map((key, i) => (
                           <React.Fragment key={i}>
                             {i > 0 && <span className="text-[10px]">+</span>}
@@ -4780,7 +4811,7 @@ Provide only the answer, nothing else.`;
                           </React.Fragment>
                         ))}
                       </div>
-                      <span>for selective screenshot</span>
+                      <span>for screenshot</span>
                     </div>
                   )}
 

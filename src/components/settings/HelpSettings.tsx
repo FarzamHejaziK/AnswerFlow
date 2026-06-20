@@ -127,11 +127,9 @@ const MockAppInterface = () => {
                                     <div className="flex items-center gap-1 opacity-80 sm:ml-0.5">
                                         <kbd className="px-1.5 py-0.5 rounded border text-[10px] font-sans min-w-[20px] text-center bg-bg-item-surface border-border-subtle text-text-primary shadow-sm">{getModifierSymbol('cmd')}</kbd>
                                         <span className="text-[10px]">+</span>
-                                        <kbd className="px-1.5 py-0.5 rounded border text-[10px] font-sans min-w-[20px] text-center bg-bg-item-surface border-border-subtle text-text-primary shadow-sm">{getModifierSymbol('shift')}</kbd>
-                                        <span className="text-[10px]">+</span>
                                         <kbd className="px-1.5 py-0.5 rounded border text-[10px] font-sans min-w-[20px] text-center bg-bg-item-surface border-border-subtle text-text-primary shadow-sm">H</kbd>
                                     </div>
-                                    <span className="hidden sm:inline">for selective screenshot</span>
+                                    <span className="hidden sm:inline">for screenshot</span>
                                 </div>
                             </div>
                             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-20 text-text-primary">
@@ -726,7 +724,6 @@ const AccordionSection: React.FC<AccordionSectionProps> = ({ title, icon, childr
 
 const SetupGuide = () => {
     const cmd = getModifierSymbol('cmd');
-    const shift = getModifierSymbol('shift');
     const steps = [
         {
             title: 'Grant Permissions',
@@ -753,8 +750,8 @@ const SetupGuide = () => {
     ];
 
     const hotkeys = [
-        { label: 'Toggle', kbd: `${cmd}H` },
-        { label: 'Screenshot', kbd: `${cmd}${shift}H` },
+        { label: 'Toggle', kbd: `${cmd}B` },
+        { label: 'Screenshot', kbd: `${cmd}H` },
         { label: 'Chat', kbd: `${cmd}K` },
     ];
 
@@ -1124,7 +1121,7 @@ export const HelpSettings: React.FC = () => {
                                 { Icon: MessageSquare, color: 'indigo', title: 'Clarify', badge: null, bc: '', kbd: ['⌘', '2'], desc: 'Generates sharp probing questions from latent audio when a topic is unclear.' },
                                 { Icon: RefreshCw, color: 'amber', title: 'Recap', badge: 'Interview OFF', bc: 'bg-red-500/10 text-red-400 border-red-500/30', kbd: ['⌘', '3'], desc: 'Condenses the last 5 minutes into bullet points when you lose the thread.' },
                                 { Icon: Sparkles, color: 'sky', title: 'Code Hint', badge: null, bc: '', kbd: ['⌘', '6'], desc: 'Reads your screen and nudges you toward the correct code implementation.' },
-                                { Icon: Monitor, color: 'rose', title: 'Screenshot & Ask', badge: null, bc: '', kbd: ['⌘', '⇧', 'H'], desc: 'Forces a full-screen capture and immediately processes it through the LLM.' },
+                                { Icon: Monitor, color: 'rose', title: 'Screenshot', badge: null, bc: '', kbd: ['⌘', 'H'], desc: 'Captures the whole screen and attaches it to the current interview.' },
                                 { Icon: EyeOff, color: 'slate', title: 'Stealth Execute', badge: null, bc: '', kbd: ['⌘', '↵'], desc: 'Processes context in the background without ever revealing the interface.' },
                             ] as Array<{ Icon: React.ElementType; color: 'blue' | 'violet' | 'teal' | 'emerald' | 'indigo' | 'amber' | 'sky' | 'rose' | 'slate'; title: string; badge: string | null; bc: string; kbd: string[]; desc: string }>).map(({ Icon, color, title, badge, bc, kbd, desc }) => {
                                 const resolvedKbd = kbd.map(k =>
