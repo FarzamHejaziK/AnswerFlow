@@ -366,11 +366,11 @@ const MessageRow = React.memo(
                 <span>Screenshot attached</span>
               </div>
             )}
-            {msg.role === 'user' && msg.hasScreenshot && msg.screenshotPreview && (
+            {msg.role === 'user' && msg.hasScreenshot && typeof msg.screenshotPreview === 'string' && (
               <button
                 type="button"
                 onClick={() =>
-                  onOpenScreenshot({ path: msg.screenshotPath, preview: msg.screenshotPreview })
+                  onOpenScreenshot({ path: msg.screenshotPath, preview: msg.screenshotPreview! })
                 }
                 className={`no-drag block mt-1 max-h-36 w-full overflow-hidden rounded-lg border transition-opacity hover:opacity-85 ${msg.text ? 'mb-2' : ''} ${isLightTheme ? 'border-black/10' : 'border-white/10'}`}
                 title="Open screenshot"
