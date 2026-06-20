@@ -77,6 +77,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install macOS DMG builder
+        run: npm install --no-save --no-package-lock create-dmg@8.1.0
+
       - name: Import Developer ID signing certificate
         env:
           MACOS_CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 || secrets.APPLE_DEVELOPER_ID_APPLICATION_CERT_BASE64 }}
