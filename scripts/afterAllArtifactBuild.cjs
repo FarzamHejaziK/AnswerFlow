@@ -157,8 +157,8 @@ function verifyZipManifest(outDir) {
 }
 
 /**
- * Build a styled, Developer-ID-signed DMG from a single signed .app using create-dmg.
- * create-dmg stages via `hdiutil create -srcfolder`, preserving the app's nested
+ * Build a Developer-ID-signed DMG from a single signed .app using create-dmg.
+ * create-dmg stages the app through appdmg while preserving the app's nested
  * code signatures (unlike electron-builder's DMG layout, which corrupts them).
  * Returns the output dmg path. Throws if create-dmg is unavailable or fails.
  */
@@ -166,39 +166,33 @@ function buildStyledDmg({ appPath, outDmg, identity }) {
   // Stage ONLY the .app in an isolated temp dir so create-dmg's window contains
   // exactly [AnswerCue.app, Applications-droplink] and nothing stray.
   const stage = fs.mkdtempSync(path.join(os.tmpdir(), 'natively-dmg-'));
+  const dmgStage = fs.mkdtempSync(path.join(os.tmpdir(), 'answercue-dmg-out-'));
   const stagedApp = path.join(stage, path.basename(appPath));
   execFileSync('ditto', [appPath, stagedApp], { stdio: 'inherit' }); // ditto preserves signatures
 
   if (fs.existsSync(outDmg)) fs.unlinkSync(outDmg);
 
   const args = [
-    '--volname', VOLNAME,
-    '--window-pos', '200', '120',
-    '--window-size', '660', '400',
-    '--icon-size', '120',
-    '--icon', path.basename(appPath), '170', '190',
-    '--app-drop-link', '490', '190',
-    '--hide-extension', path.basename(appPath),
-    '--no-internet-enable',
-    '--hdiutil-quiet',
+    '--overwrite',
+    '--no-version-in-filename',
+    '--dmg-title', VOLNAME,
   ];
-  if (fs.existsSync(VOLICON)) args.push('--volicon', VOLICON);
-  if (fs.existsSync(BACKGROUND)) args.push('--background', BACKGROUND);
-  if (identity) args.push('--codesign', identity); // sign the DMG container itself
-  args.push(outDmg, stage);
+  if (identity) args.push('--identity', identity); // sign the DMG container itself
+  args.push(stagedApp, dmgStage);
 
   try {
-    // create-dmg exits 2 when it built the dmg but couldn't set the .DS_Store layout
-    // (e.g. headless/no Finder); the dmg is still valid + signed, so tolerate exit 2.
     execFileSync('create-dmg', args, { stdio: 'inherit' });
-  } catch (e) {
-    if (e.status === 2 && fs.existsSync(outDmg)) {
-      console.warn('[dmg] create-dmg exit 2 (cosmetic layout skipped) — dmg built + signed OK.');
-    } else {
-      throw e;
+    const generatedDmg = path.join(dmgStage, `${VOLNAME}.dmg`);
+    const actualDmg = fs.existsSync(generatedDmg)
+      ? generatedDmg
+      : fs.readdirSync(dmgStage).find((name) => name.endsWith('.dmg'));
+    if (!actualDmg) {
+      throw new Error(`[dmg] create-dmg completed but no .dmg was written to ${dmgStage}`);
     }
+    fs.renameSync(path.isAbsolute(actualDmg) ? actualDmg : path.join(dmgStage, actualDmg), outDmg);
   } finally {
     fs.rmSync(stage, { recursive: true, force: true });
+    fs.rmSync(dmgStage, { recursive: true, force: true });
   }
   return outDmg;
 }

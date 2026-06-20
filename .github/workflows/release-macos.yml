@@ -159,16 +159,28 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          # GH token for electron-builder publish (artifacts attach to the release on tag builds).
+          # Keep GH_TOKEN available for tools that expect it, but pass
+          # `--publish never` below so electron-builder cannot attach partial
+          # ZIPs before DMG signing/notarization verification succeeds.
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           if [ "${MACOS_SIGNING_AVAILABLE:-false}" = "true" ] && [ "${MACOS_NOTARIZATION_AVAILABLE:-false}" = "true" ]; then
             echo "Building signed + notarized macOS artifacts using ${MACOS_NOTARIZATION_STRATEGY:-unknown} notarization."
-            npm run dist:signed
+            npm run build
+            npm run build:electron
+            ANSWERCUE_BUILD_ALL_MAC_ARCHES=1 npm run build:native
+            node scripts/download-models.js
+            node scripts/ensure-sharp-mac-deps.js
+            npx electron-builder --config electron-builder.signed.cjs --publish never
           else
             echo "::warning::Building unsigned macOS artifacts because signing/notarization secrets are incomplete."
-            CSC_IDENTITY_AUTO_DISCOVERY=false npm run dist
+            npm run build
+            npm run build:electron
+            ANSWERCUE_BUILD_ALL_MAC_ARCHES=1 npm run build:native
+            node scripts/download-models.js
+            node scripts/ensure-sharp-mac-deps.js
+            CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --publish never
           fi
 
       - name: Verify signature + notarization (both arches + DMGs)
