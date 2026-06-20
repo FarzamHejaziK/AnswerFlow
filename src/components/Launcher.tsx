@@ -33,11 +33,14 @@ interface Meeting {
         timestamp: number;
     }>;
     usage?: Array<{
-        type: 'assist' | 'followup' | 'chat' | 'followup_questions';
+        type: 'assist' | 'followup' | 'chat' | 'followup_questions' | 'screenshot';
         timestamp: number;
         question?: string;
         answer?: string;
         items?: string[];
+        metadata?: any;
+        screenshotPath?: string;
+        screenshotPreview?: string;
     }>;
     isProcessed?: boolean;
     active?: boolean; // UI state
@@ -222,7 +225,7 @@ const getUpdateVersionLabel = (info: any) => {
     return version.startsWith('v') ? version : `v${version}`;
 };
 
-type TimelineRole = 'interviewer' | 'me' | 'ai';
+type TimelineRole = 'interviewer' | 'me' | 'ai' | 'screenshot';
 
 interface TranscriptTimelineItem {
     id: string;
@@ -232,6 +235,9 @@ interface TranscriptTimelineItem {
     text: string;
     question?: string;
     interactionType?: string;
+    screenshotPath?: string;
+    screenshotPreview?: string;
+    captureKind?: 'full' | 'selective';
     isLivePartial?: boolean;
 }
 
@@ -262,6 +268,8 @@ const usageLabel = (type: string | undefined) => {
         case 'followup':
         case 'followup_questions':
             return 'AI follow-up';
+        case 'screenshot':
+            return 'Screenshot';
         case 'assist':
         default:
             return 'AI response';
@@ -269,6 +277,7 @@ const usageLabel = (type: string | undefined) => {
 };
 
 const usageText = (usage: MeetingUsage) => {
+    if (usage.type === 'screenshot') return usage.question || 'Screenshot attached';
     const answer = (usage as any).answer;
     if (Array.isArray(answer)) return answer.join('\n');
     if (typeof answer === 'string' && answer.trim()) return answer;
@@ -314,6 +323,20 @@ const buildTranscriptTimeline = (meeting: Meeting): TranscriptTimelineItem[] => 
 
     const aiInteractions = usage
         .map((item, index) => {
+            if (item.type === 'screenshot') {
+                const metadata = item.metadata || {};
+                return {
+                    id: `screenshot-${index}-${item.timestamp}`,
+                    role: 'screenshot' as TimelineRole,
+                    label: metadata.captureKind === 'selective' ? 'Selective screenshot' : 'Screenshot',
+                    timestamp: item.timestamp,
+                    text: usageText(item),
+                    screenshotPath: item.screenshotPath || metadata.screenshotPath,
+                    screenshotPreview: item.screenshotPreview || metadata.screenshotPreview,
+                    captureKind: metadata.captureKind,
+                    interactionType: item.type,
+                };
+            }
             const text = usageText(item).trim();
             if (!text && !item.question?.trim()) return null;
             return {
@@ -1016,8 +1039,14 @@ const InterviewPrepPanel: React.FC<InterviewPrepPanelProps> = ({
         return transcriptItems.map((item) => {
             const isMe = item.role === 'me';
             const isAi = item.role === 'ai';
-            const Icon = isAi ? Sparkles : isMe ? User : Mic;
-            const bubbleTone = isAi
+            const isScreenshot = item.role === 'screenshot';
+            const alignRight = isMe || isScreenshot;
+            const Icon = isScreenshot ? Monitor : isAi ? Sparkles : isMe ? User : Mic;
+            const bubbleTone = isScreenshot
+                ? isLight
+                    ? 'bg-slate-50 border-slate-200 text-slate-900'
+                    : 'bg-white/8 border-white/14 text-text-primary'
+                : isAi
                 ? isLight
                     ? 'bg-accent-secondary border-border-subtle text-text-primary'
                     : 'bg-accent-secondary border-border-subtle text-text-primary'
@@ -1028,21 +1057,30 @@ const InterviewPrepPanel: React.FC<InterviewPrepPanelProps> = ({
                     : isLight
                         ? 'bg-bg-elevated border-border-subtle text-text-primary'
                         : 'bg-bg-secondary border-border-subtle text-text-primary';
-            const badgeTone = isAi
+            const badgeTone = isScreenshot
+                ? 'text-text-secondary'
+                : isAi
                 ? 'text-accent-primary'
                 : isMe
                     ? 'text-emerald-500'
                     : 'text-text-secondary';
 
             return (
-                <div key={item.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                <div key={item.id} className={`flex ${alignRight ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[82%] ${isAi ? 'w-full' : ''}`}>
-                        <div className={`mb-1 flex items-center gap-1.5 text-[11px] font-semibold ${isMe ? 'justify-end' : 'justify-start'} ${badgeTone}`}>
+                        <div className={`mb-1 flex items-center gap-1.5 text-[11px] font-semibold ${alignRight ? 'justify-end' : 'justify-start'} ${badgeTone}`}>
                             <Icon size={12} />
                             <span>{item.label}{item.isLivePartial ? ' typing' : ''}</span>
                             <span className="font-normal text-text-tertiary">{formatTimelineTime(item.timestamp)}</span>
                         </div>
                         <div className={`rounded-lg border px-3.5 py-3 ${bubbleTone}`}>
+                            {item.screenshotPreview && (
+                                <img
+                                    src={item.screenshotPreview}
+                                    alt="Screenshot preview"
+                                    className="mb-2 max-h-56 w-full rounded-md border border-white/10 object-cover"
+                                />
+                            )}
                             {item.question && (
                                 <div className={`mb-2 pb-2 border-b ${isLight ? 'border-black/8' : 'border-white/10'}`}>
                                     <p className="text-[10px] uppercase tracking-wide font-semibold opacity-60">Prompt</p>
@@ -1514,8 +1552,14 @@ const TranscriptTimeline: React.FC<TranscriptTimelineProps> = ({ meeting, isLigh
                         {items.map((item) => {
                             const isMe = item.role === 'me';
                             const isAi = item.role === 'ai';
-                            const Icon = isAi ? Sparkles : isMe ? User : Mic;
-                            const bubbleTone = isAi
+                            const isScreenshot = item.role === 'screenshot';
+                            const alignRight = isMe || isScreenshot;
+                            const Icon = isScreenshot ? Monitor : isAi ? Sparkles : isMe ? User : Mic;
+                            const bubbleTone = isScreenshot
+                                ? isLight
+                                    ? 'bg-slate-50 border-slate-200 text-slate-900'
+                                    : 'bg-white/8 border-white/14 text-text-primary'
+                                : isAi
                                 ? isLight
                                     ? 'bg-accent-secondary border-border-subtle text-text-primary'
                                     : 'bg-accent-secondary border-border-subtle text-text-primary'
@@ -1526,21 +1570,30 @@ const TranscriptTimeline: React.FC<TranscriptTimelineProps> = ({ meeting, isLigh
                                     : isLight
                                         ? 'bg-bg-elevated border-border-subtle text-text-primary'
                                         : 'bg-bg-secondary border-border-subtle text-text-primary';
-                            const badgeTone = isAi
+                            const badgeTone = isScreenshot
+                                ? 'text-text-secondary'
+                                : isAi
                                 ? 'text-accent-primary'
                                 : isMe
                                     ? 'text-emerald-500'
                                     : 'text-text-secondary';
 
                             return (
-                                <div key={item.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                <div key={item.id} className={`flex ${alignRight ? 'justify-end' : 'justify-start'}`}>
                                     <div className={`max-w-[82%] ${isAi ? 'w-full' : ''}`}>
-                                        <div className={`mb-1 flex items-center gap-1.5 text-[11px] font-semibold ${isMe ? 'justify-end' : 'justify-start'} ${badgeTone}`}>
+                                        <div className={`mb-1 flex items-center gap-1.5 text-[11px] font-semibold ${alignRight ? 'justify-end' : 'justify-start'} ${badgeTone}`}>
                                             <Icon size={12} />
                                             <span>{item.label}</span>
                                             <span className="font-normal text-text-tertiary">{formatTimelineTime(item.timestamp)}</span>
                                         </div>
                                         <div className={`rounded-lg border px-3.5 py-3 ${bubbleTone}`}>
+                                            {item.screenshotPreview && (
+                                                <img
+                                                    src={item.screenshotPreview}
+                                                    alt="Screenshot preview"
+                                                    className="mb-2 max-h-56 w-full rounded-md border border-white/10 object-cover"
+                                                />
+                                            )}
                                             {item.question && (
                                                 <div className={`mb-2 pb-2 border-b ${isLight ? 'border-black/8' : 'border-white/10'}`}>
                                                     <p className="text-[10px] uppercase tracking-wide font-semibold opacity-60">Prompt</p>

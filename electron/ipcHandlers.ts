@@ -303,10 +303,24 @@ export function initializeIpcHandlers(appState: AppState): void {
     return appState.deleteScreenshot(resolved);
   });
 
+  const recordScreenshotUsage = (
+    screenshotPath: string,
+    preview: string,
+    captureKind: 'full' | 'selective',
+  ) => {
+    if (!appState.getIsMeetingActive()) return;
+    try {
+      appState.getIntelligenceManager().logScreenshot(screenshotPath, preview, captureKind);
+    } catch (error) {
+      console.warn('[IPC] Failed to record screenshot usage:', error);
+    }
+  };
+
   safeHandle('take-screenshot', async () => {
     try {
       const screenshotPath = await appState.takeScreenshot();
       const preview = await appState.getImagePreview(screenshotPath);
+      recordScreenshotUsage(screenshotPath, preview, 'full');
       return { path: screenshotPath, preview };
     } catch (error) {
       // console.error("Error taking screenshot:", error)
@@ -318,6 +332,7 @@ export function initializeIpcHandlers(appState: AppState): void {
     try {
       const screenshotPath = await appState.takeSelectiveScreenshot();
       const preview = await appState.getImagePreview(screenshotPath);
+      recordScreenshotUsage(screenshotPath, preview, 'selective');
       return { path: screenshotPath, preview };
     } catch (error) {
       // EC-04 fix: cast unknown error to Error before accessing .message
@@ -1243,11 +1258,16 @@ export function initializeIpcHandlers(appState: AppState): void {
   safeHandle('set-gemini-api-key', async (_, apiKey: string) => {
     try {
       const { CredentialsManager } = require('./services/CredentialsManager');
-      CredentialsManager.getInstance().setGeminiApiKey(apiKey);
+      const cm = CredentialsManager.getInstance();
+      cm.setGeminiApiKey(apiKey);
 
       // Also update the LLMHelper immediately
       const llmHelper = appState.processingHelper.getLLMHelper();
       llmHelper.setApiKey(apiKey);
+      const defaultModel = cm.getDefaultModel();
+      const allProviders = [...(cm.getCurlProviders() || []), ...(cm.getCustomProviders() || [])];
+      llmHelper.setModel(defaultModel, allProviders);
+      appState.sendModelChanged(defaultModel);
 
       // CQ-06 fix: cancel any in-flight LLM stream before swapping LLM clients.
       // Use resetEngine() (NOT reset()) so session transcript is preserved mid-meeting.
@@ -1266,11 +1286,16 @@ export function initializeIpcHandlers(appState: AppState): void {
   safeHandle('set-groq-api-key', async (_, apiKey: string) => {
     try {
       const { CredentialsManager } = require('./services/CredentialsManager');
-      CredentialsManager.getInstance().setGroqApiKey(apiKey);
+      const cm = CredentialsManager.getInstance();
+      cm.setGroqApiKey(apiKey);
 
       // Also update the LLMHelper immediately
       const llmHelper = appState.processingHelper.getLLMHelper();
       llmHelper.setGroqApiKey(apiKey);
+      const defaultModel = cm.getDefaultModel();
+      const allProviders = [...(cm.getCurlProviders() || []), ...(cm.getCustomProviders() || [])];
+      llmHelper.setModel(defaultModel, allProviders);
+      appState.sendModelChanged(defaultModel);
 
       // CQ-06 fix: cancel in-flight stream before re-init (engine only, not session)
       appState.getIntelligenceManager().resetEngine();
@@ -1287,11 +1312,16 @@ export function initializeIpcHandlers(appState: AppState): void {
   safeHandle('set-openai-api-key', async (_, apiKey: string) => {
     try {
       const { CredentialsManager } = require('./services/CredentialsManager');
-      CredentialsManager.getInstance().setOpenaiApiKey(apiKey);
+      const cm = CredentialsManager.getInstance();
+      cm.setOpenaiApiKey(apiKey);
 
       // Also update the LLMHelper immediately
       const llmHelper = appState.processingHelper.getLLMHelper();
       llmHelper.setOpenaiApiKey(apiKey);
+      const defaultModel = cm.getDefaultModel();
+      const allProviders = [...(cm.getCurlProviders() || []), ...(cm.getCustomProviders() || [])];
+      llmHelper.setModel(defaultModel, allProviders);
+      appState.sendModelChanged(defaultModel);
 
       // CQ-06 fix: cancel in-flight stream before re-init (engine only, not session)
       appState.getIntelligenceManager().resetEngine();
@@ -1308,11 +1338,16 @@ export function initializeIpcHandlers(appState: AppState): void {
   safeHandle('set-claude-api-key', async (_, apiKey: string) => {
     try {
       const { CredentialsManager } = require('./services/CredentialsManager');
-      CredentialsManager.getInstance().setClaudeApiKey(apiKey);
+      const cm = CredentialsManager.getInstance();
+      cm.setClaudeApiKey(apiKey);
 
       // Also update the LLMHelper immediately
       const llmHelper = appState.processingHelper.getLLMHelper();
       llmHelper.setClaudeApiKey(apiKey);
+      const defaultModel = cm.getDefaultModel();
+      const allProviders = [...(cm.getCurlProviders() || []), ...(cm.getCustomProviders() || [])];
+      llmHelper.setModel(defaultModel, allProviders);
+      appState.sendModelChanged(defaultModel);
 
       // CQ-06 fix: cancel in-flight stream before re-init (engine only, not session)
       appState.getIntelligenceManager().resetEngine();
@@ -1329,11 +1364,16 @@ export function initializeIpcHandlers(appState: AppState): void {
   safeHandle('set-deepseek-api-key', async (_, apiKey: string) => {
     try {
       const { CredentialsManager } = require('./services/CredentialsManager');
-      CredentialsManager.getInstance().setDeepseekApiKey(apiKey);
+      const cm = CredentialsManager.getInstance();
+      cm.setDeepseekApiKey(apiKey);
 
       // Also update the LLMHelper immediately
       const llmHelper = appState.processingHelper.getLLMHelper();
       llmHelper.setDeepseekApiKey(apiKey);
+      const defaultModel = cm.getDefaultModel();
+      const allProviders = [...(cm.getCurlProviders() || []), ...(cm.getCustomProviders() || [])];
+      llmHelper.setModel(defaultModel, allProviders);
+      appState.sendModelChanged(defaultModel);
 
       // Cancel in-flight stream before re-init (engine only, not session)
       appState.getIntelligenceManager().resetEngine();

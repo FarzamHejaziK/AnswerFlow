@@ -521,6 +521,22 @@ export class SessionTracker {
         });
     }
 
+    logScreenshot(path: string, preview: string, captureKind: 'full' | 'selective' = 'full'): void {
+        if (!path || !preview) return;
+        this.fullUsage.push({
+            type: 'screenshot',
+            timestamp: Date.now(),
+            question: captureKind === 'selective' ? 'Selective screenshot attached' : 'Screenshot attached',
+            answer: '',
+            metadata: {
+                screenshotPath: path,
+                screenshotPreview: preview,
+                captureKind,
+            },
+        });
+        this.capUsageArray();
+    }
+
     pushUsage(entry: any): void {
         this.fullUsage.push(entry);
         this.capUsageArray();

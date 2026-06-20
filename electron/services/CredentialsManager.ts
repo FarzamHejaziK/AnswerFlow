@@ -8,6 +8,16 @@ import fs from 'fs';
 import path from 'path';
 
 const CREDENTIALS_PATH = path.join(app.getPath('userData'), 'credentials.enc');
+const FALLBACK_DEFAULT_MODEL = 'gemini-3.5-flash';
+const DEFAULT_MODEL_BY_PROVIDER: Record<string, string> = {
+    natively: 'natively',
+    openai: 'chat-latest',
+    gemini: FALLBACK_DEFAULT_MODEL,
+    claude: 'claude-sonnet-4-6',
+    groq: 'llama-3.3-70b-versatile',
+    deepseek: 'deepseek-v4-flash',
+};
+const CONFIGURED_PROVIDER_ORDER = ['natively', 'openai', 'gemini', 'claude', 'groq', 'deepseek'];
 
 export interface CustomProvider {
     id: string;
@@ -95,6 +105,11 @@ export class CredentialsManager {
      */
     public init(): void {
         this.loadCredentials();
+        const beforeDefault = this.credentials.defaultModel;
+        this.ensureDefaultModelCanRun();
+        if (this.credentials.defaultModel !== beforeDefault) {
+            this.saveCredentials();
+        }
         console.log('[CredentialsManager] Initialized');
     }
 
@@ -196,7 +211,7 @@ export class CredentialsManager {
         return this.credentials.aiResponseLanguage || 'auto';
     }
     public getDefaultModel(): string {
-        return this.credentials.defaultModel || 'gemini-3.5-flash';
+        return this.resolveDefaultModel() || FALLBACK_DEFAULT_MODEL;
     }
 
     public getAnswerCueApiKey(): string | undefined {
@@ -205,6 +220,79 @@ export class CredentialsManager {
 
     public getAllCredentials(): StoredCredentials {
         return { ...this.credentials };
+    }
+
+    private hasKey(value?: string): boolean {
+        return !!(value && value.trim().length > 0);
+    }
+
+    private getProviderForModel(modelId?: string): string | null {
+        if (!modelId) return null;
+        if (modelId === 'natively') return 'natively';
+        if (modelId === DEFAULT_MODEL_BY_PROVIDER.openai || modelId.startsWith('gpt-')) return 'openai';
+        if (modelId.startsWith('gemini-') || modelId.startsWith('models/')) return 'gemini';
+        if (modelId.startsWith('claude-')) return 'claude';
+        if (
+            modelId.startsWith('llama-') ||
+            modelId.startsWith('mixtral-') ||
+            modelId.startsWith('gemma-') ||
+            modelId.startsWith('meta-llama/') ||
+            modelId.startsWith('qwen/')
+        ) {
+            return 'groq';
+        }
+        if (modelId.startsWith('deepseek-')) return 'deepseek';
+        if (modelId.startsWith('ollama-') || modelId === 'codex-cli' || modelId.startsWith('codex-cli:')) {
+            return 'local';
+        }
+        if ([...(this.credentials.curlProviders || []), ...(this.credentials.customProviders || [])].some(provider => provider.id === modelId)) {
+            return 'custom';
+        }
+        return null;
+    }
+
+    private isProviderConfigured(provider: string | null): boolean {
+        switch (provider) {
+            case 'natively':
+                return this.hasKey(this.credentials.nativelyApiKey);
+            case 'openai':
+                return this.hasKey(this.credentials.openaiApiKey);
+            case 'gemini':
+                return this.hasKey(this.credentials.geminiApiKey);
+            case 'claude':
+                return this.hasKey(this.credentials.claudeApiKey);
+            case 'groq':
+                return this.hasKey(this.credentials.groqApiKey);
+            case 'deepseek':
+                return this.hasKey(this.credentials.deepseekApiKey);
+            case 'custom':
+            case 'local':
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private firstConfiguredDefaultModel(): string | null {
+        for (const provider of CONFIGURED_PROVIDER_ORDER) {
+            if (this.isProviderConfigured(provider)) return DEFAULT_MODEL_BY_PROVIDER[provider];
+        }
+        const customProvider = [...(this.credentials.curlProviders || []), ...(this.credentials.customProviders || [])][0];
+        return customProvider?.id || null;
+    }
+
+    private resolveDefaultModel(): string | null {
+        const current = this.credentials.defaultModel;
+        if (current && this.isProviderConfigured(this.getProviderForModel(current))) return current;
+        return this.firstConfiguredDefaultModel();
+    }
+
+    private ensureDefaultModelCanRun(): void {
+        const resolved = this.resolveDefaultModel();
+        if (resolved && resolved !== this.credentials.defaultModel) {
+            this.credentials.defaultModel = resolved;
+            console.log(`[CredentialsManager] Auto-set default model to configured provider: ${resolved}`);
+        }
     }
 
     // =========================================================================
@@ -249,24 +337,28 @@ export class CredentialsManager {
 
     public setGeminiApiKey(key: string): void {
         this.credentials.geminiApiKey = key;
+        this.ensureDefaultModelCanRun();
         this.saveCredentials();
         console.log('[CredentialsManager] Gemini API Key updated');
     }
 
     public setGroqApiKey(key: string): void {
         this.credentials.groqApiKey = key;
+        this.ensureDefaultModelCanRun();
         this.saveCredentials();
         console.log('[CredentialsManager] Groq API Key updated');
     }
 
     public setOpenaiApiKey(key: string): void {
         this.credentials.openaiApiKey = key;
+        this.ensureDefaultModelCanRun();
         this.saveCredentials();
         console.log('[CredentialsManager] OpenAI API Key updated');
     }
 
     public setClaudeApiKey(key: string): void {
         this.credentials.claudeApiKey = key;
+        this.ensureDefaultModelCanRun();
         this.saveCredentials();
         console.log('[CredentialsManager] Claude API Key updated');
     }
@@ -274,6 +366,7 @@ export class CredentialsManager {
     public setDeepseekApiKey(key: string): void {
         const trimmed = key.trim();
         this.credentials.deepseekApiKey = trimmed || undefined;
+        this.ensureDefaultModelCanRun();
         this.saveCredentials();
         console.log('[CredentialsManager] DeepSeek API Key updated');
     }
@@ -408,10 +501,11 @@ export class CredentialsManager {
                 console.log('[CredentialsManager] Auto-set STT provider to local-whisper');
             }
         } else {
-            // Key cleared — revert natively-auto-set defaults back to safe fallbacks
+            // Key cleared — revert natively-auto-set defaults back to the next configured provider.
             if (this.credentials.defaultModel === 'natively') {
-                this.credentials.defaultModel = 'gemini-3.5-flash';
-                console.log('[CredentialsManager] AnswerCue key cleared — reset default model to Gemini Flash');
+                const nextDefault = this.firstConfiguredDefaultModel() || FALLBACK_DEFAULT_MODEL;
+                this.credentials.defaultModel = nextDefault;
+                console.log(`[CredentialsManager] AnswerCue key cleared — reset default model to ${nextDefault}`);
             }
             if (this.credentials.sttProvider !== 'local-whisper') {
                 this.credentials.sttProvider = 'local-whisper';

@@ -16,11 +16,14 @@ interface Meeting {
         timestamp: number;
     }>;
     usage?: Array<{
-        type: 'assist' | 'followup' | 'chat' | 'followup_questions';
+        type: 'assist' | 'followup' | 'chat' | 'followup_questions' | 'screenshot';
         timestamp: number;
         question?: string;
         answer?: string;
         items?: string[];
+        metadata?: any;
+        screenshotPath?: string;
+        screenshotPreview?: string;
     }>;
 }
 
@@ -115,6 +118,13 @@ export const generateMeetingPDF = (meeting: Meeting) => {
             else if (item.type === 'assist' && item.answer) {
                 addText('Assist:', 10, true, '#222222');
                 addText(item.answer, 10, false, '#444444');
+                addVerticalSpace(3);
+            }
+            else if (item.type === 'screenshot') {
+                addText(item.question || 'Screenshot attached', 10, true, '#222222');
+                if (item.screenshotPath) {
+                    addText(item.screenshotPath, 8, false, '#666666');
+                }
                 addVerticalSpace(3);
             }
         });

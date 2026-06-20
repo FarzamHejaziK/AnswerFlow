@@ -126,6 +126,10 @@ export class IntelligenceManager extends EventEmitter {
         this.session.logUsage(type, question, answer);
     }
 
+    logScreenshot(path: string, preview: string, captureKind: 'full' | 'selective' = 'full'): void {
+        this.session.logScreenshot(path, preview, captureKind);
+    }
+
     // ============================================
     // Transcript Handling (delegates to engine)
     // ============================================

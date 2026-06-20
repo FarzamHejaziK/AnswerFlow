@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useResolvedTheme } from '../hooks/useResolvedTheme';
-import { ArrowLeft, Search, Mail, Link, ChevronDown, Play, ArrowUp, Copy, Check, MoreHorizontal, Settings, ArrowRight } from 'lucide-react';
+import { ArrowLeft, Search, Mail, Link, ChevronDown, Play, ArrowUp, Copy, Check, MoreHorizontal, Settings, ArrowRight, Monitor } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { genMessageId } from '../utils/messageId';
 import MeetingChatOverlay from './MeetingChatOverlay';
@@ -67,11 +67,14 @@ interface Meeting {
         timestamp: number;
     }>;
     usage?: Array<{
-        type: 'assist' | 'followup' | 'chat' | 'followup_questions';
+        type: 'assist' | 'followup' | 'chat' | 'followup_questions' | 'screenshot';
         timestamp: number;
         question?: string;
         answer?: string;
         items?: string[];
+        metadata?: any;
+        screenshotPath?: string;
+        screenshotPreview?: string;
     }>;
 }
 
@@ -143,7 +146,12 @@ ${meeting.detailedSummary.keyPoints?.map(item => `- ${item}`).join('\n') || 'Non
         } else if (activeTab === 'transcript' && meeting.transcript) {
             textToCopy = meeting.transcript.map(t => `[${formatTime(t.timestamp)}] ${t.speaker === 'user' ? 'Me' : 'Them'}: ${t.text}`).join('\n');
         } else if (activeTab === 'usage' && meeting.usage) {
-            textToCopy = meeting.usage.map(u => `Q: ${u.question || ''}\nA: ${u.answer || ''}`).join('\n\n');
+            textToCopy = meeting.usage.map(u => {
+                if (u.type === 'screenshot') {
+                    return `[${formatTime(u.timestamp)}] ${u.question || 'Screenshot attached'}${u.screenshotPath ? `\n${u.screenshotPath}` : ''}`;
+                }
+                return `Q: ${u.question || ''}\nA: ${u.answer || ''}`;
+            }).join('\n\n');
         }
 
         if (!textToCopy) return;
@@ -543,8 +551,26 @@ ${meeting.detailedSummary.keyPoints?.map(item => `- ${item}`).join('\n') || 'Non
                             <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-8 pb-10">
                                 {meeting.usage?.map((interaction, i) => (
                                     <div key={i} className="space-y-4">
+                                        {interaction.type === 'screenshot' && (
+                                            <div className="flex items-start gap-4">
+                                                <div className="mt-1 w-6 h-6 rounded-full bg-bg-input flex items-center justify-center border border-border-subtle shrink-0">
+                                                    <Monitor size={14} className="text-text-secondary" />
+                                                </div>
+                                                <div className="max-w-[560px]">
+                                                    <div className="text-[11px] text-text-tertiary mb-1.5 font-medium">{formatTime(interaction.timestamp)}</div>
+                                                    <div className="rounded-xl border border-border-subtle bg-bg-input/70 p-3">
+                                                        {interaction.screenshotPreview && (
+                                                            <img src={interaction.screenshotPreview} alt="Screenshot preview" className="mb-2 max-h-64 w-full rounded-lg border border-border-subtle object-cover" />
+                                                        )}
+                                                        <p className="text-text-secondary text-[13px] leading-relaxed">
+                                                            {interaction.question || 'Screenshot attached'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                         {/* User Question */}
-                                        {interaction.question && (
+                                        {interaction.type !== 'screenshot' && interaction.question && (
                                             <div className="flex justify-end">
                                                 <div className="bg-accent-primary text-white px-5 py-2.5 rounded-2xl rounded-tr-sm max-w-[80%] text-[15px] leading-relaxed shadow-sm">
                                                     {interaction.question}
@@ -553,7 +579,7 @@ ${meeting.detailedSummary.keyPoints?.map(item => `- ${item}`).join('\n') || 'Non
                                         )}
 
                                         {/* AI Answer */}
-                                        {interaction.answer && (
+                                        {interaction.type !== 'screenshot' && interaction.answer && (
                                             <div className="flex items-start gap-4">
                                                 <div className="mt-1 w-6 h-6 rounded-full bg-bg-input flex items-center justify-center border border-border-subtle shrink-0">
                                                     <img src={AnswerCueLogo} alt="AI" className="w-4 h-4 opacity-50 object-contain force-black-icon" />

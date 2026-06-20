@@ -703,6 +703,7 @@ export class AppState {
           // Single-trigger: capture current screen then immediately request AI analysis
           const screenshotPath = await this.takeScreenshot(false);
           const preview = await this.getImagePreview(screenshotPath);
+          this.recordScreenshotUsage(screenshotPath, preview, 'full');
           // Ensure the window is visible so the user can see the response without stealing focus
           this.showMainWindow(true);
           // win.focus() can cause macOS to re-activate the app. Re-hide the dock
@@ -935,6 +936,19 @@ export class AppState {
 
   public getIsMeetingActive(): boolean {
     return this.isMeetingActive;
+  }
+
+  public recordScreenshotUsage(
+    screenshotPath: string,
+    preview: string,
+    captureKind: 'full' | 'selective' = 'full',
+  ): void {
+    if (!this.isMeetingActive) return;
+    try {
+      this.intelligenceManager.logScreenshot(screenshotPath, preview, captureKind);
+    } catch (error) {
+      console.warn('[Main] Failed to record screenshot usage:', error);
+    }
   }
 
   public isQuitting(): boolean {
@@ -4388,6 +4402,7 @@ export class AppState {
           try {
             const screenshotPath = await this.takeScreenshot()
             const preview = await this.getImagePreview(screenshotPath)
+            this.recordScreenshotUsage(screenshotPath, preview, 'full')
             const mainWindow = this.getMainWindow()
             if (mainWindow) {
               mainWindow.webContents.send("screenshot-taken", {

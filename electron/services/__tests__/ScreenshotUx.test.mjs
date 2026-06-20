@@ -14,6 +14,11 @@ const helpSource = fs.readFileSync(
   path.join(root, 'src/components/settings/HelpSettings.tsx'),
   'utf8',
 );
+const ipcSource = fs.readFileSync(path.join(root, 'electron/ipcHandlers.ts'), 'utf8');
+const mainSource = fs.readFileSync(path.join(root, 'electron/main.ts'), 'utf8');
+const sessionSource = fs.readFileSync(path.join(root, 'electron/SessionTracker.ts'), 'utf8');
+const dbSource = fs.readFileSync(path.join(root, 'electron/db/DatabaseManager.ts'), 'utf8');
+const launcherSource = fs.readFileSync(path.join(root, 'src/components/Launcher.tsx'), 'utf8');
 
 function sliceBetween(source, startNeedle, endNeedle) {
   const start = source.indexOf(startNeedle);
@@ -70,5 +75,43 @@ test('normal screenshot UX points to full-screen capture, while selective captur
     helpSource,
     /title: 'Screenshot'[\s\S]*kbd: \['⌘', 'H'\][\s\S]*Captures the whole screen/,
     'help quick-action card should describe Cmd/Ctrl+H as whole-screen capture',
+  );
+});
+
+test('screenshots taken during a meeting are persisted and rendered in interview history', () => {
+  assert.match(
+    sessionSource,
+    /logScreenshot\(path: string, preview: string, captureKind: 'full' \| 'selective' = 'full'\)/,
+    'SessionTracker should expose screenshot usage logging',
+  );
+  assert.match(
+    ipcSource,
+    /safeHandle\('take-screenshot'[\s\S]*recordScreenshotUsage\(screenshotPath, preview, 'full'\);/,
+    'normal screenshot IPC should record screenshot usage for active meetings',
+  );
+  assert.match(
+    ipcSource,
+    /safeHandle\('take-selective-screenshot'[\s\S]*recordScreenshotUsage\(screenshotPath, preview, 'selective'\);/,
+    'selective screenshot IPC should record screenshot usage for active meetings',
+  );
+  assert.match(
+    mainSource,
+    /general:capture-and-process'[\s\S]*this\.recordScreenshotUsage\(screenshotPath, preview, 'full'\);/,
+    'capture-and-process shortcut should persist its screenshot event',
+  );
+  assert.match(
+    dbSource,
+    /usage\.metadata && typeof usage\.metadata === 'object'[\s\S]*metadata = JSON\.stringify\(usage\.metadata\);/,
+    'DatabaseManager should serialize screenshot metadata',
+  );
+  assert.match(
+    launcherSource,
+    /item\.type === 'screenshot'[\s\S]*screenshotPreview: item\.screenshotPreview \|\| metadata\.screenshotPreview/,
+    'Launcher should reconstruct screenshot timeline items from saved usage',
+  );
+  assert.match(
+    launcherSource,
+    /src={item\.screenshotPreview}[\s\S]*alt="Screenshot preview"/,
+    'Interview history should render screenshot thumbnails',
   );
 });

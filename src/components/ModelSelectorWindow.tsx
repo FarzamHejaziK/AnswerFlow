@@ -15,14 +15,9 @@ interface ModelOption {
 
 const ModelSelectorWindow = () => {
     const isLight = useResolvedTheme() === 'light';
-    const [currentModel, setCurrentModel] = useState<string>(() => localStorage.getItem('cached-current-model') || '');
-    const [availableModels, setAvailableModels] = useState<ModelOption[]>(() => {
-        try {
-            const cached = localStorage.getItem('cached-models');
-            return cached ? JSON.parse(cached) : [];
-        } catch { return []; }
-    });
-    const [isLoading, setIsLoading] = useState<boolean>(() => availableModels.length === 0);
+    const [currentModel, setCurrentModel] = useState<string>('');
+    const [availableModels, setAvailableModels] = useState<ModelOption[]>([]);
+    const [isLoading, setIsLoading] = useState<boolean>(true);
 
 
 
@@ -111,14 +106,12 @@ const ModelSelectorWindow = () => {
                     models.push({ id: `ollama-${m}`, name: `${m} (Local)`, type: 'ollama' });
                 });
 
-                localStorage.setItem('cached-models', JSON.stringify(models));
                 setAvailableModels(models);
 
                 // 4. Get Current Active Model
                 const config = await window.electronAPI?.getCurrentLlmConfig?.(); // Get runtime model
                 if (config && config.model) {
                     setCurrentModel(config.model);
-                    localStorage.setItem('cached-current-model', config.model);
                 }
 
             } catch (err) {
@@ -143,7 +136,6 @@ const ModelSelectorWindow = () => {
 
     const handleSelectFn = (modelId: string) => {
         setCurrentModel(modelId);
-        localStorage.setItem('cached-current-model', modelId);
         
         window.electronAPI?.setModel(modelId)
             .catch((err: any) => console.error("Failed to set model:", err));

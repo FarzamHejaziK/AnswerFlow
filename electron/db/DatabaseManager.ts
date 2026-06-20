@@ -30,11 +30,14 @@ export interface Meeting {
         timestamp: number;
     }>;
     usage?: Array<{
-        type: 'assist' | 'followup' | 'chat' | 'followup_questions';
+        type: 'assist' | 'followup' | 'chat' | 'followup_questions' | 'screenshot';
         timestamp: number;
         question?: string;
         answer?: string;
         items?: string[];
+        metadata?: any;
+        screenshotPath?: string;
+        screenshotPreview?: string;
     }>;
     calendarEventId?: string;
     source?: 'manual' | 'calendar';
@@ -1068,7 +1071,9 @@ export class DatabaseManager {
             if (meeting.usage) {
                 for (const usage of meeting.usage) {
                     let metadata = null;
-                    if (usage.items) {
+                    if (usage.metadata && typeof usage.metadata === 'object') {
+                        metadata = JSON.stringify(usage.metadata);
+                    } else if (usage.items) {
                         metadata = JSON.stringify(usage.items);
                     } else if (usage.type === 'followup_questions' && usage.answer) {
                         // Sometimes answer is the array for questions, or we store it in metadata
@@ -1225,6 +1230,7 @@ export class DatabaseManager {
 
         const usage = usageRows.map(row => {
             let items: string[] | undefined;
+            let metadata: any;
             let answer = row.ai_response;
 
             if (row.metadata_json) {
@@ -1234,6 +1240,8 @@ export class DatabaseManager {
                         items = parsed;
                         // Special case: for 'followup_questions', earlier we treated 'answer' as the array in memory
                         // UI expects appropriate field. If type is 'followup_questions', usually answer is null and items has the questions.
+                    } else if (parsed && typeof parsed === 'object') {
+                        metadata = parsed;
                     }
                 } catch (e) { console.warn('[DatabaseManager] Failed to parse metadata_json for interaction:', row?.id, e); }
             }
@@ -1243,7 +1251,10 @@ export class DatabaseManager {
                 timestamp: row.timestamp,
                 question: row.user_query,
                 answer: answer,
-                items: items
+                items: items,
+                metadata,
+                screenshotPath: metadata?.screenshotPath,
+                screenshotPreview: metadata?.screenshotPreview
             };
         });
 
