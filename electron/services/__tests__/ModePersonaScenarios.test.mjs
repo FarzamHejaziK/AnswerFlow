@@ -152,12 +152,12 @@ describe('Mode: sales — five realistic sales scenarios', () => {
     assertNoForeignSentinels(result, 'sales');
   });
 
-  test('2. Competitor objection — Cluely comparison', () => {
+  test('2. Competitor objection — legacy overlay comparison', () => {
     const result = runWith({
       modeFolder: folder,
       templateType: template,
       customContext: ctx,
-      query: 'how do we compare to Cluely on reference files',
+      query: 'how do we compare to legacy overlay on per-mode reference files',
     });
     assertSentinelInRetrieval(result, SENTINELS.sales.competitor);
   });

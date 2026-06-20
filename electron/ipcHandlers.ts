@@ -303,6 +303,92 @@ export function initializeIpcHandlers(appState: AppState): void {
     return appState.deleteScreenshot(resolved);
   });
 
+  safeHandle('open-screenshot-file', async (event, filePath: string) => {
+    try {
+      const { validateImagePath } = require('./utils/curlUtils');
+      const userDataDir = app.getPath('userData');
+      const validation = validateImagePath(filePath, userDataDir);
+      if (!validation.isValid) {
+        console.warn('[IPC] open-screenshot-file: path rejected:', validation.reason);
+        return { success: false, error: validation.reason || 'Path not allowed' };
+      }
+
+      const resolved = path.resolve(filePath);
+      if (!fs.existsSync(resolved)) {
+        return { success: false, error: 'Screenshot file not found' };
+      }
+
+      const error = await shell.openPath(resolved);
+      return error ? { success: false, error } : { success: true };
+    } catch (error: any) {
+      return { success: false, error: error?.message || String(error) };
+    }
+  });
+
+  safeHandle(
+    'save-screenshot-file',
+    async (event, payload: { path?: string; preview?: string } = {}) => {
+      try {
+        const { validateImagePath } = require('./utils/curlUtils');
+        const userDataDir = app.getPath('userData');
+        const sourcePath = typeof payload.path === 'string' ? payload.path : '';
+        const preview = typeof payload.preview === 'string' ? payload.preview : '';
+        let buffer: Buffer | null = null;
+        let extension = 'png';
+
+        if (sourcePath) {
+          const validation = validateImagePath(sourcePath, userDataDir);
+          if (validation.isValid) {
+            const resolved = path.resolve(sourcePath);
+            if (fs.existsSync(resolved)) {
+              buffer = await fs.promises.readFile(resolved);
+              const sourceExtension = path.extname(resolved).replace('.', '').toLowerCase();
+              if (['png', 'jpg', 'jpeg', 'webp'].includes(sourceExtension)) {
+                extension = sourceExtension === 'jpeg' ? 'jpg' : sourceExtension;
+              }
+            }
+          } else {
+            console.warn('[IPC] save-screenshot-file: path rejected:', validation.reason);
+          }
+        }
+
+        if (!buffer && preview) {
+          const match = preview.match(/^data:image\/(png|jpe?g|webp);base64,([A-Za-z0-9+/=]+)$/);
+          if (!match) {
+            return { success: false, error: 'Screenshot preview is not a supported image' };
+          }
+          extension = match[1] === 'jpeg' ? 'jpg' : match[1];
+          buffer = Buffer.from(match[2], 'base64');
+        }
+
+        if (!buffer || buffer.length === 0) {
+          return { success: false, error: 'Screenshot image is not available to save' };
+        }
+
+        const dateStamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const defaultName = `AnswerCue Screenshot ${dateStamp}.${extension}`;
+        const ownerWindow = BrowserWindow.fromWebContents(event.sender) || undefined;
+        const result = await dialog.showSaveDialog(ownerWindow, {
+          title: 'Save screenshot',
+          defaultPath: path.join(app.getPath('pictures'), defaultName),
+          filters: [{ name: 'Image', extensions: [extension] }],
+        });
+
+        if (result.canceled || !result.filePath) {
+          return { success: false, canceled: true };
+        }
+
+        const targetPath = path.extname(result.filePath)
+          ? result.filePath
+          : `${result.filePath}.${extension}`;
+        await fs.promises.writeFile(targetPath, buffer);
+        return { success: true, path: targetPath };
+      } catch (error: any) {
+        return { success: false, error: error?.message || String(error) };
+      }
+    },
+  );
+
   const recordScreenshotUsage = (
     screenshotPath: string,
     preview: string,

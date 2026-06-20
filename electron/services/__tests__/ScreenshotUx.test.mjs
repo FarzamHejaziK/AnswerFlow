@@ -15,10 +15,16 @@ const helpSource = fs.readFileSync(
   'utf8',
 );
 const ipcSource = fs.readFileSync(path.join(root, 'electron/ipcHandlers.ts'), 'utf8');
+const preloadSource = fs.readFileSync(path.join(root, 'electron/preload.ts'), 'utf8');
+const electronTypesSource = fs.readFileSync(path.join(root, 'src/types/electron.d.ts'), 'utf8');
 const mainSource = fs.readFileSync(path.join(root, 'electron/main.ts'), 'utf8');
 const sessionSource = fs.readFileSync(path.join(root, 'electron/SessionTracker.ts'), 'utf8');
 const dbSource = fs.readFileSync(path.join(root, 'electron/db/DatabaseManager.ts'), 'utf8');
 const launcherSource = fs.readFileSync(path.join(root, 'src/components/Launcher.tsx'), 'utf8');
+const meetingDetailsSource = fs.readFileSync(
+  path.join(root, 'src/components/MeetingDetails.tsx'),
+  'utf8',
+);
 
 function sliceBetween(source, startNeedle, endNeedle) {
   const start = source.indexOf(startNeedle);
@@ -47,8 +53,52 @@ test('screenshot attachment creates a visible, deduped chat-history row with a p
   );
   assert.match(
     answerCueSource,
-    /src={msg\.screenshotPreview}[\s\S]*alt="Screenshot preview"/,
+    /onClick=\{\(\) =>\s*onOpenScreenshot\(\{ path: msg\.screenshotPath, preview: msg\.screenshotPreview \}\)\s*\}[\s\S]*src=\{msg\.screenshotPreview\}[\s\S]*alt="Screenshot preview"/,
     'message rows should render the screenshot thumbnail, not only a text label',
+  );
+});
+
+test('chat screenshot thumbnails open in-app previews, can be saved, and consumed attachments are not duplicated', () => {
+  assert.match(
+    answerCueSource,
+    /const handleOpenScreenshot = useCallback\(\(screenshot: ScreenshotPreviewAttachment\) => \{[\s\S]*setSelectedScreenshot\(screenshot\);/,
+    'renderer should open clicked screenshots in the in-app preview',
+  );
+  assert.match(
+    answerCueSource,
+    /const handleSaveScreenshot = useCallback\(async \(screenshot: ScreenshotPreviewAttachment\) => \{[\s\S]*saveScreenshotFile\?\.\(screenshot\)/,
+    'renderer should save screenshots through the narrow screenshot save IPC',
+  );
+  assert.match(
+    answerCueSource,
+    /const appendUserMessage = useCallback\([\s\S]*existing\.intent === 'screenshot_attachment'[\s\S]*consumedPaths\.has\(existing\.screenshotPath\)/,
+    'submitting a screenshot should remove its pending attachment row before appending the user turn',
+  );
+  assert.match(
+    answerCueSource,
+    /appendUserMessage\([\s\S]*screenshotPreview: currentAttachments\[0\]\.preview[\s\S]*currentAttachments,\s*\);/,
+    'screenshot quick actions should use the duplicate-filtering append helper',
+  );
+  assert.match(
+    answerCueSource,
+    /onClick=\{\(\) => handleOpenScreenshot\(ctx\)\}[\s\S]*alt=\{`Screenshot \$\{idx \+ 1\}`\}/,
+    'pending screenshot thumbnails should also be clickable',
+  );
+
+  assert.match(
+    ipcSource,
+    /safeHandle\([\s\S]*'save-screenshot-file'[\s\S]*validateImagePath\(sourcePath, userDataDir\)[\s\S]*dialog\.showSaveDialog[\s\S]*fs\.promises\.writeFile\(targetPath, buffer\)/,
+    'save-screenshot-file IPC should validate app-owned screenshot paths before writing the chosen save target',
+  );
+  assert.match(
+    preloadSource,
+    /saveScreenshotFile: \(screenshot: \{ path\?: string; preview\?: string \}\) =>\s*ipcRenderer\.invoke\('save-screenshot-file', screenshot\)/,
+    'preload should expose the narrow screenshot saver',
+  );
+  assert.match(
+    electronTypesSource,
+    /saveScreenshotFile: \(screenshot: \{[\s\S]*path\?: string[\s\S]*preview\?: string[\s\S]*\}\) => Promise<\{ success: boolean; error\?: string; canceled\?: boolean; path\?: string \}>/,
+    'renderer ElectronAPI type should include saveScreenshotFile',
   );
 });
 
@@ -111,7 +161,22 @@ test('screenshots taken during a meeting are persisted and rendered in interview
   );
   assert.match(
     launcherSource,
-    /src={item\.screenshotPreview}[\s\S]*alt="Screenshot preview"/,
-    'Interview history should render screenshot thumbnails',
+    /setSelectedScreenshotPreview\(\{[\s\S]*path: item\.screenshotPath,[\s\S]*preview: item\.screenshotPreview \|\| '',[\s\S]*\}\)[\s\S]*src=\{item\.screenshotPreview\}[\s\S]*alt="Screenshot preview"/,
+    'Interview history timeline should render clickable screenshot thumbnails',
+  );
+  assert.match(
+    launcherSource,
+    /const ScreenshotPreviewDialog[\s\S]*saveScreenshotFile\?\.\(screenshot\)[\s\S]*title="Save screenshot"/,
+    'Interview history preview dialog should expose screenshot saving',
+  );
+  assert.match(
+    meetingDetailsSource,
+    /setSelectedScreenshotPreview\(\{[\s\S]*path: interaction\.screenshotPath,[\s\S]*preview: interaction\.screenshotPreview \|\| '',[\s\S]*\}\)[\s\S]*src=\{interaction\.screenshotPreview\}[\s\S]*alt="Screenshot preview"/,
+    'Meeting details usage history should render clickable screenshot thumbnails',
+  );
+  assert.match(
+    meetingDetailsSource,
+    /handleSaveScreenshot\(selectedScreenshotPreview\)[\s\S]*title="Save screenshot"/,
+    'Meeting details preview dialog should expose screenshot saving',
   );
 });

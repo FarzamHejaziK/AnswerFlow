@@ -4,6 +4,7 @@ import {
   ChevronDown,
   Code,
   Copy,
+  Download,
   HelpCircle,
   Image,
   Lightbulb,
@@ -122,6 +123,9 @@ interface Message {
   };
 }
 
+type ScreenshotAttachment = { path: string; preview: string };
+type ScreenshotPreviewAttachment = { path?: string; preview: string };
+
 interface AnswerCueInterfaceProps {
   onEndMeeting?: () => void;
   overlayOpacity?: number;
@@ -239,6 +243,7 @@ interface MessageRowProps {
   isLightTheme: boolean;
   appearance: any;
   onCopy: (text: string) => void;
+  onOpenScreenshot: (screenshot: ScreenshotPreviewAttachment) => void;
   renderMessageText: (msg: Message) => React.ReactNode;
 }
 const formatProviderLabel = (provider?: string | null): string => {
@@ -307,6 +312,7 @@ const MessageRow = React.memo(
     isLightTheme,
     appearance,
     onCopy,
+    onOpenScreenshot,
     renderMessageText,
   }: MessageRowProps) {
     const isCodeMsg = msg.role === 'system' && (msg.isCode || msg.text.includes('```'));
@@ -361,11 +367,21 @@ const MessageRow = React.memo(
               </div>
             )}
             {msg.role === 'user' && msg.hasScreenshot && msg.screenshotPreview && (
-              <img
-                src={msg.screenshotPreview}
-                alt="Screenshot preview"
-                className={`mt-1 max-h-36 w-full rounded-lg border object-cover ${msg.text ? 'mb-2' : ''} ${isLightTheme ? 'border-black/10' : 'border-white/10'}`}
-              />
+              <button
+                type="button"
+                onClick={() =>
+                  onOpenScreenshot({ path: msg.screenshotPath, preview: msg.screenshotPreview })
+                }
+                className={`no-drag block mt-1 max-h-36 w-full overflow-hidden rounded-lg border transition-opacity hover:opacity-85 ${msg.text ? 'mb-2' : ''} ${isLightTheme ? 'border-black/10' : 'border-white/10'}`}
+                title="Open screenshot"
+                aria-label="Open screenshot preview"
+              >
+                <img
+                  src={msg.screenshotPreview}
+                  alt="Screenshot preview"
+                  className="max-h-36 w-full object-cover"
+                />
+              </button>
             )}
             {msg.role === 'system' && !msg.isStreaming && (
               <button
@@ -388,6 +404,7 @@ const MessageRow = React.memo(
     prev.isLightTheme === next.isLightTheme &&
     prev.appearance === next.appearance &&
     prev.renderMessageText === next.renderMessageText &&
+    prev.onOpenScreenshot === next.onOpenScreenshot &&
     prev.onCopy === next.onCopy,
 );
 
@@ -404,6 +421,10 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
   const [inputValue, setInputValue] = useState('');
   const { shortcuts, isShortcutPressed } = useShortcuts();
   const [messages, setMessages] = useState<Message[]>([]);
+  const [selectedScreenshot, setSelectedScreenshot] = useState<ScreenshotPreviewAttachment | null>(
+    null,
+  );
+  const [screenshotSaveError, setScreenshotSaveError] = useState<string | null>(null);
   // Keep chat history visible once an answer lands until explicit clear / session reset.
   const [answerPanelPinned, setAnswerPanelPinned] = useState(false);
   const answerPanelPinnedRef = useRef(false);
@@ -561,10 +582,10 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
   // Captures data from onCaptureAndProcess before the React state flush so
   // handleWhatToSay() can access it even in React 18 concurrent mode (where
   // a plain setTimeout(0) may fire before setAttachedContext flushes).
-  const pendingCaptureRef = useRef<{ path: string; preview: string } | null>(null);
+  const pendingCaptureRef = useRef<ScreenshotAttachment | null>(null);
 
   // Latent Context State (Screenshots attached but not sent)
-  const [attachedContext, setAttachedContext] = useState<Array<{ path: string; preview: string }>>(
+  const [attachedContext, setAttachedContext] = useState<ScreenshotAttachment[]>(
     [],
   );
 
@@ -1001,14 +1022,15 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
     isExpandedRef.current = isExpanded;
   }, [isExpanded]);
 
-  // Single canonical size-reporter. Width is the live motion value
-  // (so OS frame matches the spring mid-tween); height is from the
-  // ResizeObserver-measured content rect. Centered IPC keeps the
-  // TopPill's horizontal center invariant across resizes.
+  // Single canonical size-reporter. Width normally follows the live shell
+  // motion value; screenshot preview can temporarily request a wider window.
+  // Height is from the ResizeObserver-measured content rect. Centered IPC keeps
+  // the TopPill's horizontal center invariant across resizes.
   const reportShellSize = useCallback(() => {
     if (!contentRef.current) return;
     const rect = contentRef.current.getBoundingClientRect();
-    const width = Math.round(shellWidth.get());
+    const shellTargetWidth = Math.round(shellWidth.get());
+    const width = selectedScreenshot ? Math.max(shellTargetWidth, 900) : shellTargetWidth;
     const height = Math.ceil(rect.height);
     const api = window.electronAPI as any;
     if (api?.updateContentDimensionsCentered) {
@@ -1016,7 +1038,7 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
     } else {
       window.electronAPI?.updateContentDimensions({ width, height });
     }
-  }, [shellWidth]);
+  }, [selectedScreenshot, shellWidth]);
 
   // Drive OS window width from the shell-width motion value, rAF-coalesced
   // so we emit at most one IPC per paint frame and skip ≤1px deltas. The
@@ -1025,11 +1047,14 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
   // ResizeObserver in the next effect — the two channels share the same IPC.
   useEffect(() => {
     let rafId: number | null = null;
-    let lastSentWidth = Math.round(shellWidth.get());
+    let lastSentWidth = selectedScreenshot
+      ? Math.max(Math.round(shellWidth.get()), 900)
+      : Math.round(shellWidth.get());
 
     const flush = () => {
       rafId = null;
-      const width = Math.round(shellWidth.get());
+      const shellTargetWidth = Math.round(shellWidth.get());
+      const width = selectedScreenshot ? Math.max(shellTargetWidth, 900) : shellTargetWidth;
       if (Math.abs(width - lastSentWidth) < 1) return;
       lastSentWidth = width;
       if (!contentRef.current) return;
@@ -1051,7 +1076,7 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
       unsubscribe();
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
-  }, [shellWidth]);
+  }, [selectedScreenshot, shellWidth]);
 
   // ResizeObserver: rAF-debounced so the spring can update height without
   // flooding IPC. Width is constant in expanded mode, so per-frame updates
@@ -1343,6 +1368,8 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
     const unsubscribe = window.electronAPI.onSessionReset(() => {
       console.log('[AnswerCueInterface] Resetting session state...');
       setMessages([]);
+      setSelectedScreenshot(null);
+      setScreenshotSaveError(null);
       answerPanelPinnedRef.current = false;
       setAnswerPanelPinned(false);
       setInputValue('');
@@ -2104,6 +2131,49 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
     // Optional: Trigger a small toast or state change for visual feedback
   }, []);
 
+  const handleOpenScreenshot = useCallback((screenshot: ScreenshotPreviewAttachment) => {
+    setScreenshotSaveError(null);
+    setSelectedScreenshot(screenshot);
+  }, []);
+
+  const handleSaveScreenshot = useCallback(async (screenshot: ScreenshotPreviewAttachment) => {
+    try {
+      setScreenshotSaveError(null);
+      const result = await window.electronAPI?.saveScreenshotFile?.(screenshot);
+      if (!result || result.canceled || result.success) return;
+      setScreenshotSaveError(result.error || 'Could not save screenshot');
+    } catch (error: any) {
+      setScreenshotSaveError(error?.message || 'Could not save screenshot');
+    }
+  }, []);
+
+  const appendUserMessage = useCallback(
+    (message: Message, attachments: ScreenshotAttachment[] = []) => {
+      setMessages((prev) => {
+        if (attachments.length === 0) return [...prev, message];
+        const consumedPaths = new Set(
+          attachments
+            .map((attachment) => attachment.path)
+            .filter((path): path is string => Boolean(path)),
+        );
+        if (consumedPaths.size === 0) return [...prev, message];
+        return [
+          ...prev.filter(
+            (existing) =>
+              !(
+                existing.role === 'user' &&
+                existing.intent === 'screenshot_attachment' &&
+                existing.screenshotPath &&
+                consumedPaths.has(existing.screenshotPath)
+              ),
+          ),
+          message,
+        ];
+      });
+    },
+    [],
+  );
+
   const handleWhatToSay = async (promptInstruction?: string | React.MouseEvent) => {
     if (!tryBeginOverlayAction('what_to_say')) return;
     const dynamicPromptInstruction =
@@ -2125,8 +2195,7 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
     if (currentAttachments.length > 0) {
       setAttachedContext([]);
       // Show the attached image in chat
-      setMessages((prev) => [
-        ...prev,
+      appendUserMessage(
         {
           id: genMessageId(),
           role: 'user',
@@ -2135,7 +2204,8 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
           screenshotPreview: currentAttachments[0].preview,
           screenshotPath: currentAttachments[0].path,
         },
-      ]);
+        currentAttachments,
+      );
       // Scroll to bottom when user sends message
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -2305,8 +2375,7 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
     if (currentAttachments.length > 0) {
       setAttachedContext([]);
       // Show the attached image in chat
-      setMessages((prev) => [
-        ...prev,
+      appendUserMessage(
         {
           id: genMessageId(),
           role: 'user',
@@ -2315,7 +2384,8 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
           screenshotPreview: currentAttachments[0].preview,
           screenshotPath: currentAttachments[0].path,
         },
-      ]);
+        currentAttachments,
+      );
       // Scroll to bottom when user sends message
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -2351,8 +2421,7 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
     if (currentAttachments.length > 0) {
       setAttachedContext([]);
       // Show the attached image in chat
-      setMessages((prev) => [
-        ...prev,
+      appendUserMessage(
         {
           id: genMessageId(),
           role: 'user',
@@ -2361,7 +2430,8 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
           screenshotPreview: currentAttachments[0].preview,
           screenshotPath: currentAttachments[0].path,
         },
-      ]);
+        currentAttachments,
+      );
       // Scroll to bottom when user sends message
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -2628,8 +2698,7 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
           return;
         }
 
-        setMessages((prev) => [
-          ...prev,
+        appendUserMessage(
           {
             id: genMessageId(),
             role: 'user',
@@ -2638,7 +2707,8 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
             screenshotPreview: currentAttachments[0]?.preview,
             screenshotPath: currentAttachments[0]?.path,
           },
-        ]);
+          currentAttachments,
+        );
 
         setTimeout(() => {
           messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -2790,8 +2860,7 @@ Provide only the answer, nothing else.`;
         : prev,
     );
 
-    setMessages((prev) => [
-      ...prev,
+    appendUserMessage(
       {
         id: genMessageId(),
         role: 'user',
@@ -2800,7 +2869,8 @@ Provide only the answer, nothing else.`;
         screenshotPreview: currentAttachments[0]?.preview,
         screenshotPath: currentAttachments[0]?.path,
       },
-    ]);
+      currentAttachments,
+    );
 
     // Scroll to bottom when user sends message
     setTimeout(() => {
@@ -4501,14 +4571,15 @@ Provide only the answer, nothing else.`;
                                         re-render every prior message — bailout fires on
                                         identity equality (msg, theme, callbacks). */}
                   {displayMessages.map((msg: Message) => (
-                    <MessageRow
-                      key={msg.id}
-                      msg={msg}
-                      isLightTheme={isLightTheme}
-                      appearance={appearance}
-                      onCopy={handleCopy}
-                      renderMessageText={renderMessageText}
-                    />
+	                    <MessageRow
+	                      key={msg.id}
+	                      msg={msg}
+	                      isLightTheme={isLightTheme}
+	                      appearance={appearance}
+	                      onCopy={handleCopy}
+	                      onOpenScreenshot={handleOpenScreenshot}
+	                      renderMessageText={renderMessageText}
+	                    />
                   ))}
 
                   {/* Active Recording State with Live Transcription */}
@@ -4668,14 +4739,21 @@ Provide only the answer, nothing else.`;
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <div className="flex gap-1.5 overflow-x-auto max-w-full pb-1">
-                      {attachedContext.map((ctx, idx) => (
-                        <div key={ctx.path} className="relative group/thumb flex-shrink-0">
-                          <img
-                            src={ctx.preview}
-                            alt={`Screenshot ${idx + 1}`}
-                            className={`h-10 w-auto rounded border ${isLightTheme ? 'border-black/15' : 'border-white/20'}`}
-                          />
+	                    <div className="flex gap-1.5 overflow-x-auto max-w-full pb-1">
+	                      {attachedContext.map((ctx, idx) => (
+	                        <div key={ctx.path} className="relative group/thumb flex-shrink-0">
+	                          <button
+	                            type="button"
+	                            onClick={() => handleOpenScreenshot(ctx)}
+	                            className="no-drag block"
+	                            title="Open screenshot"
+	                          >
+	                            <img
+	                              src={ctx.preview}
+	                              alt={`Screenshot ${idx + 1}`}
+	                              className={`h-10 w-auto rounded border transition-opacity hover:opacity-85 ${isLightTheme ? 'border-black/15' : 'border-white/20'}`}
+	                            />
+	                          </button>
                           <button
                             onClick={() =>
                               setAttachedContext((prev) => prev.filter((_, i) => i !== idx))
@@ -4959,9 +5037,49 @@ Provide only the answer, nothing else.`;
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
-    </div>
-  );
+	      </AnimatePresence>
+	      <AnimatePresence>
+	        {selectedScreenshot && (
+	          <motion.div
+	            initial={{ opacity: 0, y: 10, scale: 0.98 }}
+	            animate={{ opacity: 1, y: 0, scale: 1 }}
+	            exit={{ opacity: 0, y: 8, scale: 0.98 }}
+	            transition={{ duration: 0.15 }}
+	            className="no-drag mt-2 w-[min(900px,92vw)] rounded-2xl border border-white/12 bg-[#111113]/95 p-2 shadow-2xl backdrop-blur-2xl"
+	          >
+	            <div className="relative">
+	              <img
+	                src={selectedScreenshot.preview}
+	                alt="Screenshot preview"
+	                className="max-h-[70vh] w-full rounded-xl object-contain"
+	              />
+		              <button
+		                type="button"
+		                onClick={() => void handleSaveScreenshot(selectedScreenshot)}
+		                className="no-drag absolute right-10 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white shadow-lg transition-colors hover:bg-black/80"
+		                title="Save screenshot"
+		              >
+		                <Download className="h-4 w-4" />
+		              </button>
+		              <button
+		                type="button"
+		                onClick={() => setSelectedScreenshot(null)}
+		                className="no-drag absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white shadow-lg transition-colors hover:bg-black/80"
+		                title="Close"
+		              >
+		                <X className="h-4 w-4" />
+		              </button>
+		              {screenshotSaveError && (
+		                <div className="absolute bottom-2 left-2 right-2 rounded-lg bg-red-500/90 px-3 py-2 text-xs text-white shadow-lg">
+		                  {screenshotSaveError}
+		                </div>
+		              )}
+	            </div>
+	          </motion.div>
+	        )}
+	      </AnimatePresence>
+	    </div>
+	  );
 };
 
 export default AnswerCueInterface;

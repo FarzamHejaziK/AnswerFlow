@@ -243,6 +243,70 @@ interface TranscriptTimelineItem {
 
 type MeetingUsage = NonNullable<Meeting['usage']>[number];
 
+interface ScreenshotPreviewAttachment {
+    path?: string;
+    preview: string;
+}
+
+interface ScreenshotPreviewDialogProps {
+    screenshot: ScreenshotPreviewAttachment | null;
+    onClose: () => void;
+}
+
+const ScreenshotPreviewDialog: React.FC<ScreenshotPreviewDialogProps> = ({ screenshot, onClose }) => {
+    const [saveError, setSaveError] = useState<string | null>(null);
+
+    useEffect(() => {
+        setSaveError(null);
+    }, [screenshot?.preview]);
+
+    if (!screenshot) return null;
+
+    const handleSave = async () => {
+        try {
+            setSaveError(null);
+            const result = await window.electronAPI?.saveScreenshotFile?.(screenshot);
+            if (!result || result.canceled || result.success) return;
+            setSaveError(result.error || 'Could not save screenshot');
+        } catch (error: any) {
+            setSaveError(error?.message || 'Could not save screenshot');
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onClick={onClose}>
+            <div className="relative max-h-[86vh] w-full max-w-5xl" onClick={(event) => event.stopPropagation()}>
+                <img
+                    src={screenshot.preview}
+                    alt="Screenshot preview"
+                    className="max-h-[86vh] w-full rounded-lg border border-white/15 bg-black object-contain shadow-2xl"
+                />
+                <button
+                    type="button"
+                    onClick={handleSave}
+                    className="absolute right-12 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white transition-colors hover:bg-black/90"
+                    title="Save screenshot"
+                >
+                    <Download size={16} />
+                </button>
+                <button
+                    type="button"
+                    onClick={onClose}
+                    className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white transition-colors hover:bg-black/90"
+                    title="Close"
+                >
+                    <X size={16} />
+                </button>
+                {saveError && (
+                    <div className="absolute bottom-2 left-2 right-2 rounded-lg bg-red-500/90 px-3 py-2 text-xs text-white shadow-lg">
+                        {saveError}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 const isAssistantSpeaker = (speaker: string | undefined) => {
     const normalized = (speaker || '').toLowerCase();
     return ['assistant', 'ai', 'model'].includes(normalized);
@@ -875,6 +939,7 @@ const InterviewPrepPanel: React.FC<InterviewPrepPanelProps> = ({
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const docMenuRef = useRef<HTMLDivElement>(null);
     const [isDocMenuOpen, setIsDocMenuOpen] = useState(false);
+    const [selectedScreenshotPreview, setSelectedScreenshotPreview] = useState<ScreenshotPreviewAttachment | null>(null);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -1073,14 +1138,26 @@ const InterviewPrepPanel: React.FC<InterviewPrepPanelProps> = ({
                             <span>{item.label}{item.isLivePartial ? ' typing' : ''}</span>
                             <span className="font-normal text-text-tertiary">{formatTimelineTime(item.timestamp)}</span>
                         </div>
-                        <div className={`rounded-lg border px-3.5 py-3 ${bubbleTone}`}>
-                            {item.screenshotPreview && (
-                                <img
-                                    src={item.screenshotPreview}
-                                    alt="Screenshot preview"
-                                    className="mb-2 max-h-56 w-full rounded-md border border-white/10 object-cover"
-                                />
-                            )}
+	                        <div className={`rounded-lg border px-3.5 py-3 ${bubbleTone}`}>
+	                            {item.screenshotPreview && (
+	                                <button
+	                                    type="button"
+	                                    onClick={() =>
+	                                        setSelectedScreenshotPreview({
+	                                            path: item.screenshotPath,
+	                                            preview: item.screenshotPreview || '',
+	                                        })
+	                                    }
+	                                    className="mb-2 block w-full overflow-hidden rounded-md border border-white/10 transition-opacity hover:opacity-90"
+	                                    title="Open screenshot"
+	                                >
+	                                    <img
+	                                        src={item.screenshotPreview}
+	                                        alt="Screenshot preview"
+	                                        className="max-h-56 w-full object-cover"
+	                                    />
+	                                </button>
+	                            )}
                             {item.question && (
                                 <div className={`mb-2 pb-2 border-b ${isLight ? 'border-black/8' : 'border-white/10'}`}>
                                     <p className="text-[10px] uppercase tracking-wide font-semibold opacity-60">Prompt</p>
@@ -1300,11 +1377,15 @@ const InterviewPrepPanel: React.FC<InterviewPrepPanelProps> = ({
                             </button>
                         </div>
                     </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
+	                    </div>
+	                </div>
+	            </div>
+	            <ScreenshotPreviewDialog
+	                screenshot={selectedScreenshotPreview}
+	                onClose={() => setSelectedScreenshotPreview(null)}
+	            />
+	        </div>
+	    );
 };
 
 interface DocumentDetailsModalProps {
@@ -1523,6 +1604,7 @@ const TranscriptTimeline: React.FC<TranscriptTimelineProps> = ({ meeting, isLigh
     const items = buildTranscriptTimeline(meeting);
     const isFinalizing = isMeetingFinalizing(meeting);
     const StatusIcon = isFinalizing ? RefreshCw : CheckCircle;
+    const [selectedScreenshotPreview, setSelectedScreenshotPreview] = useState<ScreenshotPreviewAttachment | null>(null);
 
     return (
         <div className={`h-full min-h-0 flex flex-col rounded-lg border border-border-subtle ${isLight ? 'bg-bg-secondary' : 'bg-bg-primary'}`}>
@@ -1586,14 +1668,26 @@ const TranscriptTimeline: React.FC<TranscriptTimelineProps> = ({ meeting, isLigh
                                             <span>{item.label}</span>
                                             <span className="font-normal text-text-tertiary">{formatTimelineTime(item.timestamp)}</span>
                                         </div>
-                                        <div className={`rounded-lg border px-3.5 py-3 ${bubbleTone}`}>
-                                            {item.screenshotPreview && (
-                                                <img
-                                                    src={item.screenshotPreview}
-                                                    alt="Screenshot preview"
-                                                    className="mb-2 max-h-56 w-full rounded-md border border-white/10 object-cover"
-                                                />
-                                            )}
+	                                        <div className={`rounded-lg border px-3.5 py-3 ${bubbleTone}`}>
+	                                            {item.screenshotPreview && (
+	                                                <button
+	                                                    type="button"
+	                                                    onClick={() =>
+	                                                        setSelectedScreenshotPreview({
+	                                                            path: item.screenshotPath,
+	                                                            preview: item.screenshotPreview || '',
+	                                                        })
+	                                                    }
+	                                                    className="mb-2 block w-full overflow-hidden rounded-md border border-white/10 transition-opacity hover:opacity-90"
+	                                                    title="Open screenshot"
+	                                                >
+	                                                    <img
+	                                                        src={item.screenshotPreview}
+	                                                        alt="Screenshot preview"
+	                                                        className="max-h-56 w-full object-cover"
+	                                                    />
+	                                                </button>
+	                                            )}
                                             {item.question && (
                                                 <div className={`mb-2 pb-2 border-b ${isLight ? 'border-black/8' : 'border-white/10'}`}>
                                                     <p className="text-[10px] uppercase tracking-wide font-semibold opacity-60">Prompt</p>
@@ -1633,9 +1727,13 @@ const TranscriptTimeline: React.FC<TranscriptTimelineProps> = ({ meeting, isLigh
                 )}
             </div>
 
-            <MeetingConversationPanel meeting={meeting} isLight={isLight} />
-        </div>
-    );
+	            <MeetingConversationPanel meeting={meeting} isLight={isLight} />
+	            <ScreenshotPreviewDialog
+	                screenshot={selectedScreenshotPreview}
+	                onClose={() => setSelectedScreenshotPreview(null)}
+	            />
+	        </div>
+	    );
 };
 
 // Helper to format date groups

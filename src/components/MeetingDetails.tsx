@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useResolvedTheme } from '../hooks/useResolvedTheme';
-import { ArrowLeft, Search, Mail, Link, ChevronDown, Play, ArrowUp, Copy, Check, MoreHorizontal, Settings, ArrowRight, Monitor } from 'lucide-react';
+import { ArrowLeft, Search, Mail, Link, ChevronDown, Play, ArrowUp, Copy, Check, MoreHorizontal, Settings, ArrowRight, Monitor, X, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { genMessageId } from '../utils/messageId';
 import MeetingChatOverlay from './MeetingChatOverlay';
@@ -78,6 +78,11 @@ interface Meeting {
     }>;
 }
 
+interface ScreenshotPreviewAttachment {
+    path?: string;
+    preview: string;
+}
+
 interface MeetingDetailsProps {
     meeting: Meeting;
     onBack: () => void;
@@ -88,6 +93,8 @@ const MeetingDetails: React.FC<MeetingDetailsProps> = ({ meeting: initialMeeting
     const isLight = useResolvedTheme() === 'light';
     // We need local state for the meeting object to reflect optimistic updates
     const [meeting, setMeeting] = useState<Meeting>(initialMeeting);
+    const [selectedScreenshotPreview, setSelectedScreenshotPreview] = useState<ScreenshotPreviewAttachment | null>(null);
+    const [screenshotSaveError, setScreenshotSaveError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'summary' | 'transcript' | 'usage'>('summary');
     const [query, setQuery] = useState('');
     const [isCopied, setIsCopied] = useState(false);
@@ -123,6 +130,17 @@ const MeetingDetails: React.FC<MeetingDetailsProps> = ({ meeting: initialMeeting
         if (e.key === 'Enter' && query.trim()) {
             e.preventDefault();
             handleSubmitQuestion();
+        }
+    };
+
+    const handleSaveScreenshot = async (screenshot: ScreenshotPreviewAttachment) => {
+        try {
+            setScreenshotSaveError(null);
+            const result = await window.electronAPI?.saveScreenshotFile?.(screenshot);
+            if (!result || result.canceled || result.success) return;
+            setScreenshotSaveError(result.error || 'Could not save screenshot');
+        } catch (error: any) {
+            setScreenshotSaveError(error?.message || 'Could not save screenshot');
         }
     };
 
@@ -557,11 +575,24 @@ ${meeting.detailedSummary.keyPoints?.map(item => `- ${item}`).join('\n') || 'Non
                                                     <Monitor size={14} className="text-text-secondary" />
                                                 </div>
                                                 <div className="max-w-[560px]">
-                                                    <div className="text-[11px] text-text-tertiary mb-1.5 font-medium">{formatTime(interaction.timestamp)}</div>
-                                                    <div className="rounded-xl border border-border-subtle bg-bg-input/70 p-3">
-                                                        {interaction.screenshotPreview && (
-                                                            <img src={interaction.screenshotPreview} alt="Screenshot preview" className="mb-2 max-h-64 w-full rounded-lg border border-border-subtle object-cover" />
-                                                        )}
+	                                                    <div className="text-[11px] text-text-tertiary mb-1.5 font-medium">{formatTime(interaction.timestamp)}</div>
+	                                                    <div className="rounded-xl border border-border-subtle bg-bg-input/70 p-3">
+		                                                        {interaction.screenshotPreview && (
+		                                                            <button
+		                                                                type="button"
+		                                                                onClick={() => {
+		                                                                    setScreenshotSaveError(null);
+		                                                                    setSelectedScreenshotPreview({
+		                                                                        path: interaction.screenshotPath,
+		                                                                        preview: interaction.screenshotPreview || '',
+		                                                                    });
+		                                                                }}
+		                                                                className="mb-2 block w-full overflow-hidden rounded-lg border border-border-subtle transition-opacity hover:opacity-90"
+		                                                                title="Open screenshot"
+		                                                            >
+	                                                                <img src={interaction.screenshotPreview} alt="Screenshot preview" className="max-h-64 w-full object-cover" />
+	                                                            </button>
+	                                                        )}
                                                         <p className="text-text-secondary text-[13px] leading-relaxed">
                                                             {interaction.question || 'Screenshot attached'}
                                                         </p>
@@ -696,12 +727,44 @@ ${meeting.detailedSummary.keyPoints?.map(item => `- ${item}`).join('\n') || 'Non
                     transcript: meeting.transcript
                 }}
                 initialQuery={submittedQuery}
-                onNewQuery={(newQuery) => {
-                    setSubmittedQuery(newQuery);
-                }}
-            />
-        </div>
-    );
+	                onNewQuery={(newQuery) => {
+	                    setSubmittedQuery(newQuery);
+	                }}
+	            />
+	            {selectedScreenshotPreview && (
+	                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onClick={() => setSelectedScreenshotPreview(null)}>
+		                    <div className="relative max-h-[86vh] w-full max-w-5xl" onClick={(event) => event.stopPropagation()}>
+		                        <img
+		                            src={selectedScreenshotPreview.preview}
+		                            alt="Screenshot preview"
+		                            className="max-h-[86vh] w-full rounded-lg border border-white/15 bg-black object-contain shadow-2xl"
+		                        />
+		                        <button
+		                            type="button"
+		                            onClick={() => void handleSaveScreenshot(selectedScreenshotPreview)}
+		                            className="absolute right-12 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white transition-colors hover:bg-black/90"
+		                            title="Save screenshot"
+		                        >
+		                            <Download size={16} />
+		                        </button>
+		                        <button
+		                            type="button"
+		                            onClick={() => setSelectedScreenshotPreview(null)}
+		                            className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white transition-colors hover:bg-black/90"
+		                            title="Close"
+		                        >
+		                            <X size={16} />
+		                        </button>
+		                        {screenshotSaveError && (
+		                            <div className="absolute bottom-2 left-2 right-2 rounded-lg bg-red-500/90 px-3 py-2 text-xs text-white shadow-lg">
+		                                {screenshotSaveError}
+		                            </div>
+		                        )}
+		                    </div>
+	                </div>
+	            )}
+	        </div>
+	    );
 };
 
 export default MeetingDetails;

@@ -44,7 +44,7 @@ const CUSTOM_MODES = {
     ],
     sentinels: {
       refund_policy: 'prorated refund within 30 days of renewal',
-      audio: 'tccutil reset Microphone com.electron.natively',
+      audio: 'tccutil reset Microphone com.electron.answercue',
       known_issues: 'NAT-218',
       escalation: 'P1,founder,within 30 minutes',
       templates: 'empathetic_acknowledgement_alpha',
@@ -472,7 +472,7 @@ describe('Custom mode isolation (no foreign-mode bleed)', () => {
 // fixture). Deletion test asserts that removing the owning file removes the
 // sentinel from retrieval results entirely.
 const DELETION_PROBE = {
-  support: { sentinel: 'tccutil reset Microphone com.electron.natively', owner: 'support_audio_troubleshooting.txt' },
+  support: { sentinel: 'tccutil reset Microphone com.electron.answercue', owner: 'support_audio_troubleshooting.txt' },
   investor: { sentinel: 'PriceX', owner: 'investor_yc_application_draft.txt' },
   'exam-tutor': { sentinel: 'Laplace operator del squared phi equals', owner: 'exam_formula_sheet.txt' },
   'code-review': { sentinel: 'EmbeddingPipeline mock never resolved', owner: 'debug_test_results.json' },

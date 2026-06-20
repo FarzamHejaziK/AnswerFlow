@@ -28,7 +28,7 @@ export const SENTINELS = {
   },
   sales: {
     discountFloor: 'Acme enterprise discount floor is 17 percent',
-    competitor: 'Cluely lacks per-mode reference files',
+    competitor: 'legacy overlay lacks per-mode reference files',
     security: 'API keys stored via Electron safeStorage',
     playbook: 'Buying signal: ask about annual seats',
     pipeline: 'Enterprise pilot conversion 28%',

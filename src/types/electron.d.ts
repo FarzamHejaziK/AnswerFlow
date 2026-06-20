@@ -43,6 +43,13 @@ export interface ElectronAPI {
   deleteScreenshot: (
     path: string
   ) => Promise<{ success: boolean; error?: string }>
+  openScreenshotFile: (
+    path: string
+  ) => Promise<{ success: boolean; error?: string }>
+  saveScreenshotFile: (screenshot: {
+    path?: string
+    preview?: string
+  }) => Promise<{ success: boolean; error?: string; canceled?: boolean; path?: string }>
   onScreenshotTaken: (
     callback: (data: { path: string; preview: string }) => void
   ) => () => void

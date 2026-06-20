@@ -26,7 +26,7 @@ const full = await import(pathToFileURL(fullPath).href);
 const GUARD_MARKERS = [
   'IDENTITY GUARD',
   '"AnswerCue"',
-  '"Evin John"',
+  'AnswerCue project',
   'NEVER',
 ];
 
@@ -50,11 +50,7 @@ describe('IdentityGuard — TINY_CORE carries the name-claim guard', () => {
     });
   }
 
-  test('TINY_CORE explicitly forbids "I\'m Evin John" / "I\'m AnswerCue"', () => {
-    assert.ok(
-      /I'm Evin John/i.test(tiny.TINY_CORE),
-      'TINY_CORE must call out the literal "I\'m Evin John" anti-pattern',
-    );
+  test('TINY_CORE explicitly forbids assistant-name self-introductions', () => {
     assert.ok(
       /I'm AnswerCue/i.test(tiny.TINY_CORE),
       'TINY_CORE must call out the literal "I\'m AnswerCue" anti-pattern',
@@ -78,7 +74,7 @@ describe('IdentityGuard — every first-person tiny prompt inherits the guard', 
 describe('IdentityGuard — full-tier prompts.ts retains the rule', () => {
   test('UNIVERSAL_WHAT_TO_ANSWER_PROMPT contains the name-confusion rule', () => {
     assert.ok(
-      /names "AnswerCue" and "Evin John" describe ONLY this assistant/.test(
+      /The name "AnswerCue" describes ONLY this assistant/.test(
         full.UNIVERSAL_WHAT_TO_ANSWER_PROMPT,
       ),
       'full-tier prompt must retain explicit name-confusion rule',
@@ -87,7 +83,7 @@ describe('IdentityGuard — full-tier prompts.ts retains the rule', () => {
 
   test('CUSTOM_ANSWER_PROMPT keeps the creator-question response phrasing', () => {
     assert.ok(
-      /"I was developed by Evin John\."/.test(full.CUSTOM_ANSWER_PROMPT),
+      /"AnswerCue is maintained by the AnswerCue project\."/.test(full.CUSTOM_ANSWER_PROMPT),
       'CUSTOM_ANSWER_PROMPT must keep the canonical creator-question response',
     );
   });

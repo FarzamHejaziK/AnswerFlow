@@ -7,6 +7,11 @@ interface ElectronAPI {
   getRecognitionLanguages: () => Promise<Record<string, any>>;
   getScreenshots: () => Promise<Array<{ path: string; preview: string }>>;
   deleteScreenshot: (path: string) => Promise<{ success: boolean; error?: string }>;
+  openScreenshotFile: (path: string) => Promise<{ success: boolean; error?: string }>;
+  saveScreenshotFile: (screenshot: {
+    path?: string;
+    preview?: string;
+  }) => Promise<{ success: boolean; error?: string; canceled?: boolean; path?: string }>;
   onScreenshotTaken: (callback: (data: { path: string; preview: string }) => void) => () => void;
   onScreenshotAttached: (callback: (data: { path: string; preview: string }) => void) => () => void;
   onCaptureAndProcess: (callback: (data: { path: string; preview: string }) => void) => () => void;
@@ -865,6 +870,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   takeSelectiveScreenshot: () => ipcRenderer.invoke('take-selective-screenshot'),
   getScreenshots: () => ipcRenderer.invoke('get-screenshots'),
   deleteScreenshot: (path: string) => ipcRenderer.invoke('delete-screenshot', path),
+  openScreenshotFile: (path: string) => ipcRenderer.invoke('open-screenshot-file', path),
+  saveScreenshotFile: (screenshot: { path?: string; preview?: string }) =>
+    ipcRenderer.invoke('save-screenshot-file', screenshot),
 
   // Event listeners
   onScreenshotTaken: (callback: (data: { path: string; preview: string }) => void) => {
