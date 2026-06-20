@@ -137,6 +137,19 @@ jobs:
           echo "::warning::Apple notarization secrets are not configured; building unsigned macOS artifacts."
           echo "MACOS_NOTARIZATION_AVAILABLE=false" >> "$GITHUB_ENV"
 
+      - name: Require signing for tagged macOS releases
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          set -euo pipefail
+          if [ "${MACOS_SIGNING_AVAILABLE:-false}" != "true" ]; then
+            echo "::error::macOS signing secrets are missing. Refusing to publish unsigned release artifacts."
+            exit 1
+          fi
+          if [ "${MACOS_NOTARIZATION_AVAILABLE:-false}" != "true" ]; then
+            echo "::error::Apple notarization secrets are missing. Refusing to publish non-notarized release artifacts."
+            exit 1
+          fi
+
       - name: Build macOS artifacts
         env:
           # App Store Connect API-key strategy (built-in notarytool + DMG hook):
@@ -202,6 +215,21 @@ jobs:
           name: answercue-macos
           path: |
             release/*.dmg
+            release/*.blockmap
             release/*.zip
-            release/latest-mac.yml
+            release/latest*.yml
           if-no-files-found: error
+
+      - name: Upload artifacts to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          assets=(release/*.dmg release/*.blockmap release/*.zip release/latest*.yml)
+          if [ ${#assets[@]} -eq 0 ]; then
+            echo "No macOS release assets found in release/"
+            exit 1
+          fi
+          gh release upload "$GITHUB_REF_NAME" "${assets[@]}" --repo "$GITHUB_REPOSITORY" --clobber
