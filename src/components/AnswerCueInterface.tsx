@@ -2174,6 +2174,16 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
     [],
   );
 
+  const consumeCurrentAttachments = useCallback((): ScreenshotAttachment[] => {
+    const pending = pendingCaptureRef.current;
+    let currentAttachments = attachedContext;
+    if (pending && !currentAttachments.some((s) => s.path === pending.path)) {
+      currentAttachments = [...currentAttachments, pending].slice(-5);
+    }
+    pendingCaptureRef.current = null;
+    return currentAttachments;
+  }, [attachedContext]);
+
   const handleWhatToSay = async (promptInstruction?: string | React.MouseEvent) => {
     if (!tryBeginOverlayAction('what_to_say')) return;
     const dynamicPromptInstruction =
@@ -2186,11 +2196,7 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
     // Capture and clear attached image context.
     // Also merge in any screenshot from the capture-and-process shortcut that
     // arrived via pendingCaptureRef before the React state flush (React 18 fix).
-    const pending = pendingCaptureRef.current;
-    let currentAttachments = attachedContext;
-    if (pending && !currentAttachments.some((s) => s.path === pending.path)) {
-      currentAttachments = [...currentAttachments, pending].slice(-5);
-    }
+    const currentAttachments = consumeCurrentAttachments();
 
     if (currentAttachments.length > 0) {
       setAttachedContext([]);
@@ -2371,7 +2377,7 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
     setIsProcessing(true);
     pinAnswerPanel();
 
-    const currentAttachments = attachedContext;
+    const currentAttachments = consumeCurrentAttachments();
     if (currentAttachments.length > 0) {
       setAttachedContext([]);
       // Show the attached image in chat
@@ -2417,7 +2423,7 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
     prepareIntelligenceStreamPlaceholder('what_to_answer');
     analytics.trackCommandExecuted('brainstorm');
 
-    const currentAttachments = attachedContext;
+    const currentAttachments = consumeCurrentAttachments();
     if (currentAttachments.length > 0) {
       setAttachedContext([]);
       // Show the attached image in chat
@@ -2654,7 +2660,7 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
           .finalizeMicSTT()
           .catch((err) => console.error('[AnswerCueInterface] Failed to send finalizeMicSTT:', err));
 
-        const currentAttachments = attachedContext;
+        const currentAttachments = consumeCurrentAttachments();
         setAttachedContext([]);
 
         const question = (
@@ -2834,7 +2840,7 @@ Provide only the answer, nothing else.`;
     manualSubmitInFlightRef.current = true;
     lastManualSubmitRef.current = { text: userText, atMs: nowMs };
 
-    const currentAttachments = attachedContext;
+    const currentAttachments = consumeCurrentAttachments();
 
     // Clear inputs immediately
     setInputValue('');
