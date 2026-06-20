@@ -32,7 +32,7 @@
  * (APPLE_KEYCHAIN_PROFILE, e.g. `natively-notary`). No-op if none are present.
  */
 
-const { execFileSync, execSync } = require('child_process');
+const { execFileSync, execSync, spawnSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -118,10 +118,15 @@ function verifyDmgAppSignature(dmgPath) {
     const appInDmg = path.join(mount, app);
     // Throws (non-zero exit) if the embedded signature is invalid — exactly the eb bug.
     execFileSync('codesign', ['--verify', '--deep', '--strict', '--verbose=2', appInDmg], { stdio: 'inherit' });
-    const sp = execFileSync('spctl', ['-a', '-t', 'execute', '-vv', appInDmg], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
-    if (!/Notarized Developer ID|accepted/.test(sp)) {
+    // spctl writes its human-readable assessment to stderr on macOS, even on
+    // success. Capture both streams so a valid notarized app is not mistaken for
+    // an empty/failed assessment.
+    const spctl = spawnSync('spctl', ['-a', '-t', 'execute', '-vvv', appInDmg], { encoding: 'utf8' });
+    const sp = `${spctl.stdout || ''}${spctl.stderr || ''}`.trim();
+    if (spctl.error || spctl.status !== 0 || !/Notarized Developer ID|accepted/i.test(sp)) {
       throw new Error(`[dmg] app inside ${path.basename(dmgPath)} not Gatekeeper-accepted: ${sp}`);
     }
+    console.log(sp);
     console.log(`[dmg] verified embedded app signature + Gatekeeper inside ${path.basename(dmgPath)} ✅`);
   } finally {
     try { execFileSync('hdiutil', ['detach', mount, '-quiet'], { stdio: 'ignore' }); } catch { /* best-effort */ }
