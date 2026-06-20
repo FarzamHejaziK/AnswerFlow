@@ -20,6 +20,7 @@ const modPath = path.resolve(__dirname, '../../../dist-electron/electron/utils/c
 const { validateImagePath } = await import(pathToFileURL(modPath).href);
 
 const MAC_USER_DATA = '/Users/alice/Library/Application Support/AnswerCue';
+const WIN_USER_DATA = 'C:\\Users\\Alice\\AppData\\Roaming\\AnswerCue';
 
 describe('validateImagePath — macOS userData ordering (obs 2631)', () => {
   test('allows screenshot path inside userData even though it starts with /Users/', () => {
@@ -50,7 +51,19 @@ describe('validateImagePath — macOS userData ordering (obs 2631)', () => {
     assert.equal(r.isValid, false, 'traversal escape must be blocked even under userData prefix');
   });
 
-  test('blocks Windows drive paths', () => {
+  test('allows Windows screenshot path inside userData', () => {
+    const p = `${WIN_USER_DATA}\\screenshots\\abc-123.png`;
+    const r = validateImagePath(p, WIN_USER_DATA);
+    assert.equal(r.isValid, true, `should allow ${p}, got ${r.reason}`);
+  });
+
+  test('allows Windows paths with case differences inside userData', () => {
+    const p = 'c:\\users\\alice\\appdata\\roaming\\answercue\\screenshots\\abc-123.png';
+    const r = validateImagePath(p, WIN_USER_DATA);
+    assert.equal(r.isValid, true, `should allow case-insensitive Windows match, got ${r.reason}`);
+  });
+
+  test('blocks Windows drive paths outside userData', () => {
     const r = validateImagePath('C:\\Windows\\System32\\config\\SAM', MAC_USER_DATA);
     assert.equal(r.isValid, false);
   });

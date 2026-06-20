@@ -245,7 +245,7 @@ export function validateUrlForSsrf(urlString: string): { isValid: boolean; reaso
  * - Path traversal sequences (/../ or /..\)
  * - Absolute paths outside app-owned directories
  * - Sensitive system paths (/etc/, /home/, /var/, etc.)
- * - Windows drive paths (C:\, D:\, etc.)
+ * - Windows drive paths (C:\, D:\, etc.) outside app-owned directories
  * - Symlink escapes to directories outside allowed roots
  *
  * Allowed paths (allowlist):
@@ -258,39 +258,59 @@ export function validateUrlForSsrf(urlString: string): { isValid: boolean; reaso
  * @param userDataPath - The app's userData directory path
  * @returns { isValid: boolean, reason?: string }
  */
+function isWindowsAbsolutePath(candidate: string): boolean {
+    return /^[A-Za-z]:[\\/]/.test(candidate);
+}
+
+function normalizeForPathAllowlist(candidate: string): string {
+    const slashPath = candidate.replace(/\\/g, '/');
+    const normalized = isWindowsAbsolutePath(slashPath)
+        ? path.win32.normalize(slashPath).replace(/\\/g, '/')
+        : path.posix.normalize(slashPath);
+    return normalized.replace(/\/+$/, '');
+}
+
+function isSameOrChildPath(candidate: string, root: string, caseInsensitive: boolean): boolean {
+    const normalizedCandidate = caseInsensitive ? candidate.toLowerCase() : candidate;
+    const normalizedRoot = caseInsensitive ? root.toLowerCase() : root;
+    return normalizedCandidate === normalizedRoot || normalizedCandidate.startsWith(`${normalizedRoot}/`);
+}
+
 export function validateImagePath(imagePath: string, userDataPath: string): { isValid: boolean; reason?: string } {
     if (!imagePath || typeof imagePath !== 'string') {
         return { isValid: false, reason: 'Image path must be a non-empty string' };
     }
 
-    // Normalize path separators
-    const normalizedPath = imagePath.replace(/\\/g, '/');
+    if (!userDataPath || typeof userDataPath !== 'string') {
+        return { isValid: false, reason: 'App data directory is not available' };
+    }
+
+    // Normalize path separators before traversal checks and allowlist comparison.
+    const slashNormalizedPath = imagePath.replace(/\\/g, '/');
 
     // Block path traversal
-    if (normalizedPath.includes('/../') || normalizedPath.includes('/..\\')) {
+    if (slashNormalizedPath.split('/').includes('..')) {
         return { isValid: false, reason: 'Path traversal sequences are not allowed' };
     }
 
-    // Block Windows drive paths
-    if (/^[A-Za-z]:\\/.test(imagePath)) {
-        return { isValid: false, reason: 'Windows absolute paths are not allowed' };
-    }
-
-    // Normalize userDataPath for comparison
-    const normalizedUserData = userDataPath.replace(/\\/g, '/');
+    // Normalize paths for comparison. Windows paths are case-insensitive, so
+    // compare lowercased values when either side is a Windows absolute path.
+    const normalizedPath = normalizeForPathAllowlist(imagePath);
+    const normalizedUserData = normalizeForPathAllowlist(userDataPath);
+    const compareCaseInsensitive =
+        isWindowsAbsolutePath(normalizedPath) || isWindowsAbsolutePath(normalizedUserData);
 
     // Define allowed roots (app-owned directories only)
     const allowedRoots = [
         normalizedUserData,
-        path.join(normalizedUserData, 'screenshots').replace(/\\/g, '/'),
-        path.join(normalizedUserData, 'extra_screenshots').replace(/\\/g, '/'),
+        normalizeForPathAllowlist(`${normalizedUserData}/screenshots`),
+        normalizeForPathAllowlist(`${normalizedUserData}/extra_screenshots`),
     ].filter(Boolean);
 
     // Resolve the image path to its real path to detect symlink escapes
     let resolvedPath: string;
     try {
-        resolvedPath = fs.realpathSync(imagePath);
-        resolvedPath = resolvedPath.replace(/\\/g, '/');
+        resolvedPath = normalizeForPathAllowlist(fs.realpathSync(imagePath));
     } catch {
         // If realpath fails, the file doesn't exist or is inaccessible.
         // We still want to validate the requested path for security.
@@ -298,14 +318,10 @@ export function validateImagePath(imagePath: string, userDataPath: string): { is
         resolvedPath = normalizedPath;
     }
 
-    // Normalize userData for comparison (ensure trailing slash for prefix matching)
-    const normalizedUserDataWithSlash = normalizedUserData ? normalizedUserData.replace(/\/?$/, '/') : '';
-
     // Check if resolved path is within any allowed root
-    const isAllowed = allowedRoots.some(allowedRoot => {
-        const allowedWithSlash = allowedRoot.replace(/\/?$/, '/');
-        return resolvedPath.startsWith(allowedWithSlash) || resolvedPath === allowedRoot;
-    });
+    const isAllowed = allowedRoots.some(allowedRoot =>
+        isSameOrChildPath(resolvedPath, allowedRoot, compareCaseInsensitive)
+    );
 
     if (isAllowed) {
         return { isValid: true };
@@ -313,13 +329,17 @@ export function validateImagePath(imagePath: string, userDataPath: string): { is
 
     // Also check the original path against allowed roots as fallback
     // This handles cases where the resolved path is the same as normalized
-    const originalIsAllowed = allowedRoots.some(allowedRoot => {
-        const allowedWithSlash = allowedRoot.replace(/\/?$/, '/');
-        return normalizedPath.startsWith(allowedWithSlash) || normalizedPath === allowedRoot;
-    });
+    const originalIsAllowed = allowedRoots.some(allowedRoot =>
+        isSameOrChildPath(normalizedPath, allowedRoot, compareCaseInsensitive)
+    );
 
     if (originalIsAllowed) {
         return { isValid: true };
+    }
+
+    // Block Windows drive paths that are not inside the app-owned allowlist.
+    if (isWindowsAbsolutePath(normalizedPath)) {
+        return { isValid: false, reason: 'Windows absolute paths must be inside app directory or screenshots folder' };
     }
 
     // Block Unix absolute paths that are outside userData
