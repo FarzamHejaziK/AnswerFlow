@@ -44,6 +44,9 @@ jobs:
       - name: Build Windows native module
         run: npm run build:native
 
+      - name: Verify package inputs exist
+        run: npm run verify:package-inputs -- --require-native
+
       - name: Package Windows x64 installer
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -60,6 +63,9 @@ jobs:
           } else {
             npx electron-builder --config electron-builder.windows.cjs --win nsis:x64 --publish never
           }
+
+      - name: Verify packaged renderer exists
+        run: node scripts/verify-package-inputs.js release/win-unpacked/resources/app.asar
 
       - name: Upload Windows installer
         uses: actions/upload-artifact@v4

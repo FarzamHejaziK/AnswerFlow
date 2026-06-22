@@ -53,7 +53,7 @@ test('screenshot attachment creates a visible, deduped chat-history row with a p
   );
   assert.match(
     answerCueSource,
-    /onClick=\{\(\) =>\s*onOpenScreenshot\(\{ path: msg\.screenshotPath, preview: msg\.screenshotPreview \}\)\s*\}[\s\S]*src=\{msg\.screenshotPreview\}[\s\S]*alt="Screenshot preview"/,
+    /onClick=\{\(\) =>\s*onOpenScreenshot\(\{ path: msg\.screenshotPath!, preview: msg\.screenshotPreview! \}\)\s*\}[\s\S]*src=\{msg\.screenshotPreview\}[\s\S]*alt="Screenshot preview"/,
     'message rows should render the screenshot thumbnail, not only a text label',
   );
 });
@@ -78,6 +78,21 @@ test('chat screenshot thumbnails open in-app previews, can be saved, and consume
     answerCueSource,
     /appendUserMessage\([\s\S]*screenshotPreview: currentAttachments\[0\]\.preview[\s\S]*currentAttachments,\s*\);/,
     'screenshot quick actions should use the duplicate-filtering append helper',
+  );
+  assert.match(
+    answerCueSource,
+    /const latestVisibleScreenshotRef = useRef<ScreenshotAttachment \| null>\(null\);/,
+    'renderer should remember the latest visible screenshot attachment',
+  );
+  assert.match(
+    answerCueSource,
+    /latestVisibleScreenshotRef\.current = latestScreenshot[\s\S]*path: latestScreenshot\.screenshotPath![\s\S]*preview: latestScreenshot\.screenshotPreview!/,
+    'visible screenshot tracking should keep both path and preview available',
+  );
+  assert.match(
+    answerCueSource,
+    /if \(currentAttachments\.length === 0 && latestVisibleScreenshotRef\.current\?\.path\) \{[\s\S]*currentAttachments = \[latestVisibleScreenshotRef\.current\];[\s\S]*\}/,
+    'What to Answer should reuse the latest visible screenshot when no pending screenshot remains',
   );
   assert.match(
     answerCueSource,

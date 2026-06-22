@@ -27,8 +27,8 @@ jobs:
       - name: Build Electron main process
         run: npm run build:electron
 
-      - name: Verify packaged entrypoint exists
-        run: test -f dist-electron/electron/main.js
+      - name: Verify package inputs exist
+        run: npm run verify:package-inputs
 
   api-smoke:
     # Runs weekly (Monday 09:00 UTC) and on demand via workflow_dispatch.
