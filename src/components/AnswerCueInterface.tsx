@@ -1416,26 +1416,10 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
 
   const handleScreenshotAttach = (data: { path: string; preview: string }) => {
     setIsExpanded(true);
-    setMessages((prev) => {
-      if (prev.some((m) => m.screenshotPath === data.path)) return prev;
-      return [
-        ...prev,
-        {
-          id: genMessageId(),
-          role: 'user',
-          text: '',
-          hasScreenshot: true,
-          screenshotPreview: data.preview,
-          screenshotPath: data.path,
-          intent: 'screenshot_attachment',
-        },
-      ];
-    });
     setAttachedContext((prev) => {
-      // Prevent duplicates and cap at 5
       if (prev.some((s) => s.path === data.path)) return prev;
       const updated = [...prev, data];
-      return updated.slice(-5); // Keep last 5
+      return updated.slice(-5);
     });
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

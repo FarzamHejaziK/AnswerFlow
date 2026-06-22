@@ -34,22 +34,27 @@ function sliceBetween(source, startNeedle, endNeedle) {
   return source.slice(start, end);
 }
 
-test('screenshot attachment creates a visible, deduped chat-history row with a preview', () => {
+test('screenshot attachment stays in the pending tray until it is used by a turn', () => {
   const attachBody = sliceBetween(
     answerCueSource,
     'const handleScreenshotAttach = (data: { path: string; preview: string }) => {',
     '  // STT Status listener',
   );
 
-  assert.match(
+  assert.doesNotMatch(
     attachBody,
-    /setMessages\(\(prev\)\s*=>\s*{\s*if\s*\(prev\.some\(\(m\)\s*=>\s*m\.screenshotPath\s*===\s*data\.path\)\)\s*return prev;/,
-    'screenshot attach should dedupe history rows by screenshot path',
+    /setMessages\(/,
+    'taking a screenshot should not create a standalone empty chat-history row',
   );
   assert.match(
     attachBody,
-    /hasScreenshot:\s*true,[\s\S]*screenshotPreview:\s*data\.preview,[\s\S]*screenshotPath:\s*data\.path,/,
-    'screenshot attach should append a user history row carrying preview and path',
+    /setAttachedContext\(\(prev\)\s*=>\s*{\s*if\s*\(prev\.some\(\(s\)\s*=>\s*s\.path\s*===\s*data\.path\)\)\s*return prev;/,
+    'screenshot attach should dedupe pending attachments by path',
+  );
+  assert.match(
+    attachBody,
+    /return updated\.slice\(-5\);/,
+    'screenshot attach should cap the pending attachment tray',
   );
   assert.match(
     answerCueSource,
@@ -58,7 +63,7 @@ test('screenshot attachment creates a visible, deduped chat-history row with a p
   );
 });
 
-test('chat screenshot thumbnails open in-app previews, can be saved, and consumed attachments are not duplicated', () => {
+test('chat screenshot thumbnails open in-app previews, can be saved, and used attachments render on the user turn', () => {
   assert.match(
     answerCueSource,
     /const handleOpenScreenshot = useCallback\(\(screenshot: ScreenshotPreviewAttachment\) => \{[\s\S]*setSelectedScreenshot\(screenshot\);/,
@@ -72,7 +77,7 @@ test('chat screenshot thumbnails open in-app previews, can be saved, and consume
   assert.match(
     answerCueSource,
     /const appendUserMessage = useCallback\([\s\S]*existing\.intent === 'screenshot_attachment'[\s\S]*consumedPaths\.has\(existing\.screenshotPath\)/,
-    'submitting a screenshot should remove its pending attachment row before appending the user turn',
+    'append helper should still collapse any legacy pending screenshot rows before appending the user turn',
   );
   assert.match(
     answerCueSource,
