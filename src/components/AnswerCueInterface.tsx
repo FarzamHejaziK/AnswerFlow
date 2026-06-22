@@ -2205,7 +2205,6 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
       typeof promptInstruction === 'string' ? promptInstruction : undefined;
     setIsExpanded(true);
     setIsProcessing(true);
-    prepareIntelligenceStreamPlaceholder('what_to_answer');
     analytics.trackCommandExecuted('what_to_say');
 
     // Capture and clear attached image context.
@@ -2232,6 +2231,7 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 50);
     }
+    prepareIntelligenceStreamPlaceholder('what_to_answer');
 
     try {
       // Pass imagePath if attached

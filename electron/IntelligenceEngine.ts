@@ -687,6 +687,9 @@ export class IntelligenceEngine extends EventEmitter {
                     break;
                 }
                 fullAnswer += token;
+                if (!isSpeculative) {
+                    this.emit('suggested_answer_token', token, question || 'inferred', confidence);
+                }
             }
 
             if (streamAborted) {
@@ -740,7 +743,6 @@ export class IntelligenceEngine extends EventEmitter {
                 confidence,
             });
 
-            this.emit('suggested_answer_token', fullAnswer, question || 'inferred', confidence);
             this.session.addAssistantMessage(fullAnswer);
 
             this.session.pushUsage({
