@@ -421,6 +421,7 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
   const [inputValue, setInputValue] = useState('');
   const { shortcuts, isShortcutPressed } = useShortcuts();
   const [messages, setMessages] = useState<Message[]>([]);
+  const latestVisibleScreenshotRef = useRef<ScreenshotAttachment | null>(null);
   const [selectedScreenshot, setSelectedScreenshot] = useState<ScreenshotPreviewAttachment | null>(
     null,
   );
@@ -1307,6 +1308,17 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
 
   // Build conversation context from messages
   useEffect(() => {
+    const latestScreenshot = [...messages]
+      .reverse()
+      .find((m) => m.role === 'user' && m.hasScreenshot && m.screenshotPath && m.screenshotPreview);
+
+    latestVisibleScreenshotRef.current = latestScreenshot
+      ? {
+          path: latestScreenshot.screenshotPath!,
+          preview: latestScreenshot.screenshotPreview!,
+        }
+      : null;
+
     const context = messages
       .filter((m) => m.role !== 'user' || !m.hasScreenshot)
       .map(
@@ -2179,6 +2191,9 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
     let currentAttachments = attachedContext;
     if (pending && !currentAttachments.some((s) => s.path === pending.path)) {
       currentAttachments = [...currentAttachments, pending].slice(-5);
+    }
+    if (currentAttachments.length === 0 && latestVisibleScreenshotRef.current?.path) {
+      currentAttachments = [latestVisibleScreenshotRef.current];
     }
     pendingCaptureRef.current = null;
     return currentAttachments;
