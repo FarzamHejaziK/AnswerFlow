@@ -24,30 +24,35 @@
   color-scheme: dark;
 
   /* --- SEMANTIC TOKEN SYSTEM (DEFAULT: DARK) --- */
-  /* Codex-inspired neutral shell: charcoal canvas, low-chroma panels, warm cue accent. */
-  --bg-primary: #181818;
-  --bg-secondary: #1f1f1f;
-  --bg-sidebar: #141414;
-  --bg-main: #181818;
-  --bg-card: #202020;
-  --bg-elevated: #252525;
-  --bg-input: #2f2f2f;
-  --bg-component: #2a2a2a;
-  --bg-toggle-switch: #3a3a3a;
-  --bg-item-surface: #262626;
-  --bg-item-active: #303030;
+  /* AnswerCue brand shell: deep navy surfaces with blue, violet, and pink cues. */
+  --brand-ink: #071426;
+  --brand-blue: #1769ff;
+  --brand-violet: #7c4dff;
+  --brand-pink: #e76bce;
 
-  --text-primary: #f4f4f5;
-  --text-secondary: #b4b4b8;
-  --text-tertiary: #747478;
+  --bg-primary: #090d18;
+  --bg-secondary: #101625;
+  --bg-sidebar: #070b14;
+  --bg-main: #0b1020;
+  --bg-card: #121a2b;
+  --bg-elevated: #172033;
+  --bg-input: #1a2438;
+  --bg-component: #172238;
+  --bg-toggle-switch: #26334f;
+  --bg-item-surface: #141d30;
+  --bg-item-active: rgba(124, 77, 255, 0.18);
 
-  --border-subtle: rgba(255, 255, 255, 0.075);
-  --border-muted: rgba(255, 255, 255, 0.12);
+  --text-primary: #f7f9ff;
+  --text-secondary: #b7c2d8;
+  --text-tertiary: #7f8aa3;
 
-  --accent-primary: #f97316;
-  --accent-muted: rgba(249, 115, 22, 0.15);
-  --accent-ring: rgba(249, 115, 22, 0.24);
-  --accent-border: rgba(249, 115, 22, 0.42);
+  --border-subtle: rgba(187, 202, 255, 0.10);
+  --border-muted: rgba(187, 202, 255, 0.16);
+
+  --accent-primary: #2f7cff;
+  --accent-muted: rgba(124, 77, 255, 0.18);
+  --accent-ring: rgba(124, 77, 255, 0.30);
+  --accent-border: rgba(124, 77, 255, 0.48);
 
   --overlay-bg: rgba(24, 24, 24, 0.72);
 
@@ -82,48 +87,48 @@
   --overlay-transcript-blur: calc(var(--overlay-opacity) * 6px);
 
   /* Primary Action Button Defaults (Dark) */
-  --btn-primary-bg: #f97316;
-  --btn-primary-hover: #fb923c;
-  --btn-primary-disabled-bg: rgba(249, 115, 22, 0.14);
-  --btn-primary-disabled-border: rgba(249, 115, 22, 0.18);
-  --btn-primary-disabled-text: rgba(251, 146, 60, 0.45);
-  --btn-primary-shadow-color: rgba(249, 115, 22, 0.24);
+  --btn-primary-bg: #1769ff;
+  --btn-primary-hover: #7c4dff;
+  --btn-primary-disabled-bg: rgba(124, 77, 255, 0.14);
+  --btn-primary-disabled-border: rgba(124, 77, 255, 0.18);
+  --btn-primary-disabled-text: rgba(183, 194, 216, 0.45);
+  --btn-primary-shadow-color: rgba(23, 105, 255, 0.28);
 }
 
 [data-theme='light'] {
   color-scheme: light;
 
   /* ── Canvas / page layer ── */
-  --bg-primary:        #f4f4f5;
-  --bg-secondary:      #ececec;
+  --bg-primary:        #f6f8ff;
+  --bg-secondary:      #eef3ff;
 
   /* ── Settings modal surfaces ── */
-  --bg-main:           #f7f7f8;
+  --bg-main:           #f8faff;
   --bg-sidebar:        #ffffff;
   --bg-elevated:       #ffffff;
   --bg-card:           #ffffff;
-  --bg-input:          #eeeeef;
+  --bg-input:          #edf2ff;
 
   /* ── Interactive elements ── */
-  --bg-component:      #e8e8ea;
-  --bg-item-surface:   #efeff0;
-  --bg-item-active:    rgba(249, 115, 22, 0.10);
-  --bg-toggle-switch:  #d2d2d5;
+  --bg-component:      #e8efff;
+  --bg-item-surface:   #f0f4ff;
+  --bg-item-active:    rgba(23, 105, 255, 0.10);
+  --bg-toggle-switch:  #d4def5;
 
   /* ── Typography — Tailwind gray scale, proven for readability ── */
-  --text-primary:      #1c1c1f;
-  --text-secondary:    #6b6b70;
-  --text-tertiary:     #96969d;
+  --text-primary:      #071426;
+  --text-secondary:    #526078;
+  --text-tertiary:     #8290aa;
 
   /* ── Borders — barely-there structural lines ── */
-  --border-subtle:     rgba(0, 0, 0, 0.075);
-  --border-muted:      rgba(0, 0, 0, 0.13);
+  --border-subtle:     rgba(7, 20, 38, 0.09);
+  --border-muted:      rgba(7, 20, 38, 0.15);
 
   /* ── Accent ── */
-  --accent-primary:    #c2410c;
-  --accent-muted:      rgba(194, 65, 12, 0.10);
-  --accent-ring:       rgba(194, 65, 12, 0.18);
-  --accent-border:     rgba(194, 65, 12, 0.34);
+  --accent-primary:    #1769ff;
+  --accent-muted:      rgba(124, 77, 255, 0.10);
+  --accent-ring:       rgba(124, 77, 255, 0.22);
+  --accent-border:     rgba(124, 77, 255, 0.38);
 
   /* ── Overlay system (in-meeting floating UI) ── */
   /* Frosted white glass — lighter than dark mode for less visual weight    */
@@ -158,12 +163,12 @@
   --overlay-transcript-blur: calc(var(--overlay-opacity) * 5px);
 
   /* Primary Action Button (Light) */
-  --btn-primary-bg: #c2410c;
-  --btn-primary-hover: #9a3412;
+  --btn-primary-bg: #1769ff;
+  --btn-primary-hover: #7c4dff;
   --btn-primary-disabled-bg: var(--bg-input);
   --btn-primary-disabled-border: var(--border-subtle);
   --btn-primary-disabled-text: var(--text-tertiary);
-  --btn-primary-shadow-color: rgba(0, 0, 0, 0.05);
+  --btn-primary-shadow-color: rgba(23, 105, 255, 0.14);
 }
 
 [data-theme='light'] .force-black-icon {

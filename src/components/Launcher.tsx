@@ -4473,7 +4473,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
                                         </section>
 
                                         <section className={`rounded-lg border border-border-subtle ${isLight ? 'bg-bg-elevated' : 'bg-bg-secondary'} p-3`}>
-                                            <div className={`rounded-xl p-4 border border-border-subtle flex items-center justify-between gap-3 transition-all ${isLight ? 'bg-bg-card' : 'bg-bg-item-surface'} ${!isDetectable ? 'shadow-lg shadow-[0_0_24px_rgba(249,115,22,0.12)]' : ''}`}>
+                                            <div className={`rounded-xl p-4 border border-border-subtle flex items-center justify-between gap-3 transition-all ${isLight ? 'bg-bg-card' : 'bg-bg-item-surface'} ${!isDetectable ? 'shadow-lg shadow-[0_0_24px_rgba(124,77,255,0.16)]' : ''}`}>
                                                 <div className="min-w-0 flex flex-col gap-1">
                                                     <div className="flex items-center gap-2">
                                                         <Ghost size={16} className="shrink-0 text-text-primary" />
@@ -4539,9 +4539,9 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
                         className={`fixed bottom-10 right-10 z-[2000] flex items-center gap-4 pl-4 pr-6 py-3.5 rounded-[18px] backdrop-blur-xl saturate-[180%] ring-1 ring-black/10 ${isLight ? 'bg-bg-elevated/90 border border-border-muted shadow-[0_8px_32px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.9)]' : 'bg-[#2A2A2E]/40 border border-white/10 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.3),inset_0_-1px_0_rgba(255,255,255,0.05)]'}`}
                     >
                         {/* Liquid Icon Orb */}
-                        <div className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-b from-orange-400/20 to-orange-600/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] border border-white/5">
-                            <div className="absolute inset-0 rounded-full bg-orange-500/20 blur-md" />
-                            <RefreshCw size={15} className="text-orange-300 animate-[spin_2s_linear_infinite] drop-shadow-[0_0_5px_rgba(249,115,22,0.6)]" />
+                        <div className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-b from-blue-400/20 via-violet-500/20 to-pink-400/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] border border-white/5">
+                            <div className="absolute inset-0 rounded-full bg-violet-500/20 blur-md" />
+                            <RefreshCw size={15} className="text-blue-200 animate-[spin_2s_linear_infinite] drop-shadow-[0_0_5px_rgba(124,77,255,0.6)]" />
                         </div>
 
                         {/* Text Content */}

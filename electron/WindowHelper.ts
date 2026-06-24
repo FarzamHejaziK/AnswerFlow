@@ -28,6 +28,9 @@ export class WindowHelper {
   private overlayBounds: Electron.Rectangle | null = null;
   // Track current window mode (persists even when overlay is hidden via Cmd+B)
   private currentWindowMode: 'launcher' | 'overlay' = 'launcher';
+  private pendingOverlayAfterFullscreenExit:
+    | { inactive?: boolean; timeout?: NodeJS.Timeout }
+    | null = null;
 
   private appState: AppState;
   private contentProtection: boolean = false;
@@ -244,6 +247,10 @@ export class WindowHelper {
       ...(isMac
         ? { vibrancy: 'under-window' as const, visualEffectState: 'followWindow' as const }
         : {}),
+      // A native macOS fullscreen launcher creates a separate Space. If the
+      // live overlay is opened from that Space, the launcher gets hidden and
+      // the user sees the fullscreen backing surface instead of their meeting.
+      fullscreenable: !isMac,
       transparent: isMac,
       hasShadow: true,
       backgroundColor: isMac ? '#00000000' : '#000000',
@@ -707,8 +714,43 @@ export class WindowHelper {
 
   // --- Swapping Logic ---
 
+  private deferOverlayUntilLauncherLeavesFullscreen(inactive?: boolean): boolean {
+    if (process.platform !== 'darwin') return false;
+    if (!this.launcherWindow || this.launcherWindow.isDestroyed()) return false;
+    if (!this.launcherWindow.isFullScreen()) return false;
+
+    if (this.pendingOverlayAfterFullscreenExit) {
+      this.pendingOverlayAfterFullscreenExit.inactive = inactive;
+      return true;
+    }
+
+    const finish = () => {
+      const pending = this.pendingOverlayAfterFullscreenExit;
+      if (!pending) return;
+      if (pending.timeout) clearTimeout(pending.timeout);
+      this.pendingOverlayAfterFullscreenExit = null;
+
+      // Let macOS finish the Space transition before hiding the launcher and
+      // showing the overlay. Otherwise the overlay can still land on the stale
+      // fullscreen Space for one frame or more.
+      setTimeout(() => this.switchToOverlay(pending.inactive), 120);
+    };
+
+    this.pendingOverlayAfterFullscreenExit = {
+      inactive,
+      timeout: setTimeout(finish, 2500),
+    };
+
+    console.log('[WindowHelper] Launcher is fullscreen; exiting fullscreen before overlay.');
+    this.launcherWindow.once('leave-full-screen', finish);
+    this.launcherWindow.setFullScreen(false);
+    return true;
+  }
+
   public switchToOverlay(inactive?: boolean): void {
     console.log(`[WindowHelper] Switching to OVERLAY (inactive: ${!!inactive})`);
+    if (this.deferOverlayUntilLauncherLeavesFullscreen(inactive)) return;
+
     this.currentWindowMode = 'overlay';
     KeybindManager.getInstance().setMode('overlay'); // Adapted from public PR #123 — verify premium interaction
 
