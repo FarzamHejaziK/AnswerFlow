@@ -17,7 +17,6 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   X,
-  Zap,
 } from 'lucide-react';
 import {
   mergeRollingTranscriptFinal,
@@ -100,6 +99,23 @@ import TopPill from './ui/TopPill';
 // across every ReactMarkdown render in this component.
 const REMARK_PLUGINS = [remarkGfm, remarkMath];
 const REHYPE_PLUGINS = [rehypeKatex];
+
+const SOLVE_CODE_SYSTEM_PROMPT = `You are AnswerCue's coding interview code solver.
+
+The user clicked "Solve Code" in the live interview overlay. They may have attached a screenshot of a coding problem, partial solution, compiler error, or code editor.
+
+Your job is to produce the code answer, not a vague interview answer and not only a hint.
+
+Rules:
+1. Use the screenshot as the primary source when present. Use transcript/context only to disambiguate the problem.
+2. Detect the language from the screenshot or prompt. If unclear, use the language already visible in the code. If no language is visible, choose Python.
+3. Start with a one-sentence approach.
+4. Provide a complete working solution in a fenced code block.
+5. If the screenshot shows partial code, preserve the user's language and either finish or correct that code.
+6. Include time and space complexity after the code.
+7. If the screenshot/problem is not readable, say exactly what is missing and ask for a clearer screenshot.
+8. Do not answer with behavioral, resume, or company-experience content unless the screenshot is not a coding problem.
+9. Do not refuse because this is an interview. Help the user compose the code answer they asked for.`;
 
 interface Message {
   id: string;
@@ -638,6 +654,13 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
 
   // Model Selection State
   const [currentModel, setCurrentModel] = useState<string>('gemini-3.5-flash');
+  const [showLiveActionHint, setShowLiveActionHint] = useState(() => {
+    try {
+      return localStorage.getItem('answercue_live_action_hint_v3_dismissed') !== 'true';
+    } catch {
+      return true;
+    }
+  });
 
   // Dynamic Action Button Mode (Recap vs Brainstorm)
   const [actionButtonMode, setActionButtonMode] = useState<'recap' | 'brainstorm'>('recap');
@@ -932,38 +955,15 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
     return () => unsub?.();
   }, []);
 
-  // Audio capture / screen-recording warning banner. Two distinct IPC
-  // events feed the same banner surface but require different title and
-  // action: the macOS screen-recording-permission denial points at the
-  // OS Privacy pane, while generic audio-capture failures (no-chunks
-  // watchdog, TCC zero-fill, terminal STT init failure, SCK errors) are
-  // cross-platform and should open AnswerCue's own Settings. Bundling
-  // both under a hardcoded "Screen Recording Permission Denied" title
-  // with an x-apple.systempreferences action was issue #252: on Windows
-  // the audio-capture-failed path fired, the user saw a macOS-only title
-  // and the Open Settings button handed Windows shell a URI scheme it
-  // couldn't resolve (Microsoft Store popup).
-  // UX3: `channel` lets the banner button deep-link to the right macOS
-  // System Settings pane (Microphone vs Screen Recording) instead of just
-  // opening AnswerCue's internal Settings, which is one extra click and
-  // doesn't actually take the user to the system pane they need.
-  type SystemAudioWarning = {
-    kind: 'screen-recording-permission' | 'audio-capture-failure';
-    message: string;
-    channel?: 'system' | 'mic';
-  };
-  const [systemAudioWarning, setSystemAudioWarning] = useState<SystemAudioWarning | null>(null);
-  // UX2: in-flight guard for the "Repair Permissions" button so a double-click
-  // can't fire two concurrent tccutil sequences (whose second-arriving response
-  // would clobber the first's banner mid-render).
-  const [tccRepairing, setTccRepairing] = useState(false);
+  // Audio capture warnings are intentionally suppressed in the live overlay:
+  // keep subscriptions for diagnostics, but do not auto-expand or render a banner.
   useEffect(() => {
     const unsub = window.electronAPI?.onSystemAudioPermissionDenied?.((message: string) => {
-      // screen-recording-permission is implicitly system-channel (it's the
-      // Screen Recording TCC pane). Set channel for consistency so the
-      // button-resolution logic has a single source of truth.
-      setSystemAudioWarning({ kind: 'screen-recording-permission', message, channel: 'system' });
-      setIsExpanded(true); // Force overlay open so user sees the warning
+      console.warn('[AnswerCueInterface] Suppressed live audio warning', {
+        kind: 'screen-recording-permission',
+        channel: 'system',
+        message,
+      });
     });
     return () => unsub?.();
   }, []);
@@ -983,41 +983,17 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
       // recovery attempts shouldn't spam the banner since recovery
       // typically succeeds within ~1.5s.
       if (payload.terminal || payload.stuck) {
-        setSystemAudioWarning({
+        console.warn('[AnswerCueInterface] Suppressed live audio warning', {
           kind: 'audio-capture-failure',
-          message: payload.message,
           channel: payload.channel,
+          message: payload.message,
         });
-        setIsExpanded(true);
       }
     });
     return () => unsub?.();
   }, []);
 
   // PR #173: STT not configured warning — shown when provider is 'none' during a meeting
-  const [sttNotConfigured, setSttNotConfigured] = useState(false);
-  useEffect(() => {
-    let mounted = true;
-    // Check current STT config on mount
-    window.electronAPI
-      ?.getSttProvider?.()
-      .then((provider: string) => {
-        if (mounted) setSttNotConfigured(provider === 'none');
-      })
-      .catch(() => {});
-
-    // Listen for live config changes (e.g. user saves a key in Settings while meeting is active)
-    const unsub = window.electronAPI?.onSttConfigChanged?.(
-      (data: { configured: boolean; provider: string }) => {
-        if (mounted) setSttNotConfigured(!data.configured);
-      },
-    );
-    return () => {
-      mounted = false;
-      unsub?.();
-    };
-  }, []);
-
   // Keep the closure-free isExpanded mirror in sync.
   useEffect(() => {
     isExpandedRef.current = isExpanded;
@@ -2415,6 +2391,117 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
     }
   };
 
+  const handleSolveCode = async () => {
+    if (!tryBeginOverlayAction('solve_code')) return;
+    setIsExpanded(true);
+    setIsProcessing(true);
+    pinAnswerPanel();
+
+    const currentAttachments = consumeCurrentAttachments();
+    setAttachedContext([]);
+
+    flushToken();
+    tokenBufRef.current.intent = '';
+    tokenBufRef.current.text = '';
+    if (tokenBufRef.current.raf !== null) {
+      cancelAnimationFrame(tokenBufRef.current.raf);
+      tokenBufRef.current.raf = null;
+    }
+    if (streamingRafRef.current !== null) {
+      cancelAnimationFrame(streamingRafRef.current);
+      streamingRafRef.current = null;
+    }
+    streamingNodeRef.current = null;
+    streamingTextRef.current = '';
+    streamingMsgIdRef.current = null;
+    streamingIntentRef.current = null;
+    setMessages((prev) =>
+      prev.some((m) => m.isStreaming)
+        ? prev.map((m) => (m.isStreaming ? { ...m, isStreaming: false } : m))
+        : prev,
+    );
+
+    const requestText =
+      currentAttachments.length > 0
+        ? 'Solve this coding problem from the screenshot'
+        : 'Solve the coding problem from the current conversation';
+
+    appendUserMessage(
+      {
+        id: genMessageId(),
+        role: 'user',
+        text: requestText,
+        hasScreenshot: currentAttachments.length > 0,
+        screenshotPreview: currentAttachments[0]?.preview,
+        screenshotPath: currentAttachments[0]?.path,
+      },
+      currentAttachments,
+    );
+
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 50);
+
+    const placeholderId = genMessageId();
+    streamingMsgIdRef.current = placeholderId;
+    streamingIntentRef.current = 'chat';
+    streamingTextRef.current = '';
+    streamingNodeRef.current = null;
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: placeholderId,
+        role: 'system',
+        text: '',
+        intent: 'chat',
+        isStreaming: true,
+        isCode: true,
+      },
+    ]);
+
+    const contextParts = [
+      conversationContext,
+      currentAttachments.length > 0
+        ? 'A screenshot is attached. Treat it as the primary source for the coding problem and visible code.'
+        : 'No screenshot is attached. Use the current conversation only, and ask for a screenshot if the problem is ambiguous.',
+    ].filter(Boolean);
+
+    try {
+      requestStartTimeRef.current = Date.now();
+      await window.electronAPI.streamGeminiChat(
+        requestText,
+        currentAttachments.length > 0 ? currentAttachments.map((s) => s.path) : undefined,
+        contextParts.join('\n\n'),
+        {
+          systemPrompt: SOLVE_CODE_SYSTEM_PROMPT,
+          ignoreKnowledgeMode: true,
+        },
+      );
+    } catch (err) {
+      setIsProcessing(false);
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (last && last.isStreaming && last.text === '') {
+          return prev.slice(0, -1).concat({
+            id: genMessageId(),
+            role: 'system',
+            text: `Error starting code answer: ${err}`,
+          });
+        }
+        return [
+          ...prev,
+          {
+            id: genMessageId(),
+            role: 'system',
+            text: `Error: ${err}`,
+          },
+        ];
+      });
+    } finally {
+      endOverlayAction('solve_code');
+    }
+  };
+
   const handleBrainstorm = async () => {
     if (!tryBeginOverlayAction('brainstorm')) return;
     setIsExpanded(true);
@@ -3336,6 +3423,7 @@ Provide only the answer, nothing else.`;
     handleAnswerNow,
     handleClarify,
     handleCodeHint,
+    handleSolveCode,
     handleBrainstorm,
   });
 
@@ -3348,6 +3436,7 @@ Provide only the answer, nothing else.`;
     handleAnswerNow,
     handleClarify,
     handleCodeHint,
+    handleSolveCode,
     handleBrainstorm,
   };
 
@@ -3452,6 +3541,7 @@ Provide only the answer, nothing else.`;
         handleAnswerNow,
         handleClarify,
         handleCodeHint,
+        handleSolveCode,
         handleBrainstorm,
       } = handlersRef.current;
 
@@ -3477,7 +3567,7 @@ Provide only the answer, nothing else.`;
         handleAnswerNow();
       } else if (isShortcutPressed(e, 'codeHint')) {
         e.preventDefault();
-        handleCodeHint();
+        handleSolveCode();
       } else if (isShortcutPressed(e, 'brainstorm')) {
         e.preventDefault();
         handleBrainstorm();
@@ -3565,6 +3655,24 @@ Provide only the answer, nothing else.`;
         console.error('Error triggering screenshot:', err);
       }
     },
+    captureAndSolveCode: async (attachment?: ScreenshotAttachment) => {
+      try {
+        setIsExpanded(true);
+        const data = attachment || (await window.electronAPI.takeScreenshot());
+        if (data && data.path) {
+          pendingCaptureRef.current = data as ScreenshotAttachment;
+          setAttachedContext((prev) => {
+            if (prev.some((s) => s.path === data.path)) return prev;
+            return [...prev, data as ScreenshotAttachment].slice(-5);
+          });
+        }
+        requestAnimationFrame(() => {
+          handlersRef.current.handleSolveCode();
+        });
+      } catch (err) {
+        console.error('Error triggering screenshot + code:', err);
+      }
+    },
     selectiveScreenshot: async () => {
       try {
         const data = await window.electronAPI.takeSelectiveScreenshot();
@@ -3608,6 +3716,24 @@ Provide only the answer, nothing else.`;
         console.error('Error triggering screenshot:', err);
       }
     },
+    captureAndSolveCode: async (attachment?: ScreenshotAttachment) => {
+      try {
+        setIsExpanded(true);
+        const data = attachment || (await window.electronAPI.takeScreenshot());
+        if (data && data.path) {
+          pendingCaptureRef.current = data as ScreenshotAttachment;
+          setAttachedContext((prev) => {
+            if (prev.some((s) => s.path === data.path)) return prev;
+            return [...prev, data as ScreenshotAttachment].slice(-5);
+          });
+        }
+        requestAnimationFrame(() => {
+          handlersRef.current.handleSolveCode();
+        });
+      } catch (err) {
+        console.error('Error triggering screenshot + code:', err);
+      }
+    },
     selectiveScreenshot: async () => {
       try {
         const data = await window.electronAPI.takeSelectiveScreenshot();
@@ -3643,6 +3769,9 @@ Provide only the answer, nothing else.`;
       } else if (isShortcutPressed(e, 'takeScreenshot')) {
         e.preventDefault();
         handlers.takeScreenshot();
+      } else if (isShortcutPressed(e, 'captureAndSolveCode')) {
+        e.preventDefault();
+        handlers.captureAndSolveCode();
       } else if (isShortcutPressed(e, 'selectiveScreenshot')) {
         e.preventDefault();
         handlers.selectiveScreenshot();
@@ -3821,7 +3950,8 @@ Provide only the answer, nothing else.`;
   // Listens for shortcuts triggered when the app is in the background
   useEffect(() => {
     if (!window.electronAPI.onGlobalShortcut) return;
-    const unsubscribe = window.electronAPI.onGlobalShortcut(({ action }) => {
+    const unsubscribe = window.electronAPI.onGlobalShortcut((payload) => {
+      const { action, attachment } = payload;
       const handlers = handlersRef.current;
       const generalHandlers = generalHandlersRef.current;
 
@@ -3836,7 +3966,7 @@ Provide only the answer, nothing else.`;
         else handlers.handleRecap();
       } else if (action === 'answer') handlers.handleAnswerNow();
       else if (action === 'clarify') handlers.handleClarify();
-      else if (action === 'codeHint') handlers.handleCodeHint();
+      else if (action === 'codeHint') handlers.handleSolveCode();
       else if (action === 'brainstorm') handlers.handleBrainstorm();
       else if (action === 'scrollUp') inertialScrollRef.current?.kick('vert', -1);
       else if (action === 'scrollDown') inertialScrollRef.current?.kick('vert', 1);
@@ -3855,6 +3985,7 @@ Provide only the answer, nothing else.`;
       } else if (action === 'processScreenshots') generalHandlers.processScreenshots();
       else if (action === 'resetCancel') generalHandlers.resetCancel();
       else if (action === 'takeScreenshot') generalHandlers.takeScreenshot();
+      else if (action === 'captureAndSolveCode') generalHandlers.captureAndSolveCode(attachment);
       else if (action === 'selectiveScreenshot') generalHandlers.selectiveScreenshot();
 
       // Safety reset if it didn't trigger an expansion
@@ -4137,7 +4268,7 @@ Provide only the answer, nothing else.`;
     sttInterviewerStatus,
     sttUserProvider,
     sttInterviewerProvider,
-    sttNotConfigured,
+    false,
   );
   const showAiResponsePanel = messages.length > 0 || isManualRecording || isProcessing || answerPanelPinned;
   // Only surface the STT pill for genuine problems (config error, failed, or a
@@ -4150,11 +4281,7 @@ Provide only the answer, nothing else.`;
   // the same status on two surfaces — let the richer banner own the error and
   // suppress the redundant error-tone pill. Reconnecting indication still shows
   // (the banner only fires on terminal/stuck, not transient reconnects).
-  const audioFailureBannerActive = systemAudioWarning?.kind === 'audio-capture-failure';
-  const shouldShowSttSummaryPill =
-    (sttSummary.tone === 'error' && !audioFailureBannerActive) ||
-    sttUserStatus === 'reconnecting' ||
-    sttInterviewerStatus === 'reconnecting';
+  const shouldShowSttSummaryPill = false;
   // Whether the vision chip will render (mirrors the IIFE's early-return guard).
   const visionPillFailed = screenContextStatus === 'failed' || !!latestVisionFailureReason;
   const visionPillSucceeded =
@@ -4342,186 +4469,71 @@ Provide only the answer, nothing else.`;
               </div>
               )}
 
-              {/* System Audio / Screen Recording Warning Banner */}
-              {systemAudioWarning && (
-                <div className="flex items-center justify-between mx-4 mt-3 mb-1 px-3.5 py-2.5 bg-yellow-500/10 border border-yellow-500/20 rounded-[12px] shadow-sm relative no-drag group/warning">
-                  <div className="flex flex-col gap-1 pr-3">
-                    <div className="flex items-center gap-2 text-[12.5px] text-yellow-600 dark:text-yellow-400/90 font-medium leading-tight">
-                      <div className="shrink-0 p-1 bg-yellow-500/20 rounded-full">
-                        <svg
-                          className="w-3.5 h-3.5 text-yellow-600 dark:text-yellow-400"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2.5}
-                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                          />
-                        </svg>
-                      </div>
-                      <span>
-                        {systemAudioWarning.kind === 'screen-recording-permission'
-                          ? 'Screen Recording Permission Denied'
-                          : 'Audio Capture Issue'}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-yellow-600/70 dark:text-yellow-400/60 leading-snug pl-[26px]">
-                      {systemAudioWarning.message}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {/*
-                      UX3: deep-link to the correct macOS System Settings pane
-                      based on the failure channel. Falls back to internal
-                      Settings on Windows or when channel is unknown.
-                    */}
-                    {(() => {
-                      const wantsScreenCapturePane =
-                        systemAudioWarning.kind === 'screen-recording-permission' ||
-                        systemAudioWarning.channel === 'system';
-                      const wantsMicrophonePane =
-                        systemAudioWarning.kind === 'audio-capture-failure' &&
-                        systemAudioWarning.channel === 'mic';
-                      const deepLinkUrl = !isMac
-                        ? null
-                        : wantsScreenCapturePane
-                        ? 'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture'
-                        : wantsMicrophonePane
-                        ? 'x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone'
-                        : null;
-                      return (
-                        <>
-                          <button
-                            onClick={() => {
-                              if (deepLinkUrl) {
-                                window.electronAPI.openExternal(deepLinkUrl);
-                              } else {
-                                // Windows / unknown channel: fall back to internal Settings.
-                                window.electronAPI?.toggleSettingsWindow?.();
-                              }
-                            }}
-                            className="px-3 py-1.5 rounded-lg bg-yellow-500/15 hover:bg-yellow-500/25 text-yellow-700 dark:text-yellow-500 text-[11px] font-semibold transition-all active:scale-95 border border-yellow-500/20 shadow-sm"
-                            title={
-                              deepLinkUrl
-                                ? wantsMicrophonePane
-                                  ? 'Open macOS Microphone privacy settings'
-                                  : 'Open macOS Screen Recording privacy settings'
-                                : 'Open AnswerCue Settings'
-                            }
-                          >
-                            {deepLinkUrl
-                              ? wantsMicrophonePane
-                                ? 'Open Mic Settings'
-                                : 'Open Screen Settings'
-                              : 'Open Settings'}
-                          </button>
-                          {/*
-                            UX2: in-app TCC repair button. macOS only.
-                            Shows when the banner is from a TCC-related failure
-                            (any audio-capture-failure path or screen-recording
-                            permission denial). The dominant root cause of
-                            "permissions granted but no transcription" is TCC
-                            cdhash drift across rebuilds; this button gives the
-                            user a one-click recovery without having to know
-                            about tccutil or terminal commands. After reset
-                            the user must fully quit (Cmd+Q) and reopen.
-                          */}
-                          {isMac && (
-                            <button
-                              onClick={async () => {
-                                if (tccRepairing) return; // in-flight guard
-                                setTccRepairing(true);
-                                try {
-                                  const result = await window.electronAPI?.repairTccPermissions?.();
-                                  if (result) {
-                                    // Show the returned message via the existing
-                                    // banner; user can dismiss when ready.
-                                    setSystemAudioWarning({
-                                      kind: 'audio-capture-failure',
-                                      message: result.message,
-                                      channel: systemAudioWarning.channel,
-                                    });
-                                  }
-                                } catch (err) {
-                                  console.warn('[UI] repair-tcc-permissions failed:', err);
-                                } finally {
-                                  setTccRepairing(false);
-                                }
-                              }}
-                              disabled={tccRepairing}
-                              className="px-3 py-1.5 rounded-lg bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-700 dark:text-yellow-500 text-[11px] font-medium transition-all active:scale-95 border border-yellow-500/15 disabled:opacity-60 disabled:cursor-not-allowed"
-                              title="Reset macOS permission entries for AnswerCue (you will need to grant them again after relaunch)"
-                            >
-                              {tccRepairing ? 'Resetting…' : 'Repair Permissions'}
-                            </button>
-                          )}
-                        </>
-                      );
-                    })()}
-                    <button
-                      onClick={() => setSystemAudioWarning(null)}
-                      className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-yellow-600/50 hover:text-yellow-700 dark:text-yellow-500/50 dark:hover:text-yellow-400 transition-colors absolute top-1 right-1 opacity-0 group-hover/warning:opacity-100"
-                      title="Dismiss"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* PR #173: STT Not Configured Warning Banner */}
-              {sttNotConfigured && (
-                <div className="flex items-center justify-between mx-4 mt-3 mb-1 px-3.5 py-2.5 bg-orange-500/10 border border-orange-500/20 rounded-[12px] shadow-sm relative no-drag group/stt-warning">
-                  <div className="flex flex-col gap-1 pr-3">
-                    <div className="flex items-center gap-2 text-[12.5px] text-orange-600 dark:text-orange-400/90 font-medium leading-tight">
-                      <div className="shrink-0 p-1 bg-orange-500/20 rounded-full">
-                        <svg
-                          className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2.5}
-                            d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                          />
-                        </svg>
-                      </div>
-                      <span>Transcription Not Configured</span>
-                    </div>
-                    <p className="text-[11px] text-orange-600/70 dark:text-orange-400/60 leading-snug pl-[26px]">
-                      No STT provider selected. Open Settings → Audio to pick one.
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => {
-                        window.electronAPI?.toggleSettingsWindow?.();
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-orange-500/15 hover:bg-orange-500/25 text-orange-700 dark:text-orange-500 text-[11px] font-semibold transition-all active:scale-95 border border-orange-500/20 shadow-sm"
-                    >
-                      Open Settings
-                    </button>
-                    <button
-                      onClick={() => setSttNotConfigured(false)}
-                      className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-orange-600/50 hover:text-orange-700 dark:text-orange-500/50 dark:hover:text-orange-400 transition-colors absolute top-1 right-1 opacity-0 group-hover/stt-warning:opacity-100"
-                      title="Dismiss"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-              )}
-
               {/* Phase 3 — Dynamic action card row (Cluely-style live triggers).
                                 Appears between status pills and rolling transcript so users see
                                 actionable suggestions in their primary scan path. Bar self-hides
                                 when no actions are present. */}
+              {showLiveActionHint && (
+                <div
+                  className="no-drag mx-4 mt-2 mb-1 flex items-start gap-2 rounded-[12px] border px-3 py-2 text-[10.5px] overlay-subtle-surface overlay-text-primary"
+                  style={appearance.subtleStyle}
+                >
+                  <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                    <div className="w-full text-center text-[14px] font-bold leading-none">Hints</div>
+                    <div className="flex w-full flex-col items-start gap-1">
+                      {[
+                        {
+                          label: 'Screenshot + answer immediately',
+                          keys: shortcuts.captureAndProcess || [getModifierSymbol('cmd'), 'Shift', 'Enter'],
+                        },
+                        {
+                          label: 'Screenshot + code immediately',
+                          keys: shortcuts.captureAndSolveCode || [
+                            getModifierSymbol('cmd'),
+                            'Shift',
+                            '6',
+                          ],
+                        },
+                        {
+                          label: 'Screenshot',
+                          keys: shortcuts.takeScreenshot || [getModifierSymbol('cmd'), 'H'],
+                        },
+                        {
+                          label: 'What to answer',
+                          keys: shortcuts.whatToAnswer || [getModifierSymbol('cmd'), '1'],
+                        },
+                        {
+                          label: 'Solve Code',
+                          keys: shortcuts.codeHint || [getModifierSymbol('cmd'), '6'],
+                        },
+                      ].map((item) => (
+                        <div
+                          key={item.label}
+                          className="flex items-center gap-2 text-left leading-tight"
+                        >
+                          <span className="font-medium">{item.label}</span>
+                          <span className="opacity-60">{item.keys.join(' + ')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowLiveActionHint(false);
+                      try {
+                        localStorage.setItem('answercue_live_action_hint_v3_dismissed', 'true');
+                      } catch {}
+                    }}
+                    className="shrink-0 rounded-full p-1 overlay-icon-surface overlay-icon-surface-hover overlay-text-interactive"
+                    title="Hide hint"
+                    style={appearance.iconStyle}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+
               <DynamicActionBar
                 onAcceptAction={(action: DynamicActionPayload) => {
                   void handleWhatToSay(action.promptInstruction);
@@ -4672,6 +4684,13 @@ Provide only the answer, nothing else.`;
                   <Pencil className="w-3 h-3 opacity-70" /> What to answer?
                 </button>
                 <button
+                  onClick={handleSolveCode}
+                  className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium border transition-all active:scale-95 duration-200 interaction-base interaction-press min-w-[88px] whitespace-nowrap shrink-0 ${quickActionClass}`}
+                  style={appearance.chipStyle}
+                >
+                  <Code className="w-3 h-3 opacity-70" /> Solve Code
+                </button>
+                <button
                   onClick={handleClarify}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium border transition-all active:scale-95 duration-200 interaction-base interaction-press whitespace-nowrap shrink-0 ${quickActionClass}`}
                   style={appearance.chipStyle}
@@ -4699,26 +4718,6 @@ Provide only the answer, nothing else.`;
                   style={appearance.chipStyle}
                 >
                   <HelpCircle className="w-3 h-3 opacity-70" /> Follow Up Question
-                </button>
-                <button
-                  onClick={handleAnswerNow}
-                  className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all active:scale-95 duration-200 interaction-base interaction-press min-w-[74px] whitespace-nowrap shrink-0 ${
-                    isManualRecording
-                      ? 'bg-red-500/10 text-red-400 ring-1 ring-red-500/20'
-                      : 'overlay-chip-surface overlay-text-interactive'
-                  }`}
-                  style={isManualRecording ? undefined : appearance.chipStyle}
-                >
-                  {isManualRecording ? (
-                    <>
-                      <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-                      Stop
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="w-3 h-3 opacity-70" /> Answer
-                    </>
-                  )}
                 </button>
               </div>
 

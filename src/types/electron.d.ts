@@ -414,7 +414,9 @@ export interface ElectronAPI {
   resetKeybinds: () => Promise<Array<{ id: string; label: string; accelerator: string; isGlobal: boolean; defaultAccelerator: string }>>
   onKeybindsUpdate: (callback: (keybinds: Array<any>) => void) => () => void
   onKeybindRegistrationFailed: (callback: (data: { id: string; accelerator: string }) => void) => () => void
-  onGlobalShortcut: (callback: (data: { action: string }) => void) => () => void
+  onGlobalShortcut: (
+    callback: (data: { action: string; attachment?: { path: string; preview: string } }) => void
+  ) => () => void
 
   // CGEventTap-backed stealth typing (macOS only — graceful degradation elsewhere)
   stealthTapAvailable: () => Promise<boolean>

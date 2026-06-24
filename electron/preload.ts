@@ -608,7 +608,9 @@ interface ElectronAPI {
   onKeybindsUpdate: (callback: (keybinds: Array<any>) => void) => () => void;
 
   // Global shortcut events (stealth: fired even when window is not focused)
-  onGlobalShortcut: (callback: (data: { action: string }) => void) => () => void;
+  onGlobalShortcut: (
+    callback: (data: { action: string; attachment?: { path: string; preview: string } }) => void,
+  ) => () => void;
 
   // CGEventTap-backed stealth keyboard tap (macOS only). Returns false on
   // non-macOS or when the native module / Accessibility permission is missing.
@@ -1860,8 +1862,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   // Global shortcut listener — fired stealthily from main process without focusing the window
-  onGlobalShortcut: (callback: (data: { action: string }) => void) => {
-    const subscription = (_: any, data: { action: string }) => callback(data);
+  onGlobalShortcut: (
+    callback: (data: { action: string; attachment?: { path: string; preview: string } }) => void,
+  ) => {
+    const subscription = (
+      _: any,
+      data: { action: string; attachment?: { path: string; preview: string } },
+    ) => callback(data);
     ipcRenderer.on('global-shortcut', subscription);
     return () => {
       ipcRenderer.removeListener('global-shortcut', subscription);

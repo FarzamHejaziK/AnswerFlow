@@ -4,7 +4,7 @@ import {
     Command, Monitor, Mic, Settings, Zap, Key, User, Play, Image, ArrowUp, FileText, Sparkles, Search, ChevronUp, Copy,
     FileJson, MessageSquare, Briefcase, Eye, EyeOff, Ghost, ChevronDown, ChevronRight, HelpCircle, Upload, CheckCircle2,
     RefreshCw, Trash2, Check, ExternalLink, Volume2, Globe, Brain, Cpu, Calendar, Star, CreditCard, X, Pencil, Lightbulb,
-    SlidersHorizontal, PointerOff, ArrowRight, LayoutGrid, Smartphone, Wifi, Lock
+    SlidersHorizontal, PointerOff, ArrowRight, LayoutGrid, Smartphone, Wifi, Lock, Code
 } from 'lucide-react';
 import { SiOpenai, SiGoogle } from 'react-icons/si';
 import { useShortcuts } from '../../hooks/useShortcuts';
@@ -17,12 +17,13 @@ import answercueIcon from '../icon.png';
 // ----------------------
 
 const CMD_SYMBOL = getModifierSymbol('cmd');
+const SHIFT_SYMBOL = getModifierSymbol('shift');
 const MOCK_BUTTONS = [
     { icon: Pencil, label: 'What to answer?', kbd: `${CMD_SYMBOL}1`, color: 'blue' },
+    { icon: Code, label: 'Solve Code', kbd: `${CMD_SYMBOL}6`, color: 'emerald' },
     { icon: MessageSquare, label: 'Clarify', kbd: `${CMD_SYMBOL}2`, color: 'indigo' },
-    { icon: RefreshCw, label: 'Recap', kbd: `${CMD_SYMBOL}7`, color: 'amber' },
+    { icon: RefreshCw, label: 'Recap', kbd: `${CMD_SYMBOL}3`, color: 'amber' },
     { icon: HelpCircle, label: 'Follow Up Question', kbd: `${CMD_SYMBOL}4`, color: 'teal' },
-    { icon: Zap, label: 'Answer', kbd: `${CMD_SYMBOL}5`, color: 'emerald' },
 ] as const;
 
 const colorMap: Record<string, string> = {
@@ -750,9 +751,11 @@ const SetupGuide = () => {
     ];
 
     const hotkeys = [
-        { label: 'Toggle', kbd: `${cmd}B` },
-        { label: 'Screenshot', kbd: `${cmd}H` },
-        { label: 'Chat', kbd: `${cmd}K` },
+        { label: 'Screenshot + answer immediately', kbd: `${cmd}+${SHIFT_SYMBOL}+Enter` },
+        { label: 'Screenshot + code immediately', kbd: `${cmd}+${SHIFT_SYMBOL}+6` },
+        { label: 'Screenshot', kbd: `${cmd}+H` },
+        { label: 'What to answer', kbd: `${cmd}+1` },
+        { label: 'Solve Code', kbd: `${cmd}+6` },
     ];
 
     return (
@@ -1115,14 +1118,14 @@ export const HelpSettings: React.FC = () => {
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                             {([
                                 { Icon: Pencil, color: 'blue', title: 'What to Answer?', badge: null, bc: '', kbd: ['⌘', '1'], desc: 'Reads the active transcript and screen, then streams a precise response to read aloud.' },
+                                { Icon: Code, color: 'emerald', title: 'Solve Code', badge: null, bc: '', kbd: ['⌘', '6'], desc: 'Produces a full coding-answer response from the current conversation or attached screenshot.' },
+                                { Icon: MessageSquare, color: 'indigo', title: 'Clarify', badge: null, bc: '', kbd: ['⌘', '2'], desc: 'Generates sharp probing questions from latent audio when a topic is unclear.' },
                                 { Icon: Lightbulb, color: 'violet', title: 'Brainstorm', badge: 'Interview ON', bc: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30', kbd: ['⌘', '3'], desc: 'Recap becomes Brainstorm when Interview Mode is ON — deep multi-step strategies.' },
                                 { Icon: HelpCircle, color: 'teal', title: 'Follow Up', badge: null, bc: '', kbd: ['⌘', '4'], desc: 'Suggests the next logical question to keep conversation flowing gracefully.' },
-                                { Icon: Zap, color: 'emerald', title: 'Answer Now', badge: null, bc: '', kbd: ['⌘', '5'], desc: 'Records your mic + screen context and fires an immediate AI query.' },
-                                { Icon: MessageSquare, color: 'indigo', title: 'Clarify', badge: null, bc: '', kbd: ['⌘', '2'], desc: 'Generates sharp probing questions from latent audio when a topic is unclear.' },
                                 { Icon: RefreshCw, color: 'amber', title: 'Recap', badge: 'Interview OFF', bc: 'bg-red-500/10 text-red-400 border-red-500/30', kbd: ['⌘', '3'], desc: 'Condenses the last 5 minutes into bullet points when you lose the thread.' },
-                                { Icon: Sparkles, color: 'sky', title: 'Code Hint', badge: null, bc: '', kbd: ['⌘', '6'], desc: 'Reads your screen and nudges you toward the correct code implementation.' },
                                 { Icon: Monitor, color: 'rose', title: 'Screenshot', badge: null, bc: '', kbd: ['⌘', 'H'], desc: 'Captures the whole screen and attaches it to the current interview.' },
-                                { Icon: EyeOff, color: 'slate', title: 'Stealth Execute', badge: null, bc: '', kbd: ['⌘', '↵'], desc: 'Processes context in the background without ever revealing the interface.' },
+                                { Icon: Sparkles, color: 'sky', title: 'Screenshot + Answer', badge: null, bc: '', kbd: ['⌘', '⇧', '↵'], desc: 'Captures the screen and immediately asks AnswerCue what to say.' },
+                                { Icon: Code, color: 'slate', title: 'Screenshot + Code', badge: null, bc: '', kbd: ['⌘', '⇧', '6'], desc: 'Captures the screen and immediately produces a code solution.' },
                             ] as Array<{ Icon: React.ElementType; color: 'blue' | 'violet' | 'teal' | 'emerald' | 'indigo' | 'amber' | 'sky' | 'rose' | 'slate'; title: string; badge: string | null; bc: string; kbd: string[]; desc: string }>).map(({ Icon, color, title, badge, bc, kbd, desc }) => {
                                 const resolvedKbd = kbd.map(k =>
                                     k === '⌘' ? getModifierSymbol('cmd')
@@ -1331,12 +1334,27 @@ export const HelpSettings: React.FC = () => {
                                             <Zap className="w-4 h-4 text-text-primary" />
                                         </div>
                                         <div>
-                                            <div className="font-semibold text-sm text-text-primary">Capture + Execute Instantly</div>
-                                            <div className="text-xs text-text-secondary mt-1">Captures a screenshot AND processes it in one fluid action.</div>
+                                            <div className="font-semibold text-sm text-text-primary">Screenshot + Answer Immediately</div>
+                                            <div className="text-xs text-text-secondary mt-1">Captures a screenshot and immediately asks AnswerCue what to say.</div>
                                         </div>
                                     </div>
                                     <div className="flex gap-1 shrink-0">
                                         {(shortcuts.captureAndProcess || [getModifierSymbol('cmd'), getModifierSymbol('shift'), 'Enter']).map((key: string, i: number) => <span key={i} className={kbdClass}>{key}</span>)}
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-between p-4 rounded-xl border bg-bg-item-surface border-border-subtle group">
+                                    <div className="flex items-start gap-4">
+                                        <div className="w-8 h-8 rounded shrink-0 bg-bg-input border border-border-subtle flex items-center justify-center mt-0.5">
+                                            <Code className="w-4 h-4 text-text-primary" />
+                                        </div>
+                                        <div>
+                                            <div className="font-semibold text-sm text-text-primary">Screenshot + Code Immediately</div>
+                                            <div className="text-xs text-text-secondary mt-1">Captures a screenshot and immediately produces a code solution.</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-1 shrink-0">
+                                        {(shortcuts.captureAndSolveCode || [getModifierSymbol('cmd'), getModifierSymbol('shift'), '6']).map((key: string, i: number) => <span key={i} className={kbdClass}>{key}</span>)}
                                     </div>
                                 </div>
                             </div>
@@ -1558,7 +1576,7 @@ export const HelpSettings: React.FC = () => {
                                 </p>
                                 <div className="p-2 border border-orange-500/20 bg-orange-500/5 rounded-lg">
                                     <p className="text-[10px] text-orange-400 m-0">
-                                        <strong>⚠️ Warning:</strong> This renders the AnswerCue overlay completely unclickable. You MUST memorize the Global Hotkeys (e.g. <strong>{isMac ? 'Cmd' : 'Ctrl'}+Shift+Arrows</strong> to move, <strong>{isMac ? 'Cmd' : 'Ctrl'}+B</strong> to hide, <strong>{isMac ? 'Cmd' : 'Ctrl'}+1-7</strong> for actions) to control the application once this is active.
+                                        <strong>⚠️ Warning:</strong> This renders the AnswerCue overlay completely unclickable. You MUST memorize the Global Hotkeys (e.g. <strong>{isMac ? 'Cmd' : 'Ctrl'}+Shift+Arrows</strong> to move, <strong>{isMac ? 'Cmd' : 'Ctrl'}+B</strong> to hide, <strong>{isMac ? 'Cmd' : 'Ctrl'}+1</strong> for What to Answer, <strong>{isMac ? 'Cmd' : 'Ctrl'}+6</strong> for Solve Code, and <strong>{isMac ? 'Cmd' : 'Ctrl'}+Shift+6</strong> for Screenshot + Code) to control the application once this is active.
                                     </p>
                                 </div>
                             </div>

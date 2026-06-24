@@ -718,6 +718,21 @@ export class AppState {
               preview
             });
           }
+        } else if (actionId === 'general:capture-and-solve-code') {
+          const screenshotPath = await this.takeScreenshot(false);
+          const preview = await this.getImagePreview(screenshotPath);
+          this.recordScreenshotUsage(screenshotPath, preview, 'full');
+          this.showMainWindow(true);
+          if (process.platform === 'darwin' && this.isUndetectable) {
+            app.dock.hide();
+          }
+          this.sendToMeetingSurfaces('global-shortcut', {
+            action: 'captureAndSolveCode',
+            attachment: {
+              path: screenshotPath,
+              preview
+            }
+          });
 
         // --- STEALTH SHORTCUTS: no focus, no show, pure IPC dispatch ---
 
