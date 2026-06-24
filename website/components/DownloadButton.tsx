@@ -75,9 +75,8 @@ export default function DownloadButton() {
         <div className="absolute top-[115%] z-30 w-72 overflow-hidden rounded-2xl border border-black/10 bg-white p-1 shadow-2xl shadow-brand-indigo/15">
           {(
             [
-              ["mac-arm", "macOS · Apple Silicon", ".zip"],
-              ["mac", "macOS · DMG installer", ".dmg"],
-              ["mac-intel", "macOS · Intel", ".zip"],
+              ["mac-arm", "macOS · Apple Silicon", ".dmg"],
+              ["mac-intel", "macOS · Intel", ".dmg"],
               ["windows", "Windows", ".exe"],
             ] as const
           ).map(([key, label, ext]) => (
