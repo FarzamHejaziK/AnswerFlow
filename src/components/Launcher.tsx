@@ -248,6 +248,9 @@ interface TranscriptTimelineItem {
 
 type MeetingUsage = NonNullable<Meeting['usage']>[number];
 
+const TRANSCRIPT_TURN_MERGE_GAP_MS = 8000;
+const TRANSCRIPT_TURN_MAX_CHARS = 2400;
+
 interface ScreenshotPreviewAttachment {
     path?: string;
     preview: string;
@@ -371,6 +374,51 @@ const formatTimelineTime = (timestamp: number) => {
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+};
+
+const isHumanTimelineRole = (role: TimelineRole) => role === 'interviewer' || role === 'me';
+
+const joinTranscriptFragments = (left: string, right: string) => {
+    const a = left.trim();
+    const b = right.trim();
+    if (!a) return b;
+    if (!b) return a;
+    if (/[-\/(\[{]$/.test(a) || /^[,.;:!?)\]}]/.test(b)) return `${a}${b}`;
+    return `${a} ${b}`;
+};
+
+const coalesceTranscriptTurns = (
+    items: TranscriptTimelineItem[],
+    timestampForSort: (item: TranscriptTimelineItem) => number,
+) => {
+    const sorted = [...items].sort((a, b) => timestampForSort(a) - timestampForSort(b));
+    const turns: Array<{ item: TranscriptTimelineItem; lastTimestamp: number }> = [];
+
+    for (const item of sorted) {
+        const sortTime = timestampForSort(item);
+        const previous = turns[turns.length - 1];
+        const canMerge =
+            previous &&
+            isHumanTimelineRole(previous.item.role) &&
+            previous.item.role === item.role &&
+            isHumanTimelineRole(item.role) &&
+            sortTime - previous.lastTimestamp >= 0 &&
+            sortTime - previous.lastTimestamp <= TRANSCRIPT_TURN_MERGE_GAP_MS &&
+            previous.item.text.length + item.text.length <= TRANSCRIPT_TURN_MAX_CHARS;
+
+        if (canMerge) {
+            previous.item = {
+                ...previous.item,
+                text: joinTranscriptFragments(previous.item.text, item.text),
+                isLivePartial: item.isLivePartial,
+            };
+            previous.lastTimestamp = Math.max(previous.lastTimestamp, sortTime);
+        } else {
+            turns.push({ item: { ...item }, lastTimestamp: sortTime });
+        }
+    }
+
+    return turns.map(turn => turn.item);
 };
 
 const MARKDOWN_REMARK_PLUGINS = [remarkGfm, remarkMath];
@@ -539,8 +587,10 @@ const buildTranscriptTimeline = (meeting: Meeting): TranscriptTimelineItem[] => 
                 text: item.text.trim(),
             }));
 
-    return [...humanSpeech, ...aiInteractions, ...fallbackAssistantSpeech]
-        .sort((a, b) => normalizeTimestampForSort(a.timestamp, meeting.date) - normalizeTimestampForSort(b.timestamp, meeting.date));
+    return coalesceTranscriptTurns(
+        [...humanSpeech, ...aiInteractions, ...fallbackAssistantSpeech],
+        item => normalizeTimestampForSort(item.timestamp, meeting.date),
+    );
 };
 
 interface TranscriptTimelineProps {
@@ -707,7 +757,7 @@ const buildInterviewContextMarkdown = (messages: PrepMessage[], documents: Inter
 };
 
 const buildLiveTranscriptTimeline = (segments: LiveTranscriptSegment[]): TranscriptTimelineItem[] => {
-    return segments
+    const items = segments
         .filter(segment => segment.text.trim())
         .map(segment => {
             const role = speakerRole(segment.speaker);
@@ -720,6 +770,8 @@ const buildLiveTranscriptTimeline = (segments: LiveTranscriptSegment[]): Transcr
                 isLivePartial: !segment.final,
             };
         });
+
+    return coalesceTranscriptTurns(items, item => item.timestamp);
 };
 
 const formatWorkspaceConversation = (messages: PrepMessage[]) => {
