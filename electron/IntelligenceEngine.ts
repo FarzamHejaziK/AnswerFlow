@@ -26,6 +26,11 @@ const WHAT_TO_ANSWER_PLACEHOLDER_QUESTIONS = new Set([
     'inferred from context',
 ]);
 
+const NON_ANSWER_SENTINELS = [
+    'nothing actionable right now',
+    'nothing to capture right now',
+] as const;
+
 // Refinement intent detection (refined to avoid false positives)
 function detectRefinementIntent(userText: string): { isRefinement: boolean; intent: string } {
     const lowercased = userText.toLowerCase().trim();
@@ -127,9 +132,18 @@ export class IntelligenceEngine extends EventEmitter {
     private currentDynamicActionTemplateType: string | null = null;
 
     private static isNonAnswerSentinel(answer: string): boolean {
-        const normalized = answer.trim().toLowerCase().replace(/[.!?]+$/g, '');
-        return normalized === 'nothing actionable right now'
-            || normalized === 'nothing to capture right now';
+        const normalized = IntelligenceEngine.normalizeNonAnswerSentinel(answer);
+        return NON_ANSWER_SENTINELS.includes(normalized as typeof NON_ANSWER_SENTINELS[number]);
+    }
+
+    private static normalizeNonAnswerSentinel(answer: string): string {
+        return answer.trim().toLowerCase().replace(/[.!?]+$/g, '').replace(/\s+/g, ' ');
+    }
+
+    private static isPossibleNonAnswerSentinelPrefix(answer: string): boolean {
+        const normalized = IntelligenceEngine.normalizeNonAnswerSentinel(answer);
+        if (!normalized) return true;
+        return NON_ANSWER_SENTINELS.some(sentinel => sentinel.startsWith(normalized));
     }
 
     constructor(llmHelper: LLMHelper, session: SessionTracker) {
@@ -676,6 +690,14 @@ export class IntelligenceEngine extends EventEmitter {
                 interviewPreparationContext,
             );
             let streamAborted = false;
+            let pendingTokenBuffer = "";
+
+            const flushPendingTokens = () => {
+                if (!isSpeculative && pendingTokenBuffer.length > 0) {
+                    this.emit('suggested_answer_token', pendingTokenBuffer, question || 'inferred', confidence);
+                    pendingTokenBuffer = "";
+                }
+            };
 
             for await (const token of stream) {
                 if (this.currentGenerationId !== generationId) {
@@ -688,7 +710,10 @@ export class IntelligenceEngine extends EventEmitter {
                 }
                 fullAnswer += token;
                 if (!isSpeculative) {
-                    this.emit('suggested_answer_token', token, question || 'inferred', confidence);
+                    pendingTokenBuffer += token;
+                    if (!IntelligenceEngine.isPossibleNonAnswerSentinelPrefix(fullAnswer)) {
+                        flushPendingTokens();
+                    }
                 }
             }
 
@@ -718,6 +743,8 @@ export class IntelligenceEngine extends EventEmitter {
                 this.setMode('idle');
                 return null;
             }
+
+            flushPendingTokens();
 
             if (isSpeculative) {
                 this.lastTriggerTime = Date.now();

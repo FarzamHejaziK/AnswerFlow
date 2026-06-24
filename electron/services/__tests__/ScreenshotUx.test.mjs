@@ -123,23 +123,34 @@ test('chat screenshot thumbnails open in-app previews, can be saved, and used at
 });
 
 test('normal screenshot UX points to full-screen capture, while selective capture remains explicit', () => {
-  const placeholderStart = answerCueSource.indexOf(
-    '<span>Ask anything on screen or conversation, or</span>',
+  assert.match(
+    answerCueSource,
+    /Ask anything on screen or conversation/,
+    'chat input should keep the simple screen/conversation placeholder',
   );
-  assert.notEqual(placeholderStart, -1, 'could not locate chat input placeholder');
-  const placeholder = answerCueSource.slice(placeholderStart, placeholderStart + 1200);
+
+  const hintBlock = sliceBetween(
+    answerCueSource,
+    '{showLiveActionHint && (',
+    '<DynamicActionBar',
+  );
 
   assert.match(
-    placeholder,
+    hintBlock,
+    /label: 'Screenshot'[\s\S]*keys:\s*shortcuts\.takeScreenshot\s*\|\|\s*\[getModifierSymbol\('cmd'\),\s*'H'\]/,
+    'shortcut hint should advertise the full-screen screenshot shortcut',
+  );
+  assert.match(
+    hintBlock,
     /shortcuts\.takeScreenshot\s*\|\|\s*\[getModifierSymbol\('cmd'\),\s*'H'\]/,
-    'chat placeholder should advertise the full-screen screenshot shortcut',
+    'shortcut hint should use the full-screen screenshot shortcut',
   );
   assert.doesNotMatch(
-    placeholder,
+    hintBlock,
     /shortcuts\.selectiveScreenshot|for selective screenshot/,
-    'chat placeholder must not route users to the cropper shortcut for normal screenshots',
+    'shortcut hint must not route users to the cropper shortcut for normal screenshots',
   );
-  assert.match(helpSource, /\{ label: 'Screenshot', kbd: `\$\{cmd\}H` \},/);
+  assert.match(helpSource, /\{ label: 'Screenshot', kbd: `\$\{cmd\}\+H` \},/);
   assert.doesNotMatch(helpSource, /for selective screenshot|Screenshot & Ask/);
   assert.match(
     helpSource,

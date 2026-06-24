@@ -7,10 +7,12 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE),
   title: "AnswerCue — Free AI Interview Assistant",
   description:
-    "AnswerCue is a free desktop interview assistant. Bring your own AI model, upload your docs per interview, and control exactly what the assistant remembers and says. Stop paying $1,000s for closed subscriptions.",
+    "AnswerCue is a free, undetectable desktop interview assistant — invisible to screen sharing and recording. Bring your own AI model, upload your docs per interview, and control exactly what the assistant remembers and says. Stop paying $1,000s for closed subscriptions.",
   keywords: [
     "interview assistant",
     "AI interview copilot",
+    "undetectable interview assistant",
+    "invisible to screen share",
     "free interview assistant",
     "bring your own model",
     "live transcription",

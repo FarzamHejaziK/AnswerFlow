@@ -1,5 +1,4 @@
 import { ChevronUp, ChevronDown } from "lucide-react";
-import icon from "../icon.png";
 import type { OverlayAppearance } from "../../lib/overlayAppearance";
 
 interface TopPillProps {
@@ -7,7 +6,6 @@ interface TopPillProps {
     onToggle: () => void;
     onQuit: () => void;
     appearance: OverlayAppearance;
-    onLogoClick?: () => void;
 }
 
 export default function TopPill({
@@ -15,14 +13,13 @@ export default function TopPill({
     onToggle,
     onQuit,
     appearance,
-    onLogoClick,
 }: TopPillProps) {
     return (
         <div className="flex justify-center mt-2 select-none z-50">
             <div
                 className="
           draggable-area
-          flex items-center gap-5
+          flex items-center gap-3
           rounded-full
           border
           overlay-pill-surface
@@ -32,31 +29,6 @@ export default function TopPill({
         "
                 style={appearance.pillStyle}
             >
-                <div className="draggable-area p-1">
-                    {/* LOGO BUTTON */}
-                    <button
-                        onClick={onLogoClick}
-                        className={`
-              w-8 h-8
-              rounded-full
-              overlay-icon-surface
-              overlay-icon-surface-hover
-              flex items-center justify-center
-              relative overflow-hidden
-              interaction-base interaction-press
-            `}
-                        style={appearance.iconStyle}
-                    >
-                        <img
-                            src={icon}
-                            alt="AnswerCue"
-                            className="w-[24px] h-[24px] object-contain opacity-95 scale-105 force-black-icon"
-                            draggable="false"
-                            onDragStart={(e) => e.preventDefault()}
-                        />
-                    </button>
-                </div>
-
                 {/* CENTER SEGMENT */}
                 <button
                     onClick={onToggle}

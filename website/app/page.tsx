@@ -13,6 +13,30 @@ const GitHubIcon = ({ className = "" }: { className?: string }) => (
   </svg>
 );
 
+const EyeOff = ({ className = "" }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+    <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+    <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+    <line x1="2" x2="22" y1="2" y2="22" />
+  </svg>
+);
+
+const Check = ({ className = "" }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <path d="M20 6 9 17l-5-5" />
+  </svg>
+);
+
+const STEALTH_POINTS: [string, string][] = [
+  ["Hidden from screen sharing", "Share your whole screen on Zoom, Meet, or Teams — AnswerCue stays off the image everyone else sees."],
+  ["Invisible in recordings & screenshots", "Screen recordings and screenshots come out clean. The overlay simply isn't in the captured frame."],
+  ["No bot in the participant list", "AnswerCue never joins the meeting, so there's no extra name or bot for anyone to notice."],
+  ["Skips the share picker", "It doesn't show up as a shareable window when someone chooses what to share."],
+  ["Out of the app switcher", "Undetectable Mode keeps it from stealing focus or appearing in ⌘-Tab / Alt-Tab."],
+  ["Driven by global hotkeys", "Read answers and move the overlay with keyboard shortcuts — no visible clicking around."],
+];
+
 export default async function Home() {
   const release = await getLatestRelease();
   const version = release.tag || "v2.7.4";
@@ -39,6 +63,9 @@ export default async function Home() {
               </span>
             </a>
             <div className="flex items-center gap-2 sm:gap-7">
+              <a href="#stealth" className="hidden text-sm font-medium text-ink/60 transition hover:text-ink sm:block">
+                Undetectable
+              </a>
               <a href="#features" className="hidden text-sm font-medium text-ink/60 transition hover:text-ink sm:block">
                 Features
               </a>
@@ -103,8 +130,19 @@ export default async function Home() {
           </p>
         </Reveal>
 
-        <Reveal delay={240}>
-          <div className="mt-10 flex flex-col items-center gap-5">
+        <Reveal delay={200}>
+          <a
+            href="#stealth"
+            className="mt-7 inline-flex items-center gap-2 rounded-full border border-brand-indigo/25 bg-white/70 px-4 py-2 text-sm font-semibold text-ink/80 shadow-sm backdrop-blur transition hover:border-brand-indigo/50"
+          >
+            <EyeOff className="h-4 w-4 text-brand-indigo" />
+            Invisible to screen-share, recordings &amp; the participant list
+            <span className="text-brand-indigo">See how →</span>
+          </a>
+        </Reveal>
+
+        <Reveal delay={260}>
+          <div className="mt-8 flex flex-col items-center gap-5">
             <DownloadButton />
             <a
               href={REPO_URL}
@@ -121,6 +159,61 @@ export default async function Home() {
         <Reveal delay={300}>
           <div className="animate-floaty mx-auto mt-16 max-w-4xl">
             <AppMock />
+          </div>
+        </Reveal>
+      </section>
+
+      {/* ---------- Undetectable ---------- */}
+      <section id="stealth" className="relative mx-auto mt-20 max-w-6xl px-6">
+        <Reveal>
+          <div className="relative overflow-hidden rounded-[2rem] bg-ink px-6 py-12 text-white shadow-2xl sm:px-12 sm:py-16">
+            <div className="pointer-events-none absolute -right-24 -top-28 h-80 w-80 rounded-full bg-brand-purple/30 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-28 -left-20 h-80 w-80 rounded-full bg-brand-blue/25 blur-3xl" />
+
+            <div className="relative grid gap-10 lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
+              <div>
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-white/70">
+                  <EyeOff className="h-4 w-4" /> Undetectable by design
+                </span>
+                <h2 className="mt-5 text-balance text-4xl font-extrabold tracking-tight sm:text-5xl">
+                  They&rsquo;ll never know <span className="gradient-text">it&rsquo;s there</span>
+                </h2>
+                <p className="mt-4 max-w-md text-white/60">
+                  AnswerCue lives in a window that screen-share and recording tools simply can&rsquo;t
+                  capture &mdash; using the same OS-level content protection Zoom uses to hide its own
+                  windows. No bot joins the call. Nothing shows up on the other side.
+                </p>
+                <div className="mt-6 flex flex-wrap gap-2">
+                  {["Zoom", "Google Meet", "Microsoft Teams", "Screen recordings", "OBS"].map((t) => (
+                    <span key={t} className="rounded-md bg-white/5 px-2.5 py-1 text-xs font-medium text-white/55 ring-1 ring-white/10">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <ul className="grid gap-3 sm:grid-cols-2">
+                {STEALTH_POINTS.map(([title, body]) => (
+                  <li key={title} className="flex gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                    <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-brand-gradient text-white">
+                      <Check className="h-3.5 w-3.5" />
+                    </span>
+                    <div>
+                      <p className="font-semibold leading-snug">{title}</p>
+                      <p className="mt-1 text-sm leading-relaxed text-white/55">{body}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <p className="relative mt-9 border-t border-white/10 pt-5 text-xs leading-relaxed text-white/40">
+              Undetectable Mode uses OS-level capture exclusion (WDA_EXCLUDEFROMCAPTURE on Windows,
+              NSWindowSharingNone on macOS). Coverage is broadest on macOS 2020+ and Windows 11 Pro;
+              some older OS versions and certain full-screen-share modes aren&rsquo;t covered, and no
+              software can stop someone photographing your screen &mdash; so do a quick test run before
+              you rely on it.
+            </p>
           </div>
         </Reveal>
       </section>

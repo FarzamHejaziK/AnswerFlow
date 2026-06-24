@@ -16,6 +16,11 @@ import WindowControls from './WindowControls';
 import { genMessageId } from '../utils/messageId';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneLight, vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 interface Meeting {
     id: string;
@@ -366,6 +371,113 @@ const formatTimelineTime = (timestamp: number) => {
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+};
+
+const MARKDOWN_REMARK_PLUGINS = [remarkGfm, remarkMath];
+const MARKDOWN_REHYPE_PLUGINS = [rehypeKatex];
+
+const normalizeHistoryMarkdown = (content: string) => {
+    const normalized = content
+        .replace(/\r\n/g, '\n')
+        .replace(/(^|\n)[“”"](```)/g, '$1$2')
+        .replace(/(```)[“”"](?=\n|$)/g, '$1');
+    const fenceCount = (normalized.match(/```/g) || []).length;
+    return fenceCount % 2 === 1 ? `${normalized}\n\`\`\`` : normalized;
+};
+
+const HistoryMarkdown: React.FC<{ content: string; isLight: boolean; emptyText?: string }> = ({
+    content,
+    isLight,
+    emptyText,
+}) => {
+    const text = normalizeHistoryMarkdown(content || '');
+    if (!text.trim()) {
+        return emptyText ? <span className="italic opacity-70">{emptyText}</span> : null;
+    }
+
+    return (
+        <div className="markdown-content text-[13px] leading-relaxed">
+            <ReactMarkdown
+                remarkPlugins={MARKDOWN_REMARK_PLUGINS}
+                rehypePlugins={MARKDOWN_REHYPE_PLUGINS}
+                components={{
+                    h1: ({ node, ...props }: any) => <h1 className="mt-3 mb-2 text-[17px] font-semibold first:mt-0" {...props} />,
+                    h2: ({ node, ...props }: any) => <h2 className="mt-3 mb-2 text-[15px] font-semibold first:mt-0" {...props} />,
+                    h3: ({ node, ...props }: any) => <h3 className="mt-2.5 mb-1.5 text-[14px] font-semibold first:mt-0" {...props} />,
+                    p: ({ node, ...props }: any) => <p className="mb-2 last:mb-0" {...props} />,
+                    ul: ({ node, ...props }: any) => <ul className="mb-2 ml-4 list-disc space-y-1 last:mb-0" {...props} />,
+                    ol: ({ node, ...props }: any) => <ol className="mb-2 ml-4 list-decimal space-y-1 last:mb-0" {...props} />,
+                    li: ({ node, ...props }: any) => <li className="pl-1" {...props} />,
+                    blockquote: ({ node, ...props }: any) => (
+                        <blockquote className={`my-2 border-l-2 pl-3 ${isLight ? 'border-slate-300 text-slate-700' : 'border-white/20 text-white/75'}`} {...props} />
+                    ),
+                    table: ({ node, ...props }: any) => (
+                        <div className="my-3 overflow-x-auto">
+                            <table className={`min-w-full border-collapse text-[12px] ${isLight ? 'border-slate-200' : 'border-white/12'}`} {...props} />
+                        </div>
+                    ),
+                    th: ({ node, ...props }: any) => <th className={`border px-2 py-1 text-left font-semibold ${isLight ? 'border-slate-200 bg-slate-50' : 'border-white/12 bg-white/6'}`} {...props} />,
+                    td: ({ node, ...props }: any) => <td className={`border px-2 py-1 align-top ${isLight ? 'border-slate-200' : 'border-white/12'}`} {...props} />,
+                    strong: ({ node, ...props }: any) => <strong className="font-semibold text-text-primary" {...props} />,
+                    a: ({ node, ...props }: any) => <a className="text-accent-primary hover:underline" {...props} />,
+                    pre: ({ children }: any) => <div className="not-prose my-3">{children}</div>,
+                    code: ({ node, inline, className, children, ...props }: any) => {
+                        const match = /language-([\w-]+)/.exec(className || '');
+                        const lang = match?.[1] || 'text';
+                        const raw = String(children).replace(/\n$/, '');
+                        const isInline = inline ?? (!match && !raw.includes('\n'));
+
+                        if (isInline) {
+                            return (
+                                <code
+                                    className={`rounded px-1.5 py-0.5 font-mono text-[12px] ${isLight ? 'bg-slate-100 text-slate-900' : 'bg-white/10 text-white'}`}
+                                    {...props}
+                                >
+                                    {children}
+                                </code>
+                            );
+                        }
+
+                        return (
+                            <div className={`overflow-hidden rounded-xl border shadow-sm ${isLight ? 'border-slate-200 bg-slate-950' : 'border-white/12 bg-black/35'}`}>
+                                <div className={`border-b px-3 py-1.5 ${isLight ? 'border-white/10 bg-white/5' : 'border-white/10 bg-white/[0.04]'}`}>
+                                    <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-white/45">
+                                        {lang}
+                                    </span>
+                                </div>
+                                <SyntaxHighlighter
+                                    language={lang}
+                                    style={isLight ? oneLight : vscDarkPlus}
+                                    customStyle={{
+                                        margin: 0,
+                                        borderRadius: 0,
+                                        background: isLight ? '#f8fafc' : 'transparent',
+                                        padding: '14px 16px',
+                                        fontSize: '12.5px',
+                                        lineHeight: '1.55',
+                                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                                    }}
+                                    showLineNumbers={true}
+                                    wrapLongLines={false}
+                                    lineNumberStyle={{
+                                        minWidth: '2.4em',
+                                        paddingRight: '1em',
+                                        color: isLight ? 'rgba(15,23,42,0.35)' : 'rgba(255,255,255,0.25)',
+                                        textAlign: 'right',
+                                        fontSize: '11px',
+                                    }}
+                                >
+                                    {raw}
+                                </SyntaxHighlighter>
+                            </div>
+                        );
+                    },
+                }}
+            >
+                {text}
+            </ReactMarkdown>
+        </div>
+    );
 };
 
 const buildTranscriptTimeline = (meeting: Meeting): TranscriptTimelineItem[] => {
@@ -829,14 +941,22 @@ const MeetingConversationPanel: React.FC<{ meeting: Meeting; isLight: boolean }>
                 <div className="max-h-[220px] overflow-y-auto custom-scrollbar mb-3 pr-1 space-y-3">
                     {messages.map((message) => (
                         <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`max-w-[82%] rounded-lg px-3 py-2 text-[12.5px] leading-relaxed whitespace-pre-wrap ${
+                            <div className={`max-w-[82%] rounded-lg px-3 py-2 text-[12.5px] leading-relaxed ${
                                 message.role === 'user'
                                     ? 'bg-text-primary text-bg-primary'
                                     : isLight
                                         ? 'bg-white border border-border-subtle text-text-primary'
                                         : 'bg-bg-secondary border border-border-subtle text-text-primary'
                             }`}>
-                                {message.content || (message.isStreaming ? 'Thinking...' : '')}
+                                {message.role === 'assistant' ? (
+                                    <HistoryMarkdown
+                                        content={message.content}
+                                        isLight={isLight}
+                                        emptyText={message.isStreaming ? 'Thinking...' : undefined}
+                                    />
+                                ) : (
+                                    <span className="whitespace-pre-wrap">{message.content || (message.isStreaming ? 'Thinking...' : '')}</span>
+                                )}
                                 {message.isStreaming && message.content && (
                                     <span className="inline-block ml-1 h-3 w-0.5 align-middle bg-text-tertiary animate-pulse" />
                                 )}
@@ -1022,41 +1142,11 @@ const InterviewPrepPanel: React.FC<InterviewPrepPanelProps> = ({
                             : 'bg-bg-secondary border border-border-subtle text-text-primary'
                 }`}>
                     {message.role === 'assistant' ? (
-                        <div className="markdown-content">
-                            {message.content ? (
-                                <ReactMarkdown
-                                    remarkPlugins={[remarkGfm]}
-                                    components={{
-                                        h1: ({ node, ...props }: any) => <h1 className="text-[16px] font-semibold text-text-primary mt-3 mb-2 first:mt-0" {...props} />,
-                                        h2: ({ node, ...props }: any) => <h2 className="text-[15px] font-semibold text-text-primary mt-3 mb-2 first:mt-0" {...props} />,
-                                        h3: ({ node, ...props }: any) => <h3 className="text-[14px] font-semibold text-text-primary mt-2.5 mb-1.5 first:mt-0" {...props} />,
-                                        p: ({ node, ...props }: any) => <p className="mb-2 last:mb-0 whitespace-pre-wrap" {...props} />,
-                                        ul: ({ node, ...props }: any) => <ul className="list-disc ml-4 mb-2 space-y-1 last:mb-0" {...props} />,
-                                        ol: ({ node, ...props }: any) => <ol className="list-decimal ml-4 mb-2 space-y-1 last:mb-0" {...props} />,
-                                        li: ({ node, ...props }: any) => <li className="pl-1" {...props} />,
-                                        strong: ({ node, ...props }: any) => <strong className="font-semibold text-text-primary" {...props} />,
-                                        a: ({ node, ...props }: any) => <a className="text-accent-primary hover:underline" {...props} />,
-                                        code: ({ node, inline, className, children, ...props }: any) => {
-                                            const isInline = inline ?? !String(children).includes('\n');
-                                            return isInline ? (
-                                                <code className={`rounded px-1 py-0.5 text-[12px] font-mono ${isLight ? 'bg-slate-100 text-slate-900' : 'bg-white/10 text-white'}`} {...props}>
-                                                    {children}
-                                                </code>
-                                            ) : (
-                                                <code className={`block rounded-md p-3 overflow-x-auto text-[12px] leading-relaxed font-mono ${isLight ? 'bg-slate-100 text-slate-900' : 'bg-black/35 text-white'}`} {...props}>
-                                                    {children}
-                                                </code>
-                                            );
-                                        },
-                                        pre: ({ node, ...props }: any) => <pre className="my-3 overflow-x-auto" {...props} />,
-                                    }}
-                                >
-                                    {message.content}
-                                </ReactMarkdown>
-                            ) : (
-                                message.isStreaming ? <span className="text-text-tertiary">Thinking...</span> : null
-                            )}
-                        </div>
+                        <HistoryMarkdown
+                            content={message.content}
+                            isLight={isLight}
+                            emptyText={message.isStreaming ? 'Thinking...' : undefined}
+                        />
                     ) : (
                         <span className="whitespace-pre-wrap">{message.content || (message.isStreaming ? 'Thinking...' : '')}</span>
                     )}
@@ -1164,7 +1254,11 @@ const InterviewPrepPanel: React.FC<InterviewPrepPanelProps> = ({
                                     <p className="mt-1 text-[12px] leading-relaxed whitespace-pre-wrap">{item.question}</p>
                                 </div>
                             )}
-                            <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{item.text}</p>
+                            {isAi ? (
+                                <HistoryMarkdown content={item.text} isLight={isLight} />
+                            ) : (
+                                <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{item.text}</p>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -1694,7 +1788,13 @@ const TranscriptTimeline: React.FC<TranscriptTimelineProps> = ({ meeting, isLigh
                                                     <p className="mt-1 text-[12px] leading-relaxed whitespace-pre-wrap">{item.question}</p>
                                                 </div>
                                             )}
-                                            {item.text ? (
+                                            {isAi ? (
+                                                <HistoryMarkdown
+                                                    content={item.text}
+                                                    isLight={isLight}
+                                                    emptyText="No saved response text."
+                                                />
+                                            ) : item.text ? (
                                                 <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{item.text}</p>
                                             ) : (
                                                 <p className="text-[13px] leading-relaxed italic opacity-70">No saved response text.</p>
@@ -3281,8 +3381,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
     const hasPreflightLlmKey = providerKeyStatus.openai || providerKeyStatus.claude || providerKeyStatus.gemini;
     const preflightModelReady = readiness.sttReady;
     const preflightPermissionsReady = readiness.micPermission === 'granted' &&
-        readiness.screenPermission === 'granted' &&
-        readiness.accessibilityPermission === 'granted';
+        readiness.screenPermission === 'granted';
     const showPreflight = !hasPreflightLlmKey || !preflightModelReady || !preflightPermissionsReady;
     const permissionsReady = readiness.micPermission === 'granted' && readiness.screenPermission === 'granted';
     const captureReady = readiness.audioReady && permissionsReady;
@@ -3339,8 +3438,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
     const sttModelMissing = !readiness.sttReady;
     const micMissing = readiness.micPermission !== 'granted';
     const screenMissing = readiness.screenPermission !== 'granted';
-    const accessibilityMissing = readiness.accessibilityPermission !== 'granted';
-    const coreSetupIssueCount = [providerMissing, sttModelMissing, micMissing, screenMissing, accessibilityMissing].filter(Boolean).length;
+    const coreSetupIssueCount = [providerMissing, sttModelMissing, micMissing, screenMissing].filter(Boolean).length;
     const readinessSummary = readiness.loading
         ? 'Checking setup'
         : coreSetupIssueCount > 0
@@ -3379,14 +3477,6 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
                 label: 'Grant screen recording',
                 detail: `Screen recording is ${permissionLabel(readiness.screenPermission).toLowerCase()}.`,
                 tab: 'audio',
-            }
-            : null,
-        accessibilityMissing
-            ? {
-                key: 'accessibility',
-                label: 'Grant accessibility',
-                detail: `Accessibility is ${permissionLabel(readiness.accessibilityPermission).toLowerCase()}.`,
-                tab: 'general',
             }
             : null,
     ].filter(Boolean) as Array<{ key: string; label: string; detail: string; tab: string }>;
@@ -3475,8 +3565,8 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
         },
         {
             key: 'accessibility',
-            label: 'Accessibility',
-            detail: 'Let the app use local shortcuts and window controls.',
+            label: 'Accessibility (optional)',
+            detail: 'Only needed for stealth typing without focusing AnswerCue.',
             status: readiness.accessibilityPermission,
             icon: ShieldCheck,
             actionLabel: readiness.accessibilityPermission === 'granted' ? 'Granted' : 'Open Settings',
@@ -3805,7 +3895,7 @@ const Launcher: React.FC<LauncherProps> = ({ onStartMeeting, onOpenSettings, onP
                                                     </div>
                                                     <h1 className="text-[28px] leading-tight font-semibold text-text-primary">Grant permissions</h1>
                                                     <p className="mt-3 text-[15px] leading-relaxed text-text-secondary">
-                                                        These are needed before the assistant can listen and follow the interview.
+                                                        Microphone and Screen Recording are required. Accessibility is optional for stealth typing.
                                                     </p>
                                                 </div>
                                                 <button
