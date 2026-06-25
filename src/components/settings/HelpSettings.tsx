@@ -1182,6 +1182,83 @@ export const HelpSettings: React.FC = () => {
                             })}
                         </div>
 
+                        <div className="rounded-2xl border border-border-subtle bg-bg-item-surface p-4">
+                            <h4 className="text-[14px] font-bold text-text-primary flex items-center gap-2 mb-2">
+                                <HelpCircle className="w-4 h-4 text-accent-primary" /> Live Interview Actions In Detail
+                            </h4>
+                            <p className="text-[12px] text-text-secondary leading-relaxed mb-4">
+                                These controls are the main way to work with AnswerCue during a live interview. Use the buttons when the overlay is visible, or use the global shortcuts when the overlay is hidden or another app is focused.
+                            </p>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {([
+                                    {
+                                        title: 'What to answer?',
+                                        shortcut: `${isMac ? 'Cmd' : 'Ctrl'}+1`,
+                                        detail: 'Use when the interviewer asks a normal interview question and you want a polished answer to say out loud. It uses prep notes, selected documents, transcript so far, prior AI responses, and any attached screenshot context.',
+                                        result: 'Best for behavioral, project, system design, product, data, and general technical questions.',
+                                    },
+                                    {
+                                        title: 'Solve Code',
+                                        shortcut: `${isMac ? 'Cmd' : 'Ctrl'}+6`,
+                                        detail: 'Use when the visible problem is a coding challenge, code editor, bug, compiler error, SQL prompt, algorithm question, or take-home style task. If a screenshot is attached, AnswerCue treats the screenshot as the primary source.',
+                                        result: 'Produces a full coding answer, not only a hint. The response should include the approach, working code, and key edge cases when relevant.',
+                                    },
+                                    {
+                                        title: 'Clarify',
+                                        shortcut: `${isMac ? 'Cmd' : 'Ctrl'}+2`,
+                                        detail: 'Use when the interviewer question is ambiguous or incomplete. Instead of answering too early, AnswerCue suggests concise clarifying questions you can ask first.',
+                                        result: 'Best for system design scope, vague product prompts, missing constraints, unclear data definitions, or coding problems without enough input/output detail.',
+                                    },
+                                    {
+                                        title: 'Brainstorm',
+                                        shortcut: `${isMac ? 'Cmd' : 'Ctrl'}+3 during interview mode`,
+                                        detail: 'Use when you need several possible angles before choosing an answer. It helps generate approaches, tradeoffs, examples, story framing, and step-by-step strategy.',
+                                        result: 'Best for open-ended prompts like "how would you design this?", "what could go wrong?", or "how should I structure this answer?"',
+                                    },
+                                    {
+                                        title: 'Recap',
+                                        shortcut: `${isMac ? 'Cmd' : 'Ctrl'}+3 outside interview mode`,
+                                        detail: 'Use when you lost the thread or need a quick summary of what just happened. In the live shell, this same slot can become Brainstorm depending on the active mode.',
+                                        result: 'Returns the recent conversation condensed into useful bullets so you can reorient quickly.',
+                                    },
+                                    {
+                                        title: 'Follow Up Question',
+                                        shortcut: `${isMac ? 'Cmd' : 'Ctrl'}+4`,
+                                        detail: 'Use when you want to keep the conversation moving or ask the interviewer a smart next question.',
+                                        result: 'Best for ending an answer, showing curiosity, or turning the discussion toward requirements, tradeoffs, metrics, team process, or next steps.',
+                                    },
+                                    {
+                                        title: 'Screenshot',
+                                        shortcut: `${isMac ? 'Cmd' : 'Ctrl'}+H`,
+                                        detail: 'Captures the full screen and attaches it as visual context. This does not automatically generate an answer by itself.',
+                                        result: 'Use before What to answer? or Solve Code when the interviewer is referring to visible text, a diagram, a code editor, an error, or a prompt on screen.',
+                                    },
+                                    {
+                                        title: 'Screenshot + answer immediately',
+                                        shortcut: `${isMac ? 'Cmd' : 'Ctrl'}+Shift+Enter`,
+                                        detail: 'Captures the screen, attaches it, and immediately runs What to answer?.',
+                                        result: 'Fastest path when the question depends on something visible and you need an answer without clicking twice.',
+                                    },
+                                    {
+                                        title: 'Screenshot + code immediately',
+                                        shortcut: `${isMac ? 'Cmd' : 'Ctrl'}+Shift+6`,
+                                        detail: 'Captures the screen, attaches it, and immediately runs Solve Code.',
+                                        result: 'Fastest path for live coding prompts, code review screens, failing tests, stack traces, SQL questions, or editor/compiler output.',
+                                    },
+                                ] as Array<{ title: string; shortcut: string; detail: string; result: string }>).map((item) => (
+                                    <div key={item.title} className="rounded-xl border border-border-subtle bg-bg-main p-3">
+                                        <div className="mb-1 flex items-center justify-between gap-3">
+                                            <div className="text-[12px] font-bold text-text-primary">{item.title}</div>
+                                            <span className="shrink-0 rounded bg-bg-elevated px-1.5 py-0.5 text-[10px] font-mono text-text-secondary">{item.shortcut}</span>
+                                        </div>
+                                        <p className="text-[11px] text-text-secondary leading-relaxed mb-1">{item.detail}</p>
+                                        <p className="text-[11px] text-text-tertiary leading-relaxed">{item.result}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
 
                     </div>
                 </AccordionSection>

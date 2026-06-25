@@ -338,7 +338,7 @@ export const HelpAssistant: React.FC = () => {
             </div>
             <h3 className="mb-2 text-base font-semibold text-text-primary">Ask about AnswerCue</h3>
             <p className="max-w-[300px] text-xs leading-relaxed text-text-secondary">
-                Setup, audio, permissions, models, Custom Instructions, interviews, transcripts, documents, and troubleshooting.
+                Setup, audio, permissions, models, live interview actions, shortcuts, transcripts, documents, and troubleshooting.
             </p>
         </div>
     ), []);
@@ -452,7 +452,7 @@ export const HelpAssistant: React.FC = () => {
                                                 submitQuestion();
                                             }
                                         }}
-                                        placeholder="Ask about setup, audio, models, docs..."
+                                        placeholder="Ask about live actions, shortcuts, audio, models..."
                                         rows={2}
                                         className="max-h-28 min-h-[42px] flex-1 resize-none bg-transparent px-2 py-2 text-xs leading-relaxed text-text-primary placeholder-text-tertiary focus:outline-none"
                                     />

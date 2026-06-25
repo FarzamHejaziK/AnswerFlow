@@ -179,7 +179,145 @@ The current answer request.
 </user_request>
 ```
 
-The interview preparation context must be available to the live Answer button.
+The interview preparation context must be available to the live **What to answer?** and **Solve Code** actions.
+
+## Live Interview Actions
+
+The live shell quick actions are the main way users interact with AnswerCue during an interview. The user can click the visible buttons in the overlay or use global shortcuts when another app is focused.
+
+Default shortcuts use `Cmd` on macOS and `Ctrl` on Windows. Users can change shortcuts in Settings > Hotkeys.
+
+### What to answer?
+
+Default shortcut: `Cmd/Ctrl+1`.
+
+Use **What to answer?** when the interviewer asks a normal interview question and the user wants a polished answer to say out loud.
+
+This action uses the available live context:
+
+- Custom Instructions.
+- AI Persona.
+- Prep chat.
+- Selected document Markdown.
+- Live transcript so far.
+- Prior AI responses.
+- Any attached screenshot context.
+
+Best for:
+
+- Behavioral questions.
+- Project walkthroughs.
+- System design questions.
+- Product or data questions.
+- General technical questions.
+- Explaining tradeoffs or decisions.
+
+Expected output: a direct interview-ready answer. For interviewer questions, the answer should restate or identify the question first, then provide the answer.
+
+### Solve Code
+
+Default shortcut: `Cmd/Ctrl+6`.
+
+Use **Solve Code** when the screen or transcript contains a coding problem, code editor, compiler error, failing test, SQL prompt, algorithm question, code review prompt, or debugging task.
+
+If a screenshot is attached, the screenshot is the primary source. The transcript is used to disambiguate what the interviewer asked.
+
+Expected output: a full coding answer, not only a hint. The response should include the approach, working code in a fenced code block, and key edge cases or complexity when relevant.
+
+Use **Solve Code** instead of **What to answer?** when the user specifically needs code.
+
+### Clarify
+
+Default shortcut: `Cmd/Ctrl+2`.
+
+Use **Clarify** when the interviewer question is ambiguous, underspecified, or missing constraints. This action should help the user ask a concise clarifying question instead of guessing too early.
+
+Best for:
+
+- System design scope questions.
+- Product prompts without clear goals.
+- Data questions with unclear metrics.
+- Coding problems missing input/output format.
+- Any moment where the user needs to confirm assumptions.
+
+Expected output: one or more short clarifying questions the user can ask the interviewer.
+
+### Brainstorm
+
+Default shortcut: `Cmd/Ctrl+3` when Interview Mode is active.
+
+Use **Brainstorm** when the user needs several possible angles before answering. It helps generate approaches, examples, tradeoffs, risks, and step-by-step strategy.
+
+Best for:
+
+- Open-ended system design prompts.
+- Choosing between multiple solutions.
+- Structuring a behavioral story.
+- Planning a debugging approach.
+- Thinking through architecture, tradeoffs, or edge cases.
+
+Expected output: a compact set of options or a structured plan.
+
+### Recap
+
+Default shortcut: `Cmd/Ctrl+3` when Interview Mode is not active.
+
+Use **Recap** when the user lost the thread or needs a quick summary of the recent conversation.
+
+Expected output: recent conversation condensed into useful bullets. In the live shell, the same button slot can show **Brainstorm** or **Recap** depending on mode.
+
+### Follow Up Question
+
+Default shortcut: `Cmd/Ctrl+4`.
+
+Use **Follow Up Question** when the user wants to keep the conversation moving or ask the interviewer a smart next question.
+
+Best for:
+
+- Ending an answer smoothly.
+- Showing curiosity.
+- Asking about requirements.
+- Asking about tradeoffs.
+- Asking about metrics, team process, or next steps.
+
+Expected output: one or more concise questions the user can ask next.
+
+### Screenshot
+
+Default shortcut: `Cmd/Ctrl+H`.
+
+Use **Screenshot** to capture the full screen and attach it as visual context. This action does not automatically generate an answer.
+
+Best for:
+
+- Visible coding prompts.
+- Diagrams.
+- Error messages.
+- Code editor state.
+- Browser pages.
+- Any text or visual context the interviewer is referencing.
+
+After taking a screenshot, the user can run **What to answer?**, **Solve Code**, or type a custom prompt.
+
+### Screenshot + answer immediately
+
+Default shortcut: `Cmd/Ctrl+Shift+Enter`.
+
+Use **Screenshot + answer immediately** when the question depends on something visible and the user needs a response in one action.
+
+This action captures the screen, attaches the screenshot, and immediately runs **What to answer?**.
+
+Best for visible prompts, diagrams, documents, or product screens where the user needs an interview-ready spoken answer.
+
+### Screenshot + code immediately
+
+Default shortcut: `Cmd/Ctrl+Shift+6`.
+
+Use **Screenshot + code immediately** when the visible screen contains a coding problem, code editor, compiler output, failing test, SQL task, or debugging prompt.
+
+This action captures the screen, attaches the screenshot, and immediately runs **Solve Code**.
+
+Best for live coding because it avoids the extra step of manually taking a screenshot and then clicking **Solve Code**.
 
 ## Interview Finished
 
