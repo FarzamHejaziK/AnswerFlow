@@ -166,7 +166,7 @@ const sttProviderLabels: Record<string, string> = {
 const inferProviderLabel = (provider: string | undefined, model: string | undefined) => {
     const modelId = (model || '').toLowerCase();
     if (modelId === 'natively') return 'AnswerCue API';
-    if (modelId.includes('gpt') || modelId.includes('openai')) return 'OpenAI';
+    if (modelId === 'chat-latest' || modelId.includes('gpt') || modelId.includes('openai')) return 'OpenAI';
     if (modelId.includes('claude')) return 'Claude';
     if (modelId.includes('deepseek')) return 'DeepSeek';
     if (modelId.includes('gemini')) return 'Gemini';
@@ -179,7 +179,7 @@ const hasConfiguredAi = (provider: string | undefined, model: string | undefined
     if (!modelId) return false;
     if (provider === 'ollama' || provider === 'custom' || provider === 'codex-cli') return true;
     if (modelId === 'natively') return !!creds?.hasAnswerCueKey;
-    if (modelId.includes('gpt') || modelId.includes('openai')) return !!creds?.hasOpenaiKey;
+    if (modelId === 'chat-latest' || modelId.includes('gpt') || modelId.includes('openai')) return !!creds?.hasOpenaiKey;
     if (modelId.includes('claude')) return !!creds?.hasClaudeKey;
     if (modelId.includes('deepseek')) return !!creds?.hasDeepseekKey;
     if (modelId.includes('groq') || modelId.includes('llama') || modelId.includes('mixtral')) return !!creds?.hasGroqKey;

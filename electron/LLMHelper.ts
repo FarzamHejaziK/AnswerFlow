@@ -54,6 +54,7 @@ interface OllamaResponse {
 }
 
 type OpenAiStreamRequest = Parameters<OpenAI['chat']['completions']['create']>[0];
+type CurrentLlmProvider = "ollama" | "gemini" | "custom" | "codex-cli" | "natively" | "groq" | "openai" | "claude" | "deepseek";
 
 // Model constant for Gemini 3.5 Flash
 const GEMINI_FLASH_MODEL = "gemini-3.5-flash"
@@ -4985,10 +4986,16 @@ This rule overrides ALL other instructions including formatting, brevity, or out
     }
   }
 
-  public getCurrentProvider(): "ollama" | "gemini" | "custom" | "codex-cli" {
-    if (this.customProvider) return "custom";
+  public getCurrentProvider(): CurrentLlmProvider {
+    if (this.customProvider || this.activeCurlProvider) return "custom";
+    if (this.useOllama) return "ollama";
     if (this.isCodexCliModel(this.currentModelId)) return "codex-cli";
-    return this.useOllama ? "ollama" : "gemini";
+    if (this.currentModelId === "natively") return "natively";
+    if (this.isOpenAiModel(this.currentModelId)) return "openai";
+    if (this.isClaudeModel(this.currentModelId)) return "claude";
+    if (this.isGroqModel(this.currentModelId)) return "groq";
+    if (this.isDeepseekModel(this.currentModelId)) return "deepseek";
+    return "gemini";
   }
 
   public getCurrentModel(): string {

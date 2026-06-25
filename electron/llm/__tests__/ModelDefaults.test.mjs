@@ -29,6 +29,15 @@ test('OpenAI and Gemini defaults stay aligned across runtime constants and conne
   assert.match(ipcHandlers, /models\/gemini-3.5-flash:generateContent/);
 });
 
+test('current LLM config reports chat-latest as OpenAI for the launcher readiness card', () => {
+  const llmHelper = read('electron/LLMHelper.ts');
+  const launcher = read('src/components/Launcher.tsx');
+
+  assert.match(llmHelper, /type CurrentLlmProvider = [^\n]*"openai"/);
+  assert.match(llmHelper, /if \(this\.isOpenAiModel\(this\.currentModelId\)\) return "openai";/);
+  assert.match(launcher, /modelId === 'chat-latest' \|\| modelId\.includes\('gpt'\) \|\| modelId\.includes\('openai'\)/);
+});
+
 test('GPT 5.5 Thinking dropdown ID maps to GPT 5.5 with low reasoning', () => {
   const llmHelper = read('electron/LLMHelper.ts');
 

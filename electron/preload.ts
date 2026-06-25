@@ -43,7 +43,7 @@ interface ElectronAPI {
 
   // LLM Model Management
   getCurrentLlmConfig: () => Promise<{
-    provider: 'ollama' | 'gemini';
+    provider: 'ollama' | 'gemini' | 'custom' | 'codex-cli' | 'natively' | 'groq' | 'openai' | 'claude' | 'deepseek';
     model: string;
     isOllama: boolean;
   }>;
