@@ -48,6 +48,7 @@ interface Meeting {
         screenshotPreview?: string;
     }>;
     isProcessed?: boolean;
+    titleSource?: 'placeholder' | 'auto' | 'manual' | 'calendar';
     active?: boolean; // UI state
     time?: string; // Optional for compatibility
 }

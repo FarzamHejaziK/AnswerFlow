@@ -293,6 +293,7 @@ interface ElectronAPI {
     answer: string | null;
     question?: string;
     error?: string;
+    nullReason?: 'cooldown' | 'superseded' | 'nothing_actionable' | 'unknown';
     screenContextStatus?: 'not_available' | 'available' | 'failed';
     ocrTextLength?: number;
     imageCount?: number;
@@ -345,7 +346,7 @@ interface ElectronAPI {
   endMeeting: () => Promise<{ success: boolean; error?: string }>;
   finalizeMicSTT: () => Promise<void>;
   getRecentMeetings: () => Promise<
-    Array<{ id: string; title: string; date: string; duration: string; summary: string; isProcessed?: boolean }>
+    Array<{ id: string; title: string; date: string; duration: string; summary: string; isProcessed?: boolean; titleSource?: 'placeholder' | 'auto' | 'manual' | 'calendar' }>
   >;
   getMeetingDetails: (id: string) => Promise<any>;
   updateMeetingTitle: (id: string, title: string) => Promise<boolean>;

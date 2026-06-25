@@ -12,6 +12,82 @@ import { telemetryService } from './services/telemetry/TelemetryService';
 import type { ProviderDataScopePolicy } from './llm/ProviderRouter';
 const crypto = require('crypto');
 
+const PLACEHOLDER_TITLE_RE = /^(processing\.{0,3}|untitled(?:ed)?\s+(?:interview|session)|new interview)$/i;
+
+function isPlaceholderMeetingTitle(title?: string | null): boolean {
+    const trimmed = typeof title === 'string' ? title.trim() : '';
+    return !trimmed || PLACEHOLDER_TITLE_RE.test(trimmed);
+}
+
+function cleanGeneratedMeetingTitle(raw: string): string {
+    const cleaned = raw
+        .replace(/```[\s\S]*?```/g, match => match.replace(/```(?:text|markdown|json)?/gi, '').replace(/```/g, ''))
+        .replace(/^(?:title|interview title|meeting title)\s*:\s*/i, '')
+        .replace(/["*_`#]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/[.。]+$/g, '');
+
+    if (!cleaned || isPlaceholderMeetingTitle(cleaned)) return '';
+    return cleaned.length > 80 ? cleaned.slice(0, 80).trim() : cleaned;
+}
+
+function truncateBlock(text: string, maxChars: number): string {
+    const trimmed = text.trim();
+    if (trimmed.length <= maxChars) return trimmed;
+    return `${trimmed.slice(0, maxChars).trim()}\n[truncated]`;
+}
+
+function buildInterviewTitleContext(
+    data: { transcript: TranscriptSegment[], usage: any[], context: string },
+    metadata?: { interviewContext?: { contextMarkdown?: string } } | null,
+): string {
+    const prepContext = truncateBlock(metadata?.interviewContext?.contextMarkdown || '', 5000);
+    const transcript = truncateBlock(
+        data.transcript
+            .filter(segment => segment?.text?.trim())
+            .slice(0, 80)
+            .map(segment => `${segment.speaker || 'speaker'}: ${segment.text.trim()}`)
+            .join('\n'),
+        5000,
+    );
+    const aiInteractions = truncateBlock(
+        (data.usage || [])
+            .filter(item => item && (item.question || item.answer || item.items || item.metadata))
+            .slice(0, 20)
+            .map(item => {
+                const parts = [
+                    item.type ? `type: ${item.type}` : '',
+                    item.question ? `question: ${item.question}` : '',
+                    item.answer ? `answer: ${Array.isArray(item.answer) ? item.answer.join('; ') : item.answer}` : '',
+                    Array.isArray(item.items) ? `items: ${item.items.join('; ')}` : '',
+                ].filter(Boolean);
+                return parts.join('\n');
+            })
+            .join('\n\n'),
+        2500,
+    );
+    const sessionContext = truncateBlock(data.context || '', 3000);
+
+    return [
+        prepContext ? `<interview_preparation_context>\n${prepContext}\n</interview_preparation_context>` : '',
+        transcript ? `<live_interview_transcript>\n${transcript}\n</live_interview_transcript>` : '',
+        aiInteractions ? `<ai_interactions>\n${aiInteractions}\n</ai_interactions>` : '',
+        sessionContext ? `<session_context>\n${sessionContext}\n</session_context>` : '',
+    ].filter(Boolean).join('\n\n');
+}
+
+function fallbackInterviewTitle(context: string, modeSnapshot?: { templateType: string } | null): string {
+    const lower = context.toLowerCase();
+    if (/\b(system design|architecture|scalability|distributed system)\b/.test(lower)) return 'System Design Interview';
+    if (/\b(coding challenge|leetcode|algorithm|data structure|solve code|compiler error|sql query)\b/.test(lower)) return 'Coding Interview';
+    if (/\b(data scientist|data science|machine learning|ml engineer|analytics|experiment|causal)\b/.test(lower)) return 'Data Science Interview';
+    if (/\b(product manager|product sense|roadmap|user research|metrics)\b/.test(lower)) return 'Product Interview';
+    if (/\b(backend|frontend|full stack|software engineer|engineering manager)\b/.test(lower)) return 'Software Engineering Interview';
+    if (modeSnapshot?.templateType === 'technical-interview') return 'Technical Interview';
+    return `Interview - ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+}
+
 export class MeetingPersistence {
     private session: SessionTracker;
     private llmHelper: LLMHelper;
@@ -126,7 +202,8 @@ export class MeetingPersistence {
             detailedSummary: { actionItems: [], keyPoints: [] },
             transcript: snapshot.transcript,
             usage: snapshot.usage,
-            isProcessed: false
+            isProcessed: false,
+            titleSource: 'placeholder'
         };
 
         try {
@@ -168,6 +245,7 @@ export class MeetingPersistence {
         modeSnapshot?: { id: string; name: string; templateType: string } | null
     ): Promise<void> {
         let title = "Untitled Interview";
+        let titleSource: 'placeholder' | 'auto' | 'manual' | 'calendar' = 'placeholder';
         let summaryData: { overview?: string; actionItems: string[], keyPoints: string[], sections?: Array<{ title: string; bullets: string[] }> } = { actionItems: [], keyPoints: [] };
         // Phase 6 — post_call_summary lifecycle telemetry. Wrapped in try/catch
         // around track calls so a telemetry sink fault never breaks persistence.
@@ -189,19 +267,38 @@ export class MeetingPersistence {
         let source: 'manual' | 'calendar' = 'manual';
 
         if (metadata) {
-            if (metadata.title) title = metadata.title;
+            const metadataTitle = typeof metadata.title === 'string' ? metadata.title.trim() : '';
+            if (metadataTitle && !isPlaceholderMeetingTitle(metadataTitle)) {
+                title = metadataTitle;
+                titleSource = metadata.source === 'calendar' ? 'calendar' : 'auto';
+            }
             if (metadata.calendarEventId) calendarEventId = metadata.calendarEventId;
             if (metadata.source) source = metadata.source;
         }
 
         try {
-            // Generate Title (only if not set by calendar)
-            if (!metadata || !metadata.title) {
-                const titlePrompt = `Generate a concise 3-6 word title for this meeting context. Output ONLY the title text. Do not use quotes or conversational filler.`;
-                const groqTitlePrompt = GROQ_TITLE_PROMPT;
+            // Generate title from actual interview content unless a non-placeholder
+            // calendar/title metadata value was supplied.
+            if (isPlaceholderMeetingTitle(title)) {
+                const titleContext = buildInterviewTitleContext(data, metadata);
+                const titlePrompt = `Generate a concise title for this interview.
 
-                const generatedTitle = await this.llmHelper.generateMeetingSummary(titlePrompt, data.context.substring(0, 5000), groqTitlePrompt);
-                if (generatedTitle) title = generatedTitle.replace(/["*]/g, '').trim();
+Use the specific role, company, topic, problem, or domain when available.
+Prefer titles like "Stripe Backend Coding Interview", "Data Scientist Fraud Interview", or "System Design Interview".
+
+Rules:
+- Output ONLY the title text.
+- Use 2-8 words.
+- Do not use quotes, markdown, labels, or conversational filler.
+- Never output "Untitled Interview", "Processing", or a generic placeholder.`;
+                const groqTitlePrompt = `${GROQ_TITLE_PROMPT}\n\n${titlePrompt}`;
+
+                let generatedTitle = '';
+                if (titleContext.trim()) {
+                    generatedTitle = await this.llmHelper.generateMeetingSummary(titlePrompt, titleContext, groqTitlePrompt);
+                }
+                title = cleanGeneratedMeetingTitle(generatedTitle) || fallbackInterviewTitle(titleContext || data.context, modeSnapshot);
+                titleSource = 'auto';
             }
 
             // Load template note sections for the mode that was active when meeting stopped.
@@ -387,7 +484,8 @@ Return ONLY valid JSON (no markdown code blocks):
                 usage: data.usage,
                 calendarEventId: calendarEventId,
                 source: source,
-                isProcessed: true
+                isProcessed: true,
+                titleSource
             };
 
             DatabaseManager.getInstance().saveMeeting(meetingData, data.startTime, data.durationMs);

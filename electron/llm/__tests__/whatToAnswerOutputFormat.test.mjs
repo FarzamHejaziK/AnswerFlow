@@ -10,11 +10,17 @@ const prompts = await import(pathToFileURL(promptsPath).href);
 const tinyPrompts = await import(pathToFileURL(tinyPromptsPath).href);
 
 test('what-to-answer prompts request Question and Answer sections', () => {
+  assert.match(prompts.UNIVERSAL_WHAT_TO_ANSWER_PROMPT, /SILENT DECISION POLICY/);
+  assert.match(prompts.UNIVERSAL_WHAT_TO_ANSWER_PROMPT, /RESPONSE SHAPES/);
+  assert.match(prompts.UNIVERSAL_WHAT_TO_ANSWER_PROMPT, /prep context, selected docs, custom instructions, or persona/i);
+  assert.match(prompts.UNIVERSAL_WHAT_TO_ANSWER_PROMPT, /Do not answer code screens with approach-only prose/);
   assert.match(prompts.UNIVERSAL_WHAT_TO_ANSWER_PROMPT, /Question: brief clarification/i);
   assert.match(prompts.UNIVERSAL_WHAT_TO_ANSWER_PROMPT, /Answer:\s*\nthe exact response/i);
   assert.doesNotMatch(prompts.UNIVERSAL_WHAT_TO_ANSWER_PROMPT, /Output ONLY the answer\. Nothing else\./);
   assert.doesNotMatch(prompts.UNIVERSAL_WHAT_TO_ANSWER_PROMPT, /under 14 words/i);
 
+  assert.match(tinyPrompts.TINY_WHAT_TO_ANSWER_PROMPT, /Silently choose the response type/);
+  assert.match(tinyPrompts.TINY_WHAT_TO_ANSWER_PROMPT, /complete fenced code or the exact corrected snippet/);
   assert.match(tinyPrompts.TINY_WHAT_TO_ANSWER_PROMPT, /Question: brief clarification/i);
   assert.match(tinyPrompts.TINY_WHAT_TO_ANSWER_PROMPT, /Answer:\s*\nthe spoken answer/i);
   assert.doesNotMatch(tinyPrompts.TINY_WHAT_TO_ANSWER_PROMPT, /Just give the spoken answer/i);

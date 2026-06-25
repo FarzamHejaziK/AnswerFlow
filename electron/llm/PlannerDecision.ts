@@ -70,6 +70,10 @@ export function planNextAssistantAction(input: PlannerInput): PlannerDecision {
         return { kind: 'clarify', reason: 'incomplete_technical_restatement', confidence };
     }
 
+    if (RESTATEMENT_PATTERN.test(text)) {
+        return { kind: 'answer', reason: 'answerable_question', confidence };
+    }
+
     if (RECAP_PATTERN.test(text)) {
         return { kind: 'recap', reason: 'recap_request', confidence };
     }

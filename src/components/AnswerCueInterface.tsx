@@ -957,38 +957,15 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
     return () => unsub?.();
   }, []);
 
-  // Audio capture / screen-recording warning banner. Two distinct IPC
-  // events feed the same banner surface but require different title and
-  // action: the macOS screen-recording-permission denial points at the
-  // OS Privacy pane, while generic audio-capture failures (no-chunks
-  // watchdog, TCC zero-fill, terminal STT init failure, SCK errors) are
-  // cross-platform and should open AnswerCue's own Settings. Bundling
-  // both under a hardcoded "Screen Recording Permission Denied" title
-  // with an x-apple.systempreferences action was issue #252: on Windows
-  // the audio-capture-failed path fired, the user saw a macOS-only title
-  // and the Open Settings button handed Windows shell a URI scheme it
-  // couldn't resolve (Microsoft Store popup).
-  // UX3: `channel` lets the banner button deep-link to the right macOS
-  // System Settings pane (Microphone vs Screen Recording) instead of just
-  // opening AnswerCue's internal Settings, which is one extra click and
-  // doesn't actually take the user to the system pane they need.
-  type SystemAudioWarning = {
-    kind: 'screen-recording-permission' | 'audio-capture-failure';
-    message: string;
-    channel?: 'system' | 'mic';
-  };
-  const [systemAudioWarning, setSystemAudioWarning] = useState<SystemAudioWarning | null>(null);
-  // UX2: in-flight guard for the "Repair Permissions" button so a double-click
-  // can't fire two concurrent tccutil sequences (whose second-arriving response
-  // would clobber the first's banner mid-render).
-  const [tccRepairing, setTccRepairing] = useState(false);
+  // Audio capture warnings are intentionally suppressed in the live overlay:
+  // keep subscriptions for diagnostics, but do not auto-expand or render a banner.
   useEffect(() => {
     const unsub = window.electronAPI?.onSystemAudioPermissionDenied?.((message: string) => {
-      // screen-recording-permission is implicitly system-channel (it's the
-      // Screen Recording TCC pane). Set channel for consistency so the
-      // button-resolution logic has a single source of truth.
-      setSystemAudioWarning({ kind: 'screen-recording-permission', message, channel: 'system' });
-      setIsExpanded(true); // Force overlay open so user sees the warning
+      console.warn('[AnswerCueInterface] Suppressed live audio warning', {
+        kind: 'screen-recording-permission',
+        channel: 'system',
+        message,
+      });
     });
     return () => unsub?.();
   }, []);
@@ -1008,39 +985,14 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
       // recovery attempts shouldn't spam the banner since recovery
       // typically succeeds within ~1.5s.
       if (payload.terminal || payload.stuck) {
-        setSystemAudioWarning({
+        console.warn('[AnswerCueInterface] Suppressed live audio warning', {
           kind: 'audio-capture-failure',
-          message: payload.message,
           channel: payload.channel,
+          message: payload.message,
         });
-        setIsExpanded(true);
       }
     });
     return () => unsub?.();
-  }, []);
-
-  // PR #173: STT not configured warning — shown when provider is 'none' during a meeting
-  const [sttNotConfigured, setSttNotConfigured] = useState(false);
-  useEffect(() => {
-    let mounted = true;
-    // Check current STT config on mount
-    window.electronAPI
-      ?.getSttProvider?.()
-      .then((provider: string) => {
-        if (mounted) setSttNotConfigured(provider === 'none');
-      })
-      .catch(() => {});
-
-    // Listen for live config changes (e.g. user saves a key in Settings while meeting is active)
-    const unsub = window.electronAPI?.onSttConfigChanged?.(
-      (data: { configured: boolean; provider: string }) => {
-        if (mounted) setSttNotConfigured(!data.configured);
-      },
-    );
-    return () => {
-      mounted = false;
-      unsub?.();
-    };
   }, []);
 
   // Keep the closure-free isExpanded mirror in sync.
@@ -2255,9 +2207,20 @@ const AnswerCueInterface: React.FC<AnswerCueInterfaceProps> = ({
       setLatestVisionModelUsed(result.visionModelUsed);
       setLatestVisionFailureReason(result.visionFailureReason);
       if (result.answer == null) {
+        const hadImageInput = currentAttachments.length > 0 || Boolean(result.usedImageInput);
         const feedback =
           result.error ??
-          'Could not generate an answer yet. Wait a few seconds after speech and try again.';
+          (result.nullReason === 'superseded'
+            ? 'Canceled because a newer answer request started.'
+            : result.nullReason === 'cooldown'
+              ? 'Still processing the previous request. Try again in a moment.'
+              : result.nullReason === 'nothing_actionable'
+                ? hadImageInput
+                  ? 'I could not find a clear actionable question or problem in that screenshot. Try a tighter screenshot of the code, prompt, or error.'
+                  : 'Nothing actionable yet. Try again after the interviewer finishes the question.'
+                : hadImageInput
+                  ? 'I could not generate an answer from that screenshot. Try a clearer or tighter screenshot.'
+                  : 'Could not generate an answer yet. Wait a few seconds after speech and try again.');
         // CRITICAL ORDERING: clear streaming refs and wipe imperative DOM
         // BEFORE the `setMessages` that commits the null-feedback. The old
         // order called `flushToken()` first — which exits early when
@@ -4321,17 +4284,7 @@ Provide only the answer, nothing else.`;
   // dropped-then-reconnecting channel). The neutral 'awaiting-audio' state
   // ("Listening for audio…") is intentionally suppressed — it added a pill on
   // every launch and made the top section look padded vs. the prior build.
-  // When an audio-capture-failure banner is showing, it already conveys the
-  // hard failure with actionable UI (repair button + system-settings deep
-  // link). Surfacing the STT "needs attention" error pill at the same time is
-  // the same status on two surfaces — let the richer banner own the error and
-  // suppress the redundant error-tone pill. Reconnecting indication still shows
-  // (the banner only fires on terminal/stuck, not transient reconnects).
-  const audioFailureBannerActive = systemAudioWarning?.kind === 'audio-capture-failure';
-  const shouldShowSttSummaryPill =
-    (sttSummary.tone === 'error' && !audioFailureBannerActive) ||
-    sttUserStatus === 'reconnecting' ||
-    sttInterviewerStatus === 'reconnecting';
+  const shouldShowSttSummaryPill = false;
   // Whether the vision chip will render (mirrors the IIFE's early-return guard).
   const visionPillFailed = screenContextStatus === 'failed' || !!latestVisionFailureReason;
   const visionPillSucceeded =
@@ -4516,182 +4469,6 @@ Provide only the answer, nothing else.`;
                   </div>
                 )}
               </div>
-              )}
-
-              {/* System Audio / Screen Recording Warning Banner */}
-              {systemAudioWarning && (
-                <div className="flex items-center justify-between mx-4 mt-3 mb-1 px-3.5 py-2.5 bg-yellow-500/10 border border-yellow-500/20 rounded-[12px] shadow-sm relative no-drag group/warning">
-                  <div className="flex flex-col gap-1 pr-3">
-                    <div className="flex items-center gap-2 text-[12.5px] text-yellow-600 dark:text-yellow-400/90 font-medium leading-tight">
-                      <div className="shrink-0 p-1 bg-yellow-500/20 rounded-full">
-                        <svg
-                          className="w-3.5 h-3.5 text-yellow-600 dark:text-yellow-400"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2.5}
-                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                          />
-                        </svg>
-                      </div>
-                      <span>
-                        {systemAudioWarning.kind === 'screen-recording-permission'
-                          ? 'Screen Recording Permission Denied'
-                          : 'Audio Capture Issue'}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-yellow-600/70 dark:text-yellow-400/60 leading-snug pl-[26px]">
-                      {systemAudioWarning.message}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {/*
-                      UX3: deep-link to the correct macOS System Settings pane
-                      based on the failure channel. Falls back to internal
-                      Settings on Windows or when channel is unknown.
-                    */}
-                    {(() => {
-                      const wantsScreenCapturePane =
-                        systemAudioWarning.kind === 'screen-recording-permission' ||
-                        systemAudioWarning.channel === 'system';
-                      const wantsMicrophonePane =
-                        systemAudioWarning.kind === 'audio-capture-failure' &&
-                        systemAudioWarning.channel === 'mic';
-                      const deepLinkUrl = !isMac
-                        ? null
-                        : wantsScreenCapturePane
-                          ? 'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture'
-                          : wantsMicrophonePane
-                            ? 'x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone'
-                            : null;
-                      return (
-                        <>
-                          <button
-                            onClick={() => {
-                              if (deepLinkUrl) {
-                                window.electronAPI.openExternal(deepLinkUrl);
-                              } else {
-                                // Windows / unknown channel: fall back to internal Settings.
-                                window.electronAPI?.toggleSettingsWindow?.();
-                              }
-                            }}
-                            className="px-3 py-1.5 rounded-lg bg-yellow-500/15 hover:bg-yellow-500/25 text-yellow-700 dark:text-yellow-500 text-[11px] font-semibold transition-all active:scale-95 border border-yellow-500/20 shadow-sm"
-                            title={
-                              deepLinkUrl
-                                ? wantsMicrophonePane
-                                  ? 'Open macOS Microphone privacy settings'
-                                  : 'Open macOS Screen Recording privacy settings'
-                                : 'Open AnswerCue Settings'
-                            }
-                          >
-                            {deepLinkUrl
-                              ? wantsMicrophonePane
-                                ? 'Open Mic Settings'
-                                : 'Open Screen Settings'
-                              : 'Open Settings'}
-                          </button>
-                          {/*
-                            UX2: in-app TCC repair button. macOS only.
-                            Shows when the banner is from a TCC-related failure
-                            (any audio-capture-failure path or screen-recording
-                            permission denial). The dominant root cause of
-                            "permissions granted but no transcription" is TCC
-                            cdhash drift across rebuilds; this button gives the
-                            user a one-click recovery without having to know
-                            about tccutil or terminal commands. After reset
-                            the user must fully quit (Cmd+Q) and reopen.
-                          */}
-                          {isMac && (
-                            <button
-                              onClick={async () => {
-                                if (tccRepairing) return; // in-flight guard
-                                setTccRepairing(true);
-                                try {
-                                  const result = await window.electronAPI?.repairTccPermissions?.();
-                                  if (result) {
-                                    // Show the returned message via the existing
-                                    // banner; user can dismiss when ready.
-                                    setSystemAudioWarning({
-                                      kind: 'audio-capture-failure',
-                                      message: result.message,
-                                      channel: systemAudioWarning.channel,
-                                    });
-                                  }
-                                } catch (err) {
-                                  console.warn('[UI] repair-tcc-permissions failed:', err);
-                                } finally {
-                                  setTccRepairing(false);
-                                }
-                              }}
-                              disabled={tccRepairing}
-                              className="px-3 py-1.5 rounded-lg bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-700 dark:text-yellow-500 text-[11px] font-medium transition-all active:scale-95 border border-yellow-500/15 disabled:opacity-60 disabled:cursor-not-allowed"
-                              title="Reset macOS permission entries for AnswerCue (you will need to grant them again after relaunch)"
-                            >
-                              {tccRepairing ? 'Resetting...' : 'Repair Permissions'}
-                            </button>
-                          )}
-                        </>
-                      );
-                    })()}
-                    <button
-                      onClick={() => setSystemAudioWarning(null)}
-                      className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-yellow-600/50 hover:text-yellow-700 dark:text-yellow-500/50 dark:hover:text-yellow-400 transition-colors absolute top-1 right-1 opacity-0 group-hover/warning:opacity-100"
-                      title="Dismiss"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* PR #173: STT Not Configured Warning Banner */}
-              {sttNotConfigured && (
-                <div className="flex items-center justify-between mx-4 mt-3 mb-1 px-3.5 py-2.5 bg-orange-500/10 border border-orange-500/20 rounded-[12px] shadow-sm relative no-drag group/stt-warning">
-                  <div className="flex flex-col gap-1 pr-3">
-                    <div className="flex items-center gap-2 text-[12.5px] text-orange-600 dark:text-orange-400/90 font-medium leading-tight">
-                      <div className="shrink-0 p-1 bg-orange-500/20 rounded-full">
-                        <svg
-                          className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2.5}
-                            d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                          />
-                        </svg>
-                      </div>
-                      <span>Transcription Not Configured</span>
-                    </div>
-                    <p className="text-[11px] text-orange-600/70 dark:text-orange-400/60 leading-snug pl-[26px]">
-                      No STT provider selected. Open Settings - Audio to pick one.
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => {
-                        window.electronAPI?.toggleSettingsWindow?.();
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-orange-500/15 hover:bg-orange-500/25 text-orange-700 dark:text-orange-500 text-[11px] font-semibold transition-all active:scale-95 border border-orange-500/20 shadow-sm"
-                    >
-                      Open Settings
-                    </button>
-                    <button
-                      onClick={() => setSttNotConfigured(false)}
-                      className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-orange-600/50 hover:text-orange-700 dark:text-orange-500/50 dark:hover:text-orange-400 transition-colors absolute top-1 right-1 opacity-0 group-hover/stt-warning:opacity-100"
-                      title="Dismiss"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
               )}
 
               {/* Phase 3 — Dynamic action card row (Cluely-style live triggers).

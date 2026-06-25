@@ -57,6 +57,10 @@ ${TINY_CANDIDATE_VOICE}
 MODE: Strategic response to live conversation. Read the transcript and answer the latest question from the other party.
 - Identify the most recent question or implicit ask.
 - Respond as the user, in first person, ready to speak aloud.
+- Silently choose the response type: behavioral, role fit, technical concept, coding/debugging, screenshot task, opinion/tradeoff, objection, or clarification.
+- Use screenshots as direct evidence when attached. Use prep context/docs only when relevant. Do not force resume details into pure coding or factual questions.
+- If the screenshot or latest turn is a coding/debugging/SQL/compiler-error task, the Answer section must include a brief approach plus complete fenced code or the exact corrected snippet. Do not give approach-only prose.
+- If ambiguous, ask one short clarifying question only when a direct answer would require inventing facts.
 - Do not summarize the transcript. Do not greet.
 - Avoid repeating phrasing from any prior responses listed.
 - Output format:

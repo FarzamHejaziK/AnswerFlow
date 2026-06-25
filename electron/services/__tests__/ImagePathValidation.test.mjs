@@ -118,7 +118,7 @@ test('image path validation rejects path traversal attempts', () => {
   assert.ok(hasPathValidation, 'Should have image path validation function');
 });
 
-test('generate-what-to-say rejects malformed image path payloads before OCR or model calls', () => {
+test('generate-what-to-say rejects malformed image path payloads before model calls', () => {
   const ipcSource = read('electron/ipcHandlers.ts');
   const handler = sliceSafeHandleBlock(ipcSource, 'generate-what-to-say');
 
@@ -129,6 +129,7 @@ test('generate-what-to-say rejects malformed image path payloads before OCR or m
   assert.match(handler, /Invalid image path payload/);
   assert.match(handler, /validatedImagePaths/);
   assert.match(handler, /runWhatShouldISay\([\s\S]{0,120}validatedImagePaths/);
+  assert.doesNotMatch(handler, /ScreenUnderstandingService|\.understand\(/);
 });
 
 test('image path validation is applied at IPC handler level', () => {

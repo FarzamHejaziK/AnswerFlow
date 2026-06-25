@@ -258,3 +258,5 @@ refactor_profile.py
 refactor.js
 skills-lock.json
 windowswork.md
+.vercel
+.env*

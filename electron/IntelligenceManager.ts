@@ -16,7 +16,7 @@ import { ScreenContext } from './services/screen/ScreenContextService';
 
 // Re-export types for backward compatibility
 export type { TranscriptSegment, SuggestionTrigger, ContextItem } from './SessionTracker';
-export type { IntelligenceMode, IntelligenceModeEvents } from './IntelligenceEngine';
+export type { IntelligenceMode, IntelligenceModeEvents, WhatToAnswerNullReason } from './IntelligenceEngine';
 export type { DynamicAction } from './services/dynamic-actions/DynamicAction';
 
 export const GEMINI_FLASH_MODEL = "gemini-3.5-flash";
@@ -152,6 +152,10 @@ export class IntelligenceManager extends EventEmitter {
 
     async runWhatShouldISay(question?: string, confidence?: number, imagePaths?: string[], options?: { skipCooldown?: boolean; screenContext?: ScreenContext; promptInstruction?: string; activeSkill?: { id: string; name: string; promptBlock: string } }): Promise<string | null> {
         return this.engine.runWhatShouldISay(question, confidence, imagePaths, options);
+    }
+
+    getLastWhatToAnswerNullReason() {
+        return this.engine.getLastWhatToAnswerNullReason();
     }
 
     async runFollowUp(intent: string, userRequest?: string): Promise<string | null> {

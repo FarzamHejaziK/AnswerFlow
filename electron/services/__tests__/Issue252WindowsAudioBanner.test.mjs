@@ -1,17 +1,7 @@
-// Regression test for issue #252: on Windows the audio-capture-failed
-// banner used the macOS "Screen Recording Permission Denied" title and
-// fired an x-apple.systempreferences URL on the "Open Settings" button,
-// which Windows shell cannot resolve.
-//
-// The two IPC events that feed this banner are semantically distinct:
-//   - system-audio-permission-denied : macOS screen-recording denial
-//   - audio-capture-failed           : cross-platform capture failure
-//                                       (no-chunks watchdog, TCC zerofill,
-//                                       terminal STT init failure, etc.)
-//
-// The renderer must branch on the kind of warning so that the
-// audio-capture-failure case shows a platform-neutral title and an
-// in-app settings action.
+// Regression test for issue #252 after the live-shell simplification:
+// audio-capture-failed should no longer render a platform-specific banner or
+// fire macOS System Settings URLs from the live overlay. The events remain
+// subscribed for logging/diagnostics only.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -28,88 +18,31 @@ function read(rel) {
 
 const ui = read('src/components/AnswerCueInterface.tsx');
 
-test('issue #252: audio-capture-failed handler does not reuse the screen-recording banner kind', () => {
-  // The audio-capture-failed listener should set a warning of kind
-  // 'audio-capture-failure', not the same shape used by the macOS
-  // screen-recording event.
+test('issue #252: audio-capture-failed handler is diagnostic-only in live shell', () => {
   const audioFailedHandler = ui.match(
     /onAudioCaptureFailed[\s\S]*?return\s*\(\)\s*=>\s*unsub\?\.\(\);/
   );
   assert.ok(audioFailedHandler, 'audio-capture-failed listener should still exist');
-  assert.match(
-    audioFailedHandler[0],
-    /kind:\s*['"]audio-capture-failure['"]/,
-    'audio-capture-failed must set warning kind="audio-capture-failure"'
-  );
+  assert.match(audioFailedHandler[0], /Suppressed live audio warning/);
+  assert.match(audioFailedHandler[0], /kind:\s*['"]audio-capture-failure['"]/);
+  assert.doesNotMatch(audioFailedHandler[0], /setSystemAudioWarning/);
+  assert.doesNotMatch(audioFailedHandler[0], /toggleSettingsWindow|openSettingsTab/);
 });
 
-test('issue #252: system-audio-permission-denied handler tags its banner as screen-recording-permission', () => {
+test('issue #252: system-audio-permission-denied handler is diagnostic-only in live shell', () => {
   const permissionHandler = ui.match(
     /onSystemAudioPermissionDenied[\s\S]*?return\s*\(\)\s*=>\s*unsub\?\.\(\);/
   );
   assert.ok(permissionHandler, 'system-audio-permission-denied listener should still exist');
-  // The renderer may set the kind inline OR delegate to a helper. Accept
-  // either (a) `kind: 'screen-recording-permission'` literal in the listener
-  // body, or (b) a call to a helper whose body sets that kind. The current
-  // implementation factored out `showPermissionWarning(message)` which sets
-  // the kind itself — refusing to recognise that path would force inlining
-  // for a stylistic reason rather than a correctness one.
-  const inline = /kind:\s*['"]screen-recording-permission['"]/.test(permissionHandler[0]);
-  let helperSets = false;
-  const helperCall = permissionHandler[0].match(/(\w*PermissionWarning)\s*\(/);
-  if (helperCall) {
-    const helperBody = ui.match(
-      new RegExp(`(const|function)\\s+${helperCall[1]}\\b[\\s\\S]*?\\{[\\s\\S]*?\\}`),
-    );
-    if (helperBody) {
-      helperSets = /kind:\s*['"]screen-recording-permission['"]/.test(helperBody[0]);
-    }
-  }
-  assert.ok(
-    inline || helperSets,
-    'screen-recording event must set warning kind="screen-recording-permission" (directly or via a helper)',
-  );
+  assert.match(permissionHandler[0], /Suppressed live audio warning/);
+  assert.match(permissionHandler[0], /kind:\s*['"]screen-recording-permission['"]/);
+  assert.doesNotMatch(permissionHandler[0], /setSystemAudioWarning/);
+  assert.doesNotMatch(permissionHandler[0], /toggleSettingsWindow|openSettingsTab/);
 });
 
-test('issue #252: banner title is not hardcoded to "Screen Recording Permission Denied"', () => {
-  // The unconditional <span>Screen Recording Permission Denied</span>
-  // is the bug. The title must be conditional on the warning kind.
-  const offending = '<span>Screen Recording Permission Denied</span>';
-  const stripped = ui.replace(/\s+/g, ' ');
-  const occurrences = stripped.split(offending).length - 1;
-  assert.equal(
-    occurrences,
-    0,
-    'banner must not unconditionally render "Screen Recording Permission Denied" — it should branch on the warning kind'
-  );
-});
-
-test('issue #252: Open Settings button does not unconditionally fire x-apple.systempreferences', () => {
-  // macOS-only URLs are correct only inside the guarded macOS/channel branches.
-  // On Windows the action must fall back to AnswerCue's own settings
-  // (toggleSettingsWindow / openSettingsTab) instead of firing an OS URI.
-  const stripped = ui.replace(/\s+/g, ' ');
-  const xAppleCount = (stripped.match(/x-apple\.systempreferences:/g) || []).length;
-  assert.ok(
-    xAppleCount <= 2,
-    'x-apple.systempreferences should appear only in the guarded screen-recording and microphone branches'
-  );
-
-  // The banner JSX must include a JSX-level conditional keyed on the
-  // warning kind so that the audio-capture-failure case renders an
-  // in-app settings action instead of the macOS URL.
-  const bannerJsx = ui.match(
-    /\{systemAudioWarning && \([\s\S]*?<X className="w-3 h-3" \/>/
-  );
-  assert.ok(bannerJsx, 'banner JSX block should be present');
-  assert.match(
-    bannerJsx[0],
-    /systemAudioWarning\.kind === ['"]screen-recording-permission['"]/,
-    'banner must branch on systemAudioWarning.kind'
-  );
-  assert.match(
-    bannerJsx[0],
-    /toggleSettingsWindow|openSettingsTab/,
-    'audio-capture-failure branch must open in-app settings, not an OS URL'
-  );
+test('issue #252: live overlay has no audio warning banner or macOS settings deep links', () => {
+  assert.doesNotMatch(ui, /Screen Recording Permission Denied/);
+  assert.doesNotMatch(ui, /Open Mic Settings|Open Screen Settings/);
+  assert.doesNotMatch(ui, /x-apple\.systempreferences:/);
+  assert.doesNotMatch(ui, /\{systemAudioWarning && \(/);
 });

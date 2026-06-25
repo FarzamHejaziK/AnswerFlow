@@ -9,7 +9,7 @@ import {
     AnswerLLM, AssistLLM, BrainstormLLM, ClarifyLLM, CodeHintLLM, FollowUpLLM, RecapLLM,
     FollowUpQuestionsLLM, WhatToAnswerLLM,
     prepareTranscriptForWhatToAnswer, buildTemporalContext,
-    AssistantResponse as LLMAssistantResponse, classifyIntent, planNextAssistantAction, PlannerDecision
+    AssistantResponse as LLMAssistantResponse, planNextAssistantAction, PlannerDecision
 } from './llm';
 import { DynamicActionEngine } from './services/dynamic-actions/DynamicActionEngine';
 import { DynamicAction } from './services/dynamic-actions/DynamicAction';
@@ -19,6 +19,7 @@ import { logWhatToAnswerFormatDiagnostics } from './llm/WhatToAnswerFormatDiagno
 
 // Mode types
 export type IntelligenceMode = 'idle' | 'assist' | 'what_to_say' | 'follow_up' | 'recap' | 'clarify' | 'manual' | 'follow_up_questions' | 'code_hint' | 'brainstorm';
+export type WhatToAnswerNullReason = 'cooldown' | 'superseded' | 'nothing_actionable' | 'unknown';
 
 const WHAT_TO_ANSWER_PLACEHOLDER_QUESTIONS = new Set([
     'what to answer',
@@ -130,6 +131,7 @@ export class IntelligenceEngine extends EventEmitter {
     private currentSessionId: string | null = null;
     private currentDynamicActionModeId: string | null = null;
     private currentDynamicActionTemplateType: string | null = null;
+    private lastWhatToAnswerNullReason: WhatToAnswerNullReason | null = null;
 
     private static isNonAnswerSentinel(answer: string): boolean {
         const normalized = IntelligenceEngine.normalizeNonAnswerSentinel(answer);
@@ -162,6 +164,10 @@ export class IntelligenceEngine extends EventEmitter {
 
     getLLMHelper(): LLMHelper {
         return this.llmHelper;
+    }
+
+    getLastWhatToAnswerNullReason(): WhatToAnswerNullReason | null {
+        return this.lastWhatToAnswerNullReason;
     }
 
     getRecapLLM(): RecapLLM | null {
@@ -434,24 +440,12 @@ export class IntelligenceEngine extends EventEmitter {
     private async planSuggestionTrigger(trigger: SuggestionTrigger): Promise<PlannerDecision> {
         const contextItems = this.session.getContext(180);
         const transcriptContext = contextItems.map(item => item.text).join('\n');
-        const preparedTranscript = prepareTranscriptForWhatToAnswer(contextItems.map(item => ({
-            role: item.role,
-            text: item.text,
-            timestamp: item.timestamp,
-        })), 12);
-        const lastInterviewerTurn = this.session.getLastInterviewerTurn();
-        const intentResult = await classifyIntent(
-            lastInterviewerTurn,
-            preparedTranscript,
-            this.session.getAssistantResponseHistory().length
-        );
         const detectedCodingQuestion = this.session.getDetectedCodingQuestion();
 
         return planNextAssistantAction({
             triggerQuestion: trigger.lastQuestion,
             confidence: trigger.confidence,
             transcriptContext,
-            intentResult,
             hasRecentAssistantResponse: this.session.getAssistantResponseHistory().length > 0,
             hasDetectedCodingQuestion: Boolean(detectedCodingQuestion.question),
             now: Date.now(),
@@ -548,6 +542,7 @@ export class IntelligenceEngine extends EventEmitter {
      * NEVER returns null - always provides a usable response
      */
     async runWhatShouldISay(question?: string, confidence: number = 0.8, imagePaths?: string[], options?: { speculative?: boolean; skipCooldown?: boolean; screenContext?: ScreenContext; promptInstruction?: string; activeSkill?: { id: string; name: string; promptBlock: string } }): Promise<string | null> {
+        this.lastWhatToAnswerNullReason = null;
         const now = Date.now();
         const isSpeculative = options?.speculative === true;
         const skipCooldown = options?.skipCooldown === true;
@@ -555,6 +550,7 @@ export class IntelligenceEngine extends EventEmitter {
         // Cooldown bypass: explicit images (user intent), speculative pre-fetch, or test harness.
         const hasImages = imagePaths && imagePaths.length > 0;
         if (!hasImages && !isSpeculative && !skipCooldown && now - this.lastTriggerTime < this.triggerCooldown) {
+            this.lastWhatToAnswerNullReason = 'cooldown';
             return null;
         }
 
@@ -651,11 +647,6 @@ export class IntelligenceEngine extends EventEmitter {
             );
 
             const lastInterviewerTurn = this.session.getLastInterviewerTurn();
-            const intentResult = await classifyIntent(
-                lastInterviewerTurn,
-                preparedTranscript,
-                this.session.getAssistantResponseHistory().length
-            );
 
             const screenContext = options?.screenContext;
             const interviewPreparationContext =
@@ -665,7 +656,6 @@ export class IntelligenceEngine extends EventEmitter {
             console.log('[IntelligenceEngine] Temporal RAG', {
                 previousResponses: temporalContext.previousResponses.length,
                 tone: temporalContext.toneSignals[0]?.type || 'neutral',
-                intent: intentResult.intent,
                 imageCount: imagePaths?.length || 0,
                 screenOcrAvailable: Boolean(screenContext?.ocrText),
                 screenOcrTextLength: screenContext?.ocrText?.length || 0,
@@ -681,7 +671,7 @@ export class IntelligenceEngine extends EventEmitter {
             const stream = this.whatToAnswerLLM.generateStream(
                 preparedTranscript,
                 temporalContext,
-                intentResult,
+                undefined,
                 imagePaths,
                 screenContext,
                 options?.promptInstruction,
@@ -719,6 +709,7 @@ export class IntelligenceEngine extends EventEmitter {
 
             if (streamAborted) {
                 // Aborted mid-stream — don't update session or emit final event
+                this.lastWhatToAnswerNullReason = 'superseded';
                 if (isSpeculative) {
                     this.speculativeText = null;
                     this.speculativeTextExpiry = Infinity;
@@ -735,6 +726,7 @@ export class IntelligenceEngine extends EventEmitter {
             }
 
             if (IntelligenceEngine.isNonAnswerSentinel(fullAnswer)) {
+                this.lastWhatToAnswerNullReason = 'nothing_actionable';
                 if (isSpeculative) {
                     this.speculativeText = null;
                     this.speculativeTextExpiry = Infinity;
@@ -760,13 +752,11 @@ export class IntelligenceEngine extends EventEmitter {
             );
             console.log('[WhatToAnswerRaw] output', JSON.stringify({
                 path: 'what_to_answer',
-                intent: intentResult.intent,
                 question: finalQuestion,
                 answer: fullAnswer,
             }));
             logWhatToAnswerFormatDiagnostics(fullAnswer, finalQuestion, {
                 path: 'what_to_answer',
-                intent: intentResult.intent,
                 confidence,
             });
 

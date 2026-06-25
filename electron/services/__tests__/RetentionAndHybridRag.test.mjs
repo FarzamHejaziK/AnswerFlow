@@ -1,6 +1,7 @@
 // Phase 4 + Phase 9 — source-level wiring tests.
-// Phase 4: WhatToAnswerLLM should prefer the new async hybrid retriever
-//          when ModesManager exposes it. Lexical sync remains as fallback.
+// Phase 4: hybrid retrieval remains available for non-live-answer paths.
+//          WhatToAnswerLLM intentionally skips active-mode retrieval so the
+//          live answer button goes straight to the final model call.
 // Phase 9: stopMeeting must early-return when meetingRetention is 'never'
 //          OR when meeting metadata has doNotPersist === true.
 
@@ -13,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const read = (rel) => fs.readFileSync(path.join(repoRoot, rel), 'utf8');
 
-describe('Phase 4 — Hybrid RAG default in WhatToAnswerLLM', () => {
+describe('Phase 4 — Hybrid RAG available outside live WhatToAnswerLLM', () => {
   test('ModesManager exposes async buildRetrievedActiveModeContextBlockHybrid', () => {
     const src = read('electron/services/ModesManager.ts');
     assert.match(src, /async buildRetrievedActiveModeContextBlockHybrid\(/, 'must declare async hybrid method');
@@ -30,15 +31,13 @@ describe('Phase 4 — Hybrid RAG default in WhatToAnswerLLM', () => {
     assert.match(src, /['"]rag_miss['"]/, 'must record empty result');
   });
 
-  test('WhatToAnswerLLM prefers async hybrid when method exists, falls back to sync', () => {
+  test('WhatToAnswerLLM does not run active-mode retrieval before live answers', () => {
     const src = read('electron/llm/WhatToAnswerLLM.ts');
-    // Type slot for the new method (so callers can detect it).
-    assert.match(src, /buildRetrievedActiveModeContextBlockHybrid\?:/, 'type alias must declare optional hybrid method');
-    // Runtime branch: prefer hybrid, await it.
-    assert.match(src, /typeof this\.modesManager\.buildRetrievedActiveModeContextBlockHybrid\s*===\s*['"]function['"]/);
-    assert.match(src, /await this\.modesManager\.buildRetrievedActiveModeContextBlockHybrid\(/);
-    // Lexical fallback path remains.
-    assert.match(src, /this\.modesManager\.buildRetrievedActiveModeContextBlock\(/);
+    assert.match(src, /getActiveModeSystemPromptSuffix\(\)/, 'live answers may still use active-mode instructions');
+    assert.doesNotMatch(src, /buildRetrievedActiveModeContextBlockHybrid\?:/, 'live answer type must not expose hybrid retrieval');
+    assert.doesNotMatch(src, /buildRetrievedActiveModeContextBlock\(/, 'live answer path must not call lexical retrieval');
+    assert.doesNotMatch(src, /retrievedModeContext:\s*modeContextBlock/, 'live answer packet must not include retrieved mode context');
+    assert.doesNotMatch(src, /packetScopes\.push\(['"]reference_files['"]\)/, 'live answer should not add reference_files scope via retrieval');
   });
 });
 

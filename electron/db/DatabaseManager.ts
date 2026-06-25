@@ -42,6 +42,7 @@ export interface Meeting {
     calendarEventId?: string;
     source?: 'manual' | 'calendar';
     isProcessed?: boolean;
+    titleSource?: 'placeholder' | 'auto' | 'manual' | 'calendar';
 }
 
 export class DatabaseManager {
@@ -143,7 +144,8 @@ export class DatabaseManager {
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                     calendar_event_id TEXT,
                     source TEXT,
-                    is_processed INTEGER DEFAULT 1
+                    is_processed INTEGER DEFAULT 1,
+                    title_source TEXT DEFAULT 'auto'
                 );
 
                 CREATE TABLE IF NOT EXISTS transcripts (
@@ -605,6 +607,26 @@ export class DatabaseManager {
             this.db.pragma('user_version = 15');
         }
 
+        // Version 15 → 16: Track whether a title is generated or manually set.
+        // Async post-call processing may finish after the user manually renames
+        // an interview; this flag lets final saves preserve the user's title.
+        if (version < 16) {
+            console.log('[DatabaseManager] Applying migration v15 → v16: Add meeting title_source');
+            try {
+                this.db.exec("ALTER TABLE meetings ADD COLUMN title_source TEXT DEFAULT 'auto'");
+            } catch (e) { /* Column already exists */ }
+            this.db.exec(`
+                UPDATE meetings
+                SET title_source = CASE
+                    WHEN title IS NULL OR TRIM(title) = '' THEN 'placeholder'
+                    WHEN LOWER(TRIM(title)) IN ('processing...', 'untitled interview', 'untitled session', 'untitleded session', 'untitleded interview') THEN 'placeholder'
+                    ELSE 'auto'
+                END
+                WHERE title_source IS NULL OR TRIM(title_source) = '';
+            `);
+            this.db.pragma('user_version = 16');
+        }
+
         console.log('[DatabaseManager] Migrations completed.');
     }
 
@@ -1022,9 +1044,10 @@ export class DatabaseManager {
         }
 
         const insertMeeting = this.db.prepare(`
-            INSERT OR REPLACE INTO meetings (id, title, start_time, duration_ms, summary_json, created_at, calendar_event_id, source, is_processed)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT OR REPLACE INTO meetings (id, title, start_time, duration_ms, summary_json, created_at, calendar_event_id, source, is_processed, title_source)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
+        const existingMeetingStmt = this.db.prepare('SELECT title, title_source FROM meetings WHERE id = ?');
 
         const insertTranscript = this.db.prepare(`
             INSERT INTO transcripts (meeting_id, speaker, content, timestamp_ms)
@@ -1042,17 +1065,28 @@ export class DatabaseManager {
         });
 
         const runTransaction = this.db.transaction(() => {
+            const existingMeeting = existingMeetingStmt.get(meeting.id) as { title?: string; title_source?: string } | undefined;
+            const incomingTitleSource = meeting.titleSource || (meeting.source === 'calendar' ? 'calendar' : 'auto');
+            const shouldPreserveManualTitle = existingMeeting?.title_source === 'manual' && incomingTitleSource !== 'manual';
+            const titleToSave = shouldPreserveManualTitle
+                ? existingMeeting.title || meeting.title
+                : meeting.title;
+            const titleSourceToSave = shouldPreserveManualTitle
+                ? 'manual'
+                : incomingTitleSource;
+
             // 1. Insert Meeting
             insertMeeting.run(
                 meeting.id,
-                meeting.title,
+                titleToSave,
                 startTimeMs,
                 durationMs,
                 summaryJson,
                 meeting.date, // Using the ISO string as created_at for sorting simply
                 meeting.calendarEventId || null,
                 meeting.source || 'manual',
-                meeting.isProcessed ? 1 : 0
+                meeting.isProcessed ? 1 : 0,
+                titleSourceToSave
             );
 
             // 2. Insert Transcript
@@ -1112,7 +1146,7 @@ export class DatabaseManager {
     public updateMeetingTitle(id: string, title: string): boolean {
         if (!this.db) return false;
         try {
-            const stmt = this.db.prepare('UPDATE meetings SET title = ? WHERE id = ?');
+            const stmt = this.db.prepare("UPDATE meetings SET title = ?, title_source = 'manual' WHERE id = ?");
             const info = stmt.run(title, id);
             return info.changes > 0;
         } catch (error) {
@@ -1193,6 +1227,7 @@ export class DatabaseManager {
                 calendarEventId: row.calendar_event_id,
                 source: row.source as any,
                 isProcessed: row.is_processed !== 0,
+                titleSource: row.title_source,
                 // We don't load full transcript/usage for list view to keep it light
                 transcript: [] as any[],
                 usage: [] as any[]
@@ -1268,6 +1303,7 @@ export class DatabaseManager {
             calendarEventId: meetingRow.calendar_event_id,
             source: meetingRow.source,
             isProcessed: meetingRow.is_processed !== 0,
+            titleSource: meetingRow.title_source,
             transcript: transcript,
             usage: usage
         };

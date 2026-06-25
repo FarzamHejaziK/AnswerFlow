@@ -23,6 +23,13 @@ git push origin main
 - The repository is AGPL-3.0. Public modified releases should keep the license notices and make corresponding source available.
 - Some submodule paths are not fully available from the public checkout: `premium` points to a private or unavailable repository, and `answercue-api` is a gitlink without a matching `.gitmodules` entry.
 
+## Release Hygiene
+
+- Before creating a new public release, inspect existing GitHub releases for stale Natively branding, duplicate/broken assets, draft junk, and missing release notes.
+- Clean up obvious junk releases or junk assets before publishing a new release, but be careful not to delete a release the user still needs for testing unless they explicitly approve that cleanup.
+- Every new release must include detailed release notes that explain the user-visible changes, fixed bugs, packaging/signing status, supported platforms, and any known limitations.
+- If previous releases are missing useful notes, add or improve their release notes when feasible before marking a new release as the primary/latest one.
+
 ## Local Development
 
 - Use the root package as the main app. The root scripts run the Vite + Electron app; `renderer/` appears to be a nested/legacy package.

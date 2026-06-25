@@ -3354,12 +3354,10 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   // MODE 2: What Should I Say (Primary auto-answer)
   //
-  // VISION-FIRST: image paths are validated and forwarded to IntelligenceManager
-  // which routes them through the vision provider fallback chain.
-  // LEGACY OCR PATH DISABLED: the previous build called ScreenContextService.captureScreenFromPath
-  // here to run Tesseract OCR before answering. That path is now removed from the runtime —
-  // AnswerCue answers from the image directly via a vision-capable provider. Do not re-introduce
-  // OCR here unless a future explicit OCR-only mode is reintroduced.
+  // DIRECT VISION: image paths are validated and forwarded to WhatToAnswerLLM.
+  // Do not run ScreenUnderstandingService here. Screenshots must be attached
+  // directly to the final LLM call so live answers do not pay for a separate
+  // vision/OCR pre-pass before streaming.
   safeHandle(
     'generate-what-to-say',
     async (
@@ -3369,12 +3367,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       options?: { promptInstruction?: string },
     ) => {
       try {
-        let screenContext: any;
-        let screenContextStatus: 'not_available' | 'available' | 'failed' = 'not_available';
-        let visionProviderUsed: string | undefined;
-        let visionModelUsed: string | undefined;
-        let visionAttempts: number | undefined;
-        let visionFailureReason: string | undefined;
+        const screenContextStatus: 'not_available' | 'available' | 'failed' = 'not_available';
 
         const validatedImagePaths: string[] | undefined = imagePaths?.length ? [] : undefined;
 
@@ -3415,61 +3408,6 @@ export function initializeIpcHandlers(appState: AppState): void {
             }
             validatedImagePaths!.push(imagePath);
           }
-
-          // Vision-first: run the ScreenUnderstandingService so the image is hashed, optimized,
-          // and routed through the vision provider fallback chain. The structured result becomes
-          // the screenContext that PromptAssembler consumes.
-          try {
-            const {
-              getScreenUnderstandingService,
-            } = require('./services/screen/ScreenUnderstandingService');
-            const { CredentialsManager } = require('./services/CredentialsManager');
-            const sus = getScreenUnderstandingService();
-            const settings = SettingsManager.getInstance();
-            const credentials = CredentialsManager.getInstance();
-            const providerScopes = settings.get('providerDataScopes') || {};
-            const localVisionAvailable = credentials.anyLocalVisionProviderConfigured?.() ?? false;
-            if (providerScopes.screenshots === false) {
-              console.warn(
-                localVisionAvailable
-                  ? '[ScopeFallback] screenshots denied for cloud; routing to Ollama'
-                  : '[ScopeFallback] screenshots denied; Ollama unavailable, omitting from context',
-              );
-            }
-
-            const sur = await sus.understand({
-              modeId: 'what-to-say',
-              transcript: question,
-              userAction: 'what_to_say',
-              qualityMode: 'balanced',
-              imagePaths: validatedImagePaths,
-              screenUnderstandingMode: settings.getScreenUnderstandingMode(),
-              technicalInterviewVisionFirst: settings.getTechnicalInterviewVisionFirst(),
-              providerPolicy: {
-                localOnly: settings.getScreenUnderstandingMode() === 'private_vision',
-                allowScreenshots: providerScopes.screenshots !== false,
-                visionAvailable: credentials.anyVisionProviderConfigured?.() ?? true,
-                localVisionAvailable,
-              },
-            });
-
-            screenContext = sur.status === 'available' ? sur : undefined;
-            screenContextStatus =
-              sur.status === 'available'
-                ? 'available'
-                : sur.status === 'failed'
-                  ? 'failed'
-                  : 'not_available';
-            visionProviderUsed = sur.providerUsed;
-            visionModelUsed = sur.modelUsed;
-            visionAttempts = Array.isArray(sur.attempts) ? sur.attempts.length : undefined;
-            visionFailureReason = sur.failureReason;
-          } catch (sErr: any) {
-            screenContextStatus = 'failed';
-            console.warn('[IPC] generate-what-to-say: ScreenUnderstandingService failed', {
-              errorClass: sErr?.name || 'Error',
-            });
-          }
         }
 
         const intelligenceManager = appState.getIntelligenceManager();
@@ -3480,13 +3418,16 @@ export function initializeIpcHandlers(appState: AppState): void {
           validatedImagePaths,
           {
             skipCooldown: process.env.NODE_ENV === 'test',
-            screenContext,
             promptInstruction:
               typeof options?.promptInstruction === 'string'
                 ? options.promptInstruction
                 : undefined,
           },
         );
+        const nullReason =
+          answer === null
+            ? intelligenceManager.getLastWhatToAnswerNullReason?.() ?? 'unknown'
+            : undefined;
         if (answer) {
           try {
             PhoneMirrorService.getInstance().publishAssistantMessage(
@@ -3499,11 +3440,8 @@ export function initializeIpcHandlers(appState: AppState): void {
         return {
           answer,
           question: question || 'inferred from context',
+          nullReason,
           screenContextStatus,
-          visionProviderUsed,
-          visionModelUsed,
-          visionAttempts,
-          visionFailureReason,
           imageCount: validatedImagePaths?.length || 0,
           usedImageInput: Boolean(validatedImagePaths?.length),
         };

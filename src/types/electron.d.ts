@@ -212,7 +212,8 @@ export interface ElectronAPI {
     answer: string | null;
     question?: string;
     error?: string;
-    /** Vision pipeline outcome — replaces legacy screenContextStatus/ocrTextLength fields */
+    nullReason?: 'cooldown' | 'superseded' | 'nothing_actionable' | 'unknown';
+    /** Direct screenshot input metadata. What-to-answer no longer runs a vision pre-pass. */
     screenContextStatus?: 'not_available' | 'available' | 'failed';
     visionProviderUsed?: string;
     visionModelUsed?: string;
@@ -264,7 +265,7 @@ export interface ElectronAPI {
   startMeeting: (metadata?: any) => Promise<{ success: boolean; error?: string }>
   endMeeting: () => Promise<{ success: boolean; error?: string }>
   finalizeMicSTT: () => Promise<void>
-  getRecentMeetings: () => Promise<Array<{ id: string; title: string; date: string; duration: string; summary: string; isProcessed?: boolean }>>
+  getRecentMeetings: () => Promise<Array<{ id: string; title: string; date: string; duration: string; summary: string; isProcessed?: boolean; titleSource?: 'placeholder' | 'auto' | 'manual' | 'calendar' }>>
   getMeetingDetails: (id: string) => Promise<any>
   updateMeetingTitle: (id: string, title: string) => Promise<boolean>
   updateMeetingSummary: (id: string, updates: { overview?: string, actionItems?: string[], keyPoints?: string[], actionItemsTitle?: string, keyPointsTitle?: string }) => Promise<boolean>

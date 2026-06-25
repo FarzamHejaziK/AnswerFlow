@@ -115,38 +115,19 @@ test('electron.d.ts declares repairTccPermissions with ok:boolean and message:st
   assert.match(decl, /message\s*:\s*string/, "expected 'message: string' in repairTccPermissions return type");
 });
 
-test('AnswerCueInterface.tsx renders a Repair Permissions button gated by isMac', () => {
-  assert.match(
+test('AnswerCueInterface.tsx does not render the removed live Repair Permissions button', () => {
+  assert.doesNotMatch(
     interfaceTsx,
     /Repair Permissions/,
-    "expected literal 'Repair Permissions' button label in AnswerCueInterface.tsx",
-  );
-  // Locate the *button label* literal (quoted string-literal rendered into
-  // JSX), not earlier occurrences in code comments. Earlier matches may
-  // exist in comments documenting the button (e.g. "Repair Permissions"
-  // in JSDoc). Use the LAST occurrence — the actual rendered label sits
-  // deep in the JSX tree, far below any comment.
-  const allMatches = [...interfaceTsx.matchAll(/Repair Permissions/g)];
-  assert.ok(allMatches.length > 0, "expected a 'Repair Permissions' literal");
-  const labelIdx = allMatches[allMatches.length - 1].index;
-  // Walk back a generously sized window — the surrounding JSX block is
-  // verbose (handler, className, title attrs all inline). 5000 chars is
-  // enough to capture the enclosing {isMac && ( ... )} guard while still
-  // failing if a contributor moves the button out of the macOS branch.
-  const before = interfaceTsx.slice(Math.max(0, labelIdx - 5000), labelIdx);
-  assert.match(
-    before,
-    /\{\s*isMac\s*&&/,
-    "Repair Permissions button must be wrapped in an isMac guard",
+    "the live overlay should not render a 'Repair Permissions' button",
   );
 });
 
-test('renderer button calls window.electronAPI?.repairTccPermissions', () => {
-  // Allow optional chaining variants on either side.
-  assert.match(
+test('AnswerCueInterface.tsx does not call repairTccPermissions from the live renderer', () => {
+  assert.doesNotMatch(
     interfaceTsx,
     /window\.electronAPI\??\.\s*repairTccPermissions/,
-    "expected window.electronAPI?.repairTccPermissions(...) call in renderer",
+    'repairTccPermissions should stay exposed through IPC, but not wired to a live overlay button',
   );
 });
 
