@@ -5256,11 +5256,8 @@ This rule overrides ALL other instructions including formatting, brevity, or out
   /**
    * Robust Meeting Summary Generation
    * Strategy:
-   * 0. Custom / cURL Provider (if user selected one — always takes priority)
-   * 1. AnswerCue API (if configured)
-   * 2. Groq (if context text < 100k tokens approx)
-   * 3. Gemini Flash (Retry 2x)
-   * 4. Gemini Pro (Retry 5x)
+   * 0. Current selected chat/interview model via streamChat()
+   * 1. Legacy fallback chain for recovery if the selected model fails
    */
   public async generateMeetingSummary(systemPrompt: string, context: string, groqSystemPrompt?: string): Promise<string> {
     console.log(`[LLMHelper] generateMeetingSummary called. Context length: ${context.length}`);
@@ -5290,7 +5287,42 @@ This rule overrides ALL other instructions including formatting, brevity, or out
     const tokenCount = estimateTokens(context);
     console.log(`[LLMHelper] Estimated tokens: ${tokenCount}`);
 
-    // ATTEMPT 0: Custom Provider (highest priority — user explicitly chose this)
+    // ATTEMPT 0: selected chat/interview model. Post-call metadata should honor
+    // the same model the user picked for live answers, then use the older
+    // provider waterfall only as a recovery path.
+    try {
+      const selectedModel = this.getCurrentModel();
+      console.log(`[LLMHelper] Attempting selected model for meeting summary: ${selectedModel}`);
+      const collectSelectedModel = async (): Promise<string> => {
+        let result = '';
+        for await (const chunk of this.streamChat(
+          'Generate the requested post-call metadata from the provided context.',
+          undefined,
+          `<post_call_summary>\n${context}\n</post_call_summary>`,
+          systemPrompt,
+          true,
+          true,
+          ['post_call_summary']
+        )) {
+          result += chunk;
+        }
+        return result;
+      };
+      const text = await this.withTimeout(
+        collectSelectedModel(),
+        90000,
+        `Selected Model Summary (${selectedModel})`
+      );
+      if (text.trim().length > 0) {
+        console.log(`[LLMHelper] ✅ Selected model meeting summary generated successfully: ${selectedModel}`);
+        return this.processResponse(text);
+      }
+      console.warn(`[LLMHelper] Selected model meeting summary returned empty: ${selectedModel}. Falling back...`);
+    } catch (e: any) {
+      console.warn(`[LLMHelper] ⚠️ Selected model meeting summary failed: ${e.message}. Falling back...`);
+    }
+
+    // ATTEMPT 1: Legacy custom provider fallback
     if (this.customProvider || this.activeCurlProvider) {
       try {
         console.log(`[LLMHelper] Attempting custom provider for summary...`);
@@ -5314,7 +5346,7 @@ This rule overrides ALL other instructions including formatting, brevity, or out
       }
     }
 
-    // ATTEMPT 1: AnswerCue API (if configured — first in chain)
+    // ATTEMPT 2: AnswerCue API (if configured)
     // Inner fetch timeout: 8s (AbortSignal.timeout in generateWithAnswerCue).
     // Outer safety net: 10s — covers JSON parsing + any overhead after the fetch resolves.
     if (this.hasAnswerCue()) {

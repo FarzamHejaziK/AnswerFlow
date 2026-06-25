@@ -98,3 +98,17 @@ test('MeetingPersistence post_call_summary denial falls back to local summary pa
   assert.match(llmHelper, /this\.logScopeFallback\('post_call_summary', ollamaAvailable \? 'routing' : 'omitting'\)/);
   assert.match(llmHelper, /this\.callOllama\(`Context:\\n\$\{context\}`/);
 });
+
+test('post-call summaries use the selected chat model before legacy fallbacks', () => {
+  const src = read('electron/LLMHelper.ts');
+  const summaryWindow = src.slice(
+    src.indexOf('public async generateMeetingSummary'),
+    src.indexOf('// ATTEMPT 2: AnswerCue API')
+  );
+
+  assert.match(summaryWindow, /Attempting selected model for meeting summary/);
+  assert.match(summaryWindow, /this\.getCurrentModel\(\)/);
+  assert.match(summaryWindow, /this\.streamChat\(/);
+  assert.match(summaryWindow, /\['post_call_summary'\]/);
+  assert.match(summaryWindow, /Selected model meeting summary generated successfully/);
+});
